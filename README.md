@@ -2,6 +2,7 @@
 
 This is a plugin for the CRPropa code.
 It enables simulations including Lorentz invariance violation (LIV).
+
 For now, only Breit-Wheeler pair production is supported, but we will soon extend the code to include other processes such as inverse Compton scattering.
 
 
