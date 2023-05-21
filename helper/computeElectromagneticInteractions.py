@@ -8,7 +8,7 @@ import gitHelp as gh
 import photonField
 
 # import modified interaction rate
-import interactionRate
+from interactionRateLIV import *
 
 # import units and constants from CRPropa
 from crpropa import eV, mass_electron, c_light, c_squared, sigma_thomson, alpha_finestructure
@@ -33,7 +33,6 @@ def sigmaPP(s):
 	b = np.sqrt(1. - smin / s)
 	return sigmaThomson * 3 / 16 * (1 - b * b) * ((3 - b ** 4) * (np.log1p(b) - np.log1p(-b)) - 2. * b * (2 - b * b))
 
-
 def sigmaDPP(s):
 	""" 
 	Double-pair production cross section, see R.W. Brown eq. (4.5) with k^2 = q^2 = 0 
@@ -43,7 +42,6 @@ def sigmaDPP(s):
 		return 0.
 
 	return 6.45e-34 * (1 - smin / s) ** 6
-
 
 def sigmaICS(s):
 	"""
@@ -59,7 +57,6 @@ def sigmaICS(s):
 	B = (2 - 3 * b * b - b * b * b) / b ** 2 * (np.log1p(b) - np.log1p(-b))
 	return sigmaThomson * 3. / 8. * smin / s / b * (A - B)
 
-
 def sigmaTPP(s):
 	""" 
 	Triplet-pair production cross section, see Lee 1996 
@@ -69,7 +66,6 @@ def sigmaTPP(s):
 		return 0.
 	
 	return sigmaThomson * 3. / 8. / np.pi * alpha * beta
-
 
 def getTabulatedXS(sigma, skin):
 	""" 
@@ -98,21 +94,25 @@ def getEmin(sigma, field):
 	"""
 	return getSmin(sigma) / 4. / field.getEmax()
 
-def process(sigma, field, name, xi = -0.1, eta = 0., nLIV = 3, folder = '../data'):
+def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '../data'):
 	""" 
 	Calculate the interaction rates for a given process on a given photon field .
 
 	# Input
-	. sigma : crossection (function) of the EM-process
-	. field : photon field as defined in photonField.py
-	. name  : name of the process which will be calculated. Necessary for the naming of the data folder
-	. xi    : ?
-	. eta   : ?
-	. nLIV  : order of LIV (> 1) 
+	. sigma   : crossection (function) of the EM-process
+	. field   : photon field as defined in photonField.py
+	. name    : name of the process which will be calculated. Necessary for the naming of the data folder
+	. order   : order of the LIV (0 = symmetric)
+	. energyQG: energy at which LIV sets in (defaults to Planck energy)
+	. sign    : superluminal (+1), subluminal (-1)
 	"""
+	# adjust conventions
+	xi = sign * MPl / energyQG
+	nLIV = order + 2
+	eta = 0.
 
 	# output folder
-	subfolder = 'xi_%2.1e' % xi
+	subfolder = 'Eqg_%2.1e-order_%i-%s' % (energyQG / eV, order, 'superluminal' if sign > 0 else 'subluminal')
 	if not folder.endswith('/'):
 		folder += '/'
 	folder = folder + name + '/' + subfolder
@@ -129,9 +129,9 @@ def process(sigma, field, name, xi = -0.1, eta = 0., nLIV = 3, folder = '../data
 	# -------------------------------------------
 	# tabulated values of s_kin = s - mc^2
 	# Note: integration method (Romberg) requires 2^n + 1 log-spaced tabulation points
-	s_kin = np.logspace(4, 23, 2 ** 18 + 1) * eV**2
+	s_kin = np.logspace(4, 23, 2 ** 18 + 1) * eV ** 2
 	xs = getTabulatedXS(sigma, s_kin)
-	rate = interactionRate.calc_rate_s(s_kin, xs, E, field)
+	rate = calc_rate_s_liv(s_kin, xs, E, field, energyQG = energyQG, order = order, sign = sign)
 
 	# save
 	fname = folder + '/rate_%s.txt' % field.name
@@ -171,7 +171,7 @@ def process(sigma, field, name, xi = -0.1, eta = 0., nLIV = 3, folder = '../data
 	skin = skin[skin > skin_min]
 
 	xs = getTabulatedXS(sigma, skin)
-	rate = interactionRate.calc_rate_s(skin, xs, E, field, cdf = True)
+	rate = calc_rate_s_liv(skin, xs, E, field, cdf = True, energyQG = energyQG, order = order, sign = sign)
 
 	# downsample
 	skin_save = np.logspace(4, 23, 190 + 1) * eV ** 2
