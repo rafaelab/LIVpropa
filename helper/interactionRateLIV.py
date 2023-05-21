@@ -8,6 +8,7 @@ from scipy.integrate import romb, quad
 # import from CRPropa3-data folder
 sys.path.append('CRPropa3-data/')
 import gitHelp as gh
+from interactionRate import *
 
 # import units and constants from CRPropa
 from crpropa import eV, Mpc
@@ -16,15 +17,8 @@ MPl = 1.9561e9 # J
 me2 = 6.72236e-27 # J**2
 
 
-# import already existing functions to avoid duplicates
-import interationRate.calc_rate_eps
-import interactionRate.calculateDensityIntegral
-import interactionRate.mean_log_spacing
-import interactionRate.romb_truncate
-import interactionRate.romb_pad_logspaced
 
-
-def calc_rate_s(s_kin, xs, E, field, xi = -0.1, eta = 0., nLIV = 3, z = 0, cdf = False):
+def calc_rate_s_liv(s_kin, xs, E, field, order = 1, sign = 1, energyQG = MPl, z = 0, cdf = False):
 	"""
 	Calculate the interaction rate for given tabulated cross sections against an isotropic photon background.
 	The tabulated cross sections need to be of length n = 2^i + 1 and the tabulation points log-linearly spaced.
@@ -36,14 +30,19 @@ def calc_rate_s(s_kin, xs, E, field, xi = -0.1, eta = 0., nLIV = 3, z = 0, cdf =
 	. field : photon background, see photonField.py
 	. z     : redshift
 	. cdf   : calculate cumulative differential rate
-	. xi    : ?
-	. eta   : ?
-	. nLIV  : order of LIV (> 1) 
+	. order   : order of the LIV (0 = symmetric)
+	. energyQG: energy at which LIV sets in (defaults to Planck energy)
+	. sign    : superluminal (+1), subluminal (-1)
 
 	# Output
 	. interaction rate 1/lambda(gamma) [1/Mpc] or
 	. cumulative differential rate d(1/lambda)/d(s_kin) [1/Mpc/J^2]
 	"""
+	# adjust conventions
+	xi = sign * MPl / energyQG
+	nLIV = order + 2
+	eta = 0.
+
 	if cdf:
 		# precalculate the field integral if it not exists and load it afterwards
 		calculateDensityIntegral(field)
@@ -95,7 +94,7 @@ def calc_rate_s(s_kin, xs, E, field, xi = -0.1, eta = 0., nLIV = 3, z = 0, cdf =
 			sbool = s_kin < s
 			if np.any(sbool):
 				npw = np.where(sbool)
-				y[ind,npw] = 0.
+				y[ind, npw] = 0.
 
 		ds = mean_log_spacing(s_kin)
 		return romb(y, dx = ds) / 2. / E * Mpc
