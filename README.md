@@ -37,6 +37,17 @@ Alternatively, this can be hard-coded in your python script.
 
 For consistency with CRPropa, the flag `-DCMAKE_CXX_FLAGS="-std=c++11"` may be required to force compilers to adopt C++11.
 
+To install the code locally, add the flag `-DCMAKE_INSTALL_PREFIX=$PWD` when running `cmake` from the `build/` folder (important!), as follows:
+```
+cmake .. -DCMAKE_INSTALL_PREFIX=$PWD
+```
+Then the python file `livpropa.py` will be generated. You can add this directory to your `PYTHONPATH` or do:
+```
+import sys
+sys.path.append('/path/to/livpropa/build/')
+from livpropa import *
+```
+
 
 ## Disclaimer
 
