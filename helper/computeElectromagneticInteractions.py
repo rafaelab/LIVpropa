@@ -201,6 +201,9 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 
 	del data, rate, skin, skin_save, rate_save
 
+
+###########################################################################################
+###########################################################################################
 if __name__ == "__main__":
 
 	fields = [
@@ -208,10 +211,17 @@ if __name__ == "__main__":
 		photonField.EBL_Gilmore12(),
 		photonField.URB_Protheroe96()
 	]
+	orders = [1, 2]
+	energiesQG = [0.1 * MPl, MPl, 10 * MPl]
 
-	for field in fields:
-		print(field.name)
-		process(sigmaPP, field, 'PairProductionLIV')
-		#        process(sigmaDPP, field, 'EMDoublePairProduction')
-		#        process(sigmaTPP, field, 'EMTripletPairProduction')
-		#        process(sigmaICS, field, 'EMInverseComptonScattering')
+
+	for order in orders:
+		for energyQG in energiesQG:
+			for field in fields:
+				print(order, energyQG / MPl, field.name)
+				process(sigmaPP, field, 'PairProductionLIV', order = order, sign =  1, energyQG = energyQG)
+				process(sigmaPP, field, 'PairProductionLIV', order = order, sign = -1, energyQG = energyQG)
+
+				#        process(sigmaDPP, field, 'EMDoublePairProduction')
+				#        process(sigmaTPP, field, 'EMTripletPairProduction')
+				#        process(sigmaICS, field, 'EMInverseComptonScattering')
