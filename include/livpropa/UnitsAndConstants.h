@@ -23,6 +23,8 @@ using crpropa::Mpc;
 
 // LIVpropa-specific definitions
 static const double h_dirac = h_planck / 2. / M_PI;
+static const double mass_planck = 2.176434e−8; // in kg
+static const double energy_planck = mass_planck * c_squared;
 
 
 } // namespace livpropa
