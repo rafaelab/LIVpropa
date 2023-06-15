@@ -52,7 +52,6 @@ def calc_rate_s_liv(s_kin, xs, E, field, order = 1, sign = 1, energyQG = MPl, z 
 		# interpolate
 		I = np.zeros((len(E), len(s_kin)))
 		for j in range(len(E)):
-			#old            I[j,:] = np.interp(s_kin/ 4 / E[j], densityIntegral[:,0], densityIntegral[:,1])
 			smin = np.amax([4 * me2 + eta / 2 ** (nLIV - 2) * E[j] ** nLIV / MPl ** (nLIV - 2), 0.])
 			npw = np.where(s_kin > smin)
 			I[j, npw] = np.interp((s_kin[npw] - xi * E[j] ** nLIV / MPl ** (nLIV - 2)) / 4. / E[j], densityIntegral[:, 0], densityIntegral[:, 1])
@@ -62,35 +61,36 @@ def calc_rate_s_liv(s_kin, xs, E, field, order = 1, sign = 1, energyQG = MPl, z 
 		y = np.array([xs * (s_kin - xi * E[j] ** nLIV / MPl ** (nLIV - 2) ) for j in range(len(E))]) * I
 
 		return cumulative_trapezoid(y = y, x = s_kin, initial = 0) / 8. / np.expand_dims(E, -1) ** 2 * Mpc    
+	
 	else:
 		F = cumulative_trapezoid(x = s_kin, y = s_kin * xs, initial = 0)
 
-		#new agorithm
+		# new agorithm
 		F1 = cumulative_trapezoid(x = s_kin, y = xs, initial = 0)
 		Fmatrix = np.zeros((len(E), len(s_kin)))
 		F1matrix = np.zeros((len(E), len(s_kin)))
 
-		#sthr = np.maximum(np.maximum(xi * E**nLIV / MPl**(nLIV-2), 4*me2 + eta * E**nLIV / MPl**(nLIV-2)),np.zeros(len(E)))
 		sthr = np.maximum(xi * E ** nLIV / MPl ** (nLIV - 2), np.zeros(len(E)))
-		for ind,s in enumerate(sthr):
+		for ind, s in enumerate(sthr):
 			sbool = s_kin > s
 			if np.any(sbool):
 				npw = np.where(sbool)
-				Fmatrix[ind,npw] = F[npw] - F[np.amin(npw)]
-				F1matrix[ind,npw] = F1[npw] - F1[np.amin(npw)]
+				Fmatrix[ind, npw] = F[npw] - F[np.amin(npw)]
+				F1matrix[ind, npw] = F1[npw] - F1[np.amin(npw)]
 
 		Fmatrix = Fmatrix - xi * np.reshape(E, (-1, 1)) ** nLIV / MPl ** (nLIV - 2) * F1matrix
 
 		sE = np.subtract.outer(-xi * E ** nLIV / MPl ** (nLIV - 2), -s_kin)
+	
 
-		#old    n = field.getDensity(np.outer(1. / (4 * E), s_kin), z)
 		n = field.getDensity(sE / np.reshape(4. * E, (-1, 1)), z)
+		idx = np.where(np.isnan(n))
+		n[idx] = 0.
 
-		#old	y = n * F / s_kin
 		y = n * Fmatrix / sE ** 2 * s_kin
-		
+
 		sthr = np.maximum(4 * me2 + eta / 2 ** (nLIV - 2) * E ** nLIV / MPl ** (nLIV - 2), np.zeros(len(E)))
-		for ind,s in enumerate(sthr):
+		for ind ,s in enumerate(sthr):
 			sbool = s_kin < s
 			if np.any(sbool):
 				npw = np.where(sbool)
