@@ -18,9 +18,20 @@ PairProductionLIV::PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSy
 void PairProductionLIV::setPhotonField(ref_ptr<PhotonField> field) {
 	photonField = field;
 	std::string fname = photonField->getFieldName();
+	char path[1024];
+	size_t s = 0;
+	s += std::sprintf(path + s, "PairProductionLIV/Eqg_%2.1eeV", lorentzSymmetry->getEnergyScale() / eV);
+	s += std::sprintf(path + s, "-order_%i", lorentzSymmetry->getOrder());
+	if (lorentzSymmetry->isSubluminal())
+		s += std::sprintf(path + s, "-subluminal/");
+	else
+		s += std::sprintf(path + s, "-superluminal/");
+	
+	std::string dataPath = path;
+
 	setDescription("PairProductionLIV: " + fname);
-	initRate(getDataPath("PairProductionLIV/rate_" + fname + ".txt"));
-	initCumulativeRate(getDataPath("PairProductionLIV/cdf_" + fname + ".txt"));
+	initRate(getDataPath(dataPath + "rate_" + fname + ".txt"));
+	initCumulativeRate(getDataPath(dataPath + "cdf_" + fname + ".txt"));
 }
 
 void PairProductionLIV::setHaveElectrons(bool electrons) {
@@ -195,13 +206,21 @@ void PairProductionLIV::performInteraction(Candidate* candidate) const {
 	if (E < tabE.front() or (E > tabE.back()))
 		return;
 
+	// LIV corrections
+	int sign = lorentzSymmetry->isSuperluminal() ? 1 : -1;
+	double Eqg = lorentzSymmetry->getEnergyScale();
+	unsigned int order = lorentzSymmetry->getOrder();
+	double xi = sign * energy_planck / Eqg;
+	double sShift = xi * pow(E, order + 2) / pow(2., order) / pow(energy_planck, order);
+
+
 	// sample the value of s
 	Random& random = Random::instance();
 	size_t i = closestIndex(E, tabE);  // find closest tabulation point
 	size_t j = random.randBin(tabCDF[i]);
-	double lo = std::max(4 * mec2 * mec2, tabs[j - 1]);  // first s-tabulation point below min(s_kin) = (2 me c^2)^2; ensure physical value
+	double lo = std::max(4 * mec2 * mec2 + sShift, tabs[j - 1]);  // first s-tabulation point below min(s_kin) = (2 me c^2)^2; ensure physical value
 	double hi = tabs[j];
-	double s = lo + random.rand() * (hi - lo);
+	double s = lo + random.rand() * (hi - lo) + sShift;
 
 	// sample electron / positron energy
 	static PPSecondariesEnergyDistribution interpolation;
