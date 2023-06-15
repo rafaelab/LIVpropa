@@ -112,7 +112,7 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	eta = 0.
 
 	# output folder
-	subfolder = 'Eqg_%2.1e-order_%i-%s' % (energyQG / eV, order, 'superluminal' if sign > 0 else 'subluminal')
+	subfolder = 'Eqg_%2.1eeV-order_%i-%s' % (energyQG / eV, order, 'superluminal' if sign > 0 else 'subluminal')
 	if not folder.endswith('/'):
 		folder += '/'
 	folder = folder + name + '/' + subfolder
@@ -129,7 +129,7 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	# -------------------------------------------
 	# tabulated values of s_kin = s - mc^2
 	# Note: integration method (Romberg) requires 2^n + 1 log-spaced tabulation points
-	s_kin = np.logspace(4, 23, 2 ** 18 + 1) * eV ** 2
+	s_kin = np.logspace(4, 23, 2 ** 20 + 1) * eV ** 2
 	xs = getTabulatedXS(sigma, s_kin)
 	rate = calc_rate_s_liv(s_kin, xs, E, field, energyQG = energyQG, order = order, sign = sign)
 
@@ -148,7 +148,7 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 		headerStr += 'photon field: %s\n' % (field.info)
 		headerStr += 'log10(E/eV), 1/lambda [1/Mpc]'
 		header = (headerStr)
-	np.savetxt(fname, data, fmt=fmt, header=header)
+	np.savetxt(fname, data, fmt = fmt, header = header)
 
 	# -------------------------------------------
 	# calculate cumulative differential interaction rates for sampling s values
@@ -212,8 +212,7 @@ if __name__ == "__main__":
 		photonField.URB_Protheroe96()
 	]
 	orders = [1, 2]
-	energiesQG = [0.1 * MPl, MPl, 10 * MPl]
-
+	energiesQG = [0.01 * MPl, 0.1 * MPl, MPl, 10 * MPl, 100 * MPl]
 
 	for order in orders:
 		for energyQG in energiesQG:
