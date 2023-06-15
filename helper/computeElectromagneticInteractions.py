@@ -133,6 +133,13 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	xs = getTabulatedXS(sigma, s_kin)
 	rate = calc_rate_s_liv(s_kin, xs, E, field, energyQG = energyQG, order = order, sign = sign)
 
+	# print('---------------- ', s_kin.shape, xs.shape, rate.shape)
+	# for i in range(len(s_kin)):
+	# 	if xs[i] <= 0. or xs[i] > 1e10:
+	# 		print(s_kin[i], xs[i])
+	# for j in range(len(rate)):
+	# 	print(E[j] / eV, rate[j])
+
 	# save
 	fname = folder + '/rate_%s.txt' % field.name
 	data = np.c_[np.log10(E / eV), rate]
@@ -207,12 +214,13 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 if __name__ == "__main__":
 
 	fields = [
-		photonField.CMB(),
+		# photonField.CMB(),
 		photonField.EBL_Gilmore12(),
-		photonField.URB_Protheroe96()
+		# photonField.URB_Protheroe96()
 	]
 	orders = [1, 2]
 	energiesQG = [0.01 * MPl, 0.1 * MPl, MPl, 10 * MPl, 100 * MPl]
+	
 
 	for order in orders:
 		for energyQG in energiesQG:
