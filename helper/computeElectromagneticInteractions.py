@@ -1,25 +1,23 @@
 import os
 import sys
 import numpy as np
+import warnings
+
+warnings.filterwarnings('ignore')
 
 # import from CRPropa3-data folder
 sys.path.append('CRPropa3-data/')
 import gitHelp as gh
 import photonField
 
+# import LIV parameters definitions
+from scenarioLIV import LIVParameters
+
 # import modified interaction rate
 from interactionRateLIV import *
 
-# import units and constants from CRPropa
-from crpropa import eV, mass_electron, c_light, c_squared, sigma_thomson, alpha_finestructure
-
-
-
-me2 = (mass_electron * c_squared) ** 2  # squared electron mass [J^2/c^4]
-sigmaThomson = sigma_thomson  # Thomson cross section [m^2]
-alpha = alpha_finestructure  # fine structure constant
-MPl = 1.9561e9 # J
-
+# units and constants
+from constantsUnits import *
 
 
 def sigmaPP(s):
@@ -77,16 +75,71 @@ def getTabulatedXS(sigma, skin):
 		return np.array([sigma(s) for s in skin + me2])
 	return False
 
-def getSmin(sigma):
+def getSmin(sigma, parametersLIV = LIVParameters(order = 0, eta = 0.), Erange = (1e9 * eV, 1e23 * eV)):
 	""" 
-	Return minimum required s_kin = s - (mc^2)^2 for interaction 
+	Return minimum required s_kin = s - (mc^2)^2 for interaction.
+	LIV parameters are defined as keyword arguments.
+	Note that LIV is not implemented for DPP and TPP.
+
+	The last parameter (`Erange`) is provided to prevent NaNs.
 	"""
-	sigmas = {}
-	sigmas[sigmaPP] = 4 * me2
-	sigmas[sigmaDPP] = 16 * me2
-	sigmas[sigmaTPP] = np.exp((218 / 27) / (28 / 9)) * me2 - me2
-	sigmas[sigmaICS] = 1e-40 * me2 # arbitrary
-	return sigmas[sigma]
+	xi = parametersLIV.getXi()
+	nLIV =  parametersLIV.getNLIV()
+	eta = parametersLIV.getEta()
+	sign = np.sign(eta)
+
+	smin = {}
+	smin[sigmaDPP] = 16 * me2
+	smin[sigmaTPP] = np.exp((218 / 27) / (28 / 9)) * me2 - me2
+	smin[sigmaPP] = 4 * me2
+	smin[sigmaICS] = 1e-40 * me2 # arbitrary
+	if order > 0:
+		# adjust conventions
+		xiGamma = sign * EPl / energyQG
+		xiElectron = sign * EPl / energyQG
+		nLIV = order + 2
+		eta = 0.
+
+		EminLIV = Erange[0] ** nLIV / EPl ** (nLIV - 2)
+		EmaxLIV = Erange[1] ** nLIV / EPl ** (nLIV - 2)
+
+		smin[sigmaPP] = np.amax([np.amin([xi * EminLIV, xi * EmaxLIV]), smin[sigmaPP]])
+		smin[sigmaICS] = np.amax([np.amin([xi * EminLIV, xi * EmaxLIV]), smin[sigmaICS]])
+		
+	return smin[sigma]
+
+def getSthrOuter(sigma, E, parametersLIV):
+	"""
+	Calculate s_thr for the outer integral.
+	This is defined only for PP and ICS.
+	"""
+	xi = parametersLIV.getXi()
+	nLIV =  parametersLIV.getNLIV()
+	smin0 = getSmin(sigma, parametersLIV = LIVParameters(order = 0, eta = 0))
+
+	if sigma == sigmaPP:
+		sthr = np.amax([xi * E ** nLIV / EPl ** (nLIV - 2), smin0])
+		sthr = np.amax([smin0 + xi / 2 ** (nLIV - 2) * E ** nLIV / EPl ** (nLIV - 2), sthr])
+		return sthr
+	elif sigma == sigmaICS:
+		sthr = np.amax([xi * E ** nLIV / EPl ** (nLIV - 2), smin0])
+		sthr = np.amax([me2 + xi * E ** nLIV / EPl ** (nLIV - 2), sthr])
+	else:
+		return smin0
+
+def getSthrInner(sigma, E, parametersLIV):
+	"""
+	Calculate s_thr for the inner integral.
+	"""
+	xi = parametersLIV.getXi()
+	nLIV =  parametersLIV.getNLIV()
+	smin0 = getSmin(sigma, parametersLIV = LIVParameters(order = 0, eta = 0))
+
+	if sigma == sigmaPP or sigma == sigmaICS:
+		sthr = xi * E ** nLIV / EPl ** (nLIV - 2)
+		return np.amax([sthr, smin0])
+	else:
+		return smin0
 
 def getEmin(sigma, field):
 	""" 
@@ -94,7 +147,7 @@ def getEmin(sigma, field):
 	"""
 	return getSmin(sigma) / 4. / field.getEmax()
 
-def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '../data'):
+def process(sigma, field, name, parametersLIV = LIVParameters(order = 0, eta = 0.), folder = '../data'):
 	""" 
 	Calculate the interaction rates for a given process on a given photon field .
 
@@ -105,11 +158,10 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	. order   : order of the LIV (0 = symmetric)
 	. energyQG: energy at which LIV sets in (defaults to Planck energy)
 	. sign    : superluminal (+1), subluminal (-1)
+	. parametersLIV: encapsulates LIV parameters
 	"""
-	# adjust conventions
-	xi = sign * MPl / energyQG
-	nLIV = order + 2
-	eta = 0.
+	eta = parametersLIV.getEta()
+	sign = np.sign(eta)
 
 	# output folder
 	subfolder = 'Eqg_%2.1eeV-order_%i-%s' % (energyQG / eV, order, 'superluminal' if sign > 0 else 'subluminal')
@@ -131,7 +183,11 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	# Note: integration method (Romberg) requires 2^n + 1 log-spaced tabulation points
 	s_kin = np.logspace(4, 23, 2 ** 20 + 1) * eV ** 2
 	xs = getTabulatedXS(sigma, s_kin)
-	rate = calc_rate_s_liv(s_kin, xs, E, field, energyQG = energyQG, order = order, sign = sign)
+
+	sThrIn = np.array([getSthrInner(sigma, e, parametersLIV) for e in E])
+	sThrOut = np.array([getSthrOuter(sigma, e, parametersLIV) for e in E])
+
+	rate = calc_rate_s_liv(s_kin, xs, E, field, (sThrIn, sThrOut), parametersLIV = parametersLIV)
 
 	# print('---------------- ', s_kin.shape, xs.shape, rate.shape)
 	# for i in range(len(s_kin)):
@@ -160,17 +216,8 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	# -------------------------------------------
 	# calculate cumulative differential interaction rates for sampling s values
 	# -------------------------------------------
-	# find minimum value of s_kin
-	#skin1 = getSmin(sigma)  # s threshold for interaction
-	#skin2 = np.maximum(np.maximum([xi * E[0]**2],[4*me2 + eta*E[0]**2]),[0])[0]
-	#skin2 = 4 * field.getEmin() * E[0] + xi * E[0]**2  # minimum achievable s in collision with background photon (at any tabulated E)
-	#skin_min = max(skin1, skin2)
-	#skin_min = np.maximum(np.maximum([xi * E[0]**2],[4*me2 + eta*E[0]**2]),[0])[0]
 
-	EminLIV = E[0] ** nLIV / MPl ** (nLIV - 2)
-	EmaxLIV = E[-1] ** nLIV / MPl ** (nLIV - 2)
-	skin_min = np.amin([xi * EminLIV, 4 * me2 + np.amin([eta * EminLIV, eta * EmaxLIV]), 4 * me2 + np.amin([xi * EminLIV, xi * EmaxLIV])])
-	skin_min = np.amax([skin_min, 0.])
+	skin_min = getSmin(sigma, parametersLIV, Erange = (E[0], E[-1]))
 
 	# tabulated values of s_kin = s - mc^2, limit to relevant range
 	# Note: use higher resolution and then downsample
@@ -178,13 +225,14 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 	skin = skin[skin > skin_min]
 
 	xs = getTabulatedXS(sigma, skin)
-	rate = calc_rate_s_liv(skin, xs, E, field, cdf = True, energyQG = energyQG, order = order, sign = sign)
+	rate = calc_rate_s_liv(skin, xs, E, field, (sThrIn, sThrOut), cdf = True, parametersLIV = parametersLIV)
 
 	# downsample
 	skin_save = np.logspace(4, 23, 190 + 1) * eV ** 2
 	skin_save = skin_save[skin_save > skin_min]
-	rate_save = np.array([np.interp(skin_save, skin, r) for r in rate])
 
+	rate_save = np.array([np.interp(skin_save, skin, r) for r in rate])
+	
 	# save
 	data = np.c_[np.log10(E / eV), rate_save]  # prepend log10(E/eV) as first column
 	row0 = np.r_[0, np.log10(skin_save / eV ** 2)][np.newaxis]
@@ -213,22 +261,30 @@ def process(sigma, field, name, order = 1, sign = 1, energyQG = MPl, folder = '.
 ###########################################################################################
 if __name__ == "__main__":
 
+	interactions = ['PairProductionLIV', 'InverseComptonScatteringLIV']
 	fields = [
-		# photonField.CMB(),
-		photonField.EBL_Gilmore12(),
+		photonField.CMB(),
+		# photonField.EBL_Gilmore12(),
 		# photonField.URB_Protheroe96()
 	]
 	orders = [1, 2]
-	energiesQG = [0.01 * MPl, 0.1 * MPl, MPl, 10 * MPl, 100 * MPl]
-	
+	energiesQG = np.logspace(-9., 1., 11, endpoint = True) * EPl
+	orders = [1]
 
-	for order in orders:
-		for energyQG in energiesQG:
-			for field in fields:
-				print(order, energyQG / MPl, field.name)
-				process(sigmaPP, field, 'PairProductionLIV', order = order, sign =  1, energyQG = energyQG)
-				process(sigmaPP, field, 'PairProductionLIV', order = order, sign = -1, energyQG = energyQG)
+	# interactions = ['PairProductionLIV']
+	interactions = ['InverseComptonScatteringLIV']
 
-				#        process(sigmaDPP, field, 'EMDoublePairProduction')
-				#        process(sigmaTPP, field, 'EMTripletPairProduction')
-				#        process(sigmaICS, field, 'EMInverseComptonScattering')
+	for interaction in interactions:
+		print('-------------------------------')
+		print('=> interaction = %s' % interaction)
+		for order in orders:
+			for energyQG in energiesQG:
+				for field in fields:
+
+					livM = LIVParameters(eta = -1., energyQG = energyQG, order = order)
+					print(livM, 'photon field =', field.name)
+					process(sigmaPP, field, interaction, livM)
+
+					livP = LIVParameters(eta = 1., energyQG = energyQG, order = order)
+					print(livP, 'photon field =', field.name)
+					process(sigmaPP, field, interaction, livP)
