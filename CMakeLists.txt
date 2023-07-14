@@ -64,7 +64,7 @@ add_library(${PLUGINNAME} MODULE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Data.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/LorentzSymmetry.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/PairProductionLIV.cc
-#   ${CMAKE_CURRENT_SOURCE_DIR}/src/InverseComptonScatteringLIV.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/InverseComptonScatteringLIV.cc
 #   ${CMAKE_CURRENT_SOURCE_DIR}/src/LIVpropa.cc
   )
 target_link_libraries(${PLUGINNAME} ${CRPROPA_LIBRARY} ${PYTHON_LIBRARIES})

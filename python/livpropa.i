@@ -28,6 +28,7 @@
 	#include "livpropa/UnitsAndConstants.h"
 	#include "livpropa/LorentzSymmetry.h"
 	#include "livpropa/PairProductionLIV.h"
+	#include "livpropa/InverseComptonScatteringLIV.h"
 	
 	using namespace livpropa;
 %}
@@ -48,6 +49,7 @@
 %include "livpropa/UnitsAndConstants.h"
 %include "livpropa/LorentzSymmetry.h"
 %include "livpropa/PairProductionLIV.h"
+%include "livpropa/InverseComptonScatteringLIV.h"
 
 
 
