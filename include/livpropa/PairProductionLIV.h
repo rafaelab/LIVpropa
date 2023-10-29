@@ -35,7 +35,7 @@ namespace livpropa {
 
 /**
  @class PairProductionLIV
- @brief Breit-Wheeler pair production of photons with background photons.
+ @brief Breit-Wheeler pair production of photons with background photons considering Lorentz invariance violation (LIV).
 
  This module simulates electron-pair production of photons with background photons:
  	gamma + gamma_b --> e+ + e- 
@@ -47,7 +47,7 @@ namespace livpropa {
  */
 class PairProductionLIV: public Module {
 	protected:
-		LorentzSymmetry* lorentzSymmetry; //!< the LIV object containing relevant information
+		LorentzSymmetry lorentzSymmetry; //!< the LIV object containing relevant information
 		ref_ptr<PhotonField> photonField; 	// target photon field
 		bool haveElectrons; // add secondary electrons to simulation
 		double limit; // limit the step to a fraction of the mean free path
@@ -60,12 +60,12 @@ class PairProductionLIV: public Module {
 		std::vector<std::vector<double>> tabCDF;  //!< cumulative interaction rate
 
 	public:
-		PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSymmetry* liv, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
+		PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSymmetry liv, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
 		void setPhotonField(ref_ptr<PhotonField> photonField);
 		void setHaveElectrons(bool haveElectrons);
 		void setLimit(double limit);
 		void setThinning(double thinning);
-		void setLorentzSymmetry(LorentzSymmetry* liv);
+		void setLorentzSymmetry(LorentzSymmetry liv);
 		void setInteractionTag(std::string tag);
 		std::string getInteractionTag() const;
 		void initRate(std::string filename);

@@ -6,7 +6,7 @@ namespace livpropa {
 static const double mec2 = mass_electron * c_squared;
 
 
-PairProductionLIV::PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSymmetry* liv, bool haveElectrons, double thinning, double limit) {
+PairProductionLIV::PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSymmetry liv, bool haveElectrons, double thinning, double limit) {
 	setLorentzSymmetry(liv);
 	setPhotonField(photonField);
 	setThinning(thinning);
@@ -20,9 +20,9 @@ void PairProductionLIV::setPhotonField(ref_ptr<PhotonField> field) {
 	std::string fname = photonField->getFieldName();
 	char path[1024];
 	size_t s = 0;
-	s += std::sprintf(path + s, "PairProductionLIV/Eqg_%2.1eeV", lorentzSymmetry->getEnergyScale() / eV);
-	s += std::sprintf(path + s, "-order_%i", lorentzSymmetry->getOrder());
-	if (lorentzSymmetry->isSubluminal())
+	s += std::sprintf(path + s, "PairProductionLIV/Eqg_%2.1eeV", lorentzSymmetry.getEnergyScale() / eV);
+	s += std::sprintf(path + s, "-order_%i", lorentzSymmetry.getOrder());
+	if (lorentzSymmetry.isSubluminal())
 		s += std::sprintf(path + s, "-subluminal/");
 	else
 		s += std::sprintf(path + s, "-superluminal/");
@@ -50,7 +50,7 @@ void PairProductionLIV::setInteractionTag(std::string tag) {
 	interactionTag = tag;
 }
 
-void PairProductionLIV::setLorentzSymmetry(LorentzSymmetry* liv) {
+void PairProductionLIV::setLorentzSymmetry(LorentzSymmetry liv) {
 	lorentzSymmetry = liv;
 }
 
@@ -207,9 +207,9 @@ void PairProductionLIV::performInteraction(Candidate* candidate) const {
 		return;
 
 	// LIV corrections
-	int sign = lorentzSymmetry->isSuperluminal() ? 1 : -1;
-	double Eqg = lorentzSymmetry->getEnergyScale();
-	unsigned int order = lorentzSymmetry->getOrder();
+	int sign = lorentzSymmetry.isSuperluminal() ? 1 : -1;
+	double Eqg = lorentzSymmetry.getEnergyScale();
+	unsigned int order = lorentzSymmetry.getOrder();
 	double xi = sign * energy_planck / Eqg;
 	double sShift = xi * pow(E, order + 2) / pow(2., order) / pow(energy_planck, order);
 
