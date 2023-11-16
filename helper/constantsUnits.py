@@ -10,3 +10,9 @@ me2 = 6.72236e-27 # J^2
 me2 = (mass_electron * c_squared) ** 2  # squared electron mass [J^2/c^4]
 sigmaThomson = sigma_thomson  # Thomson cross section [m^2]
 alpha = alpha_finestructure  # fine structure constant
+
+# define a dictionary with particle masses
+particleMassesDictionary = {}
+particleMassesDictionary[ 11] = mass_electron
+particleMassesDictionary[-11] = mass_electron
+particleMassesDictionary[ 22] = 0.
