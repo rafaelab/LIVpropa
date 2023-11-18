@@ -22,6 +22,8 @@ if [ -d "../build/data" ]
 then
 	cp -r ../data/PairProductionLIV/* ../build/data/PairProductionLIV/.
 	cp -r ../data/PairProductionLIV/* ../build/share/livpropa/PairProductionLIV/.
+	cp -r ../data/InverseComptonScatteringLIV/* ../build/data/InverseComptonScatteringLIV/.
+	cp -r ../data/InverseComptonScatteringLIV/* ../build/share/livpropa/InverseComptonScatteringLIV/.
 	echo "Files copied to the appropriate folder." 
 else
 	echo "Installation path is not standard." 
