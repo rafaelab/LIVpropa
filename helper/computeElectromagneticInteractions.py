@@ -12,8 +12,8 @@ sys.path.append('CRPropa3-data/')
 import gitHelp as gh
 import photonField
 
-# import LIV parameters definitions
-from scenarioLIV import *
+# import kinematics (SR, LIV)
+from kinematics import *
 
 # import modified interaction rate
 from interactionRateLIV import *

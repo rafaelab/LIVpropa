@@ -16,8 +16,8 @@ from crpropa import eV, Mpc
 # units and constants
 from constantsUnits import *
 
-# import LIVParameters object
-from scenarioLIV import SpecialRelativity, MonochromaticLIV
+# import kinematics (SR, LIV)
+from kinematics import *
 
 
 
