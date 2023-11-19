@@ -3,7 +3,13 @@ Define constants and units.
 Reexport the ones already defined in CRPropa.
 """
 
-from crpropa import *
+from crpropa import mass_electron
+from crpropa import sigma_thomson
+from crpropa import alpha_finestructure
+from crpropa import c_light, c_squared
+from crpropa import eV, keV, MeV, GeV, TeV, PeV, EeV
+from crpropa import kpc, Mpc, Gpc
+
 
 EPl = 1.9561e9 # J
 me2 = 6.72236e-27 # J^2
