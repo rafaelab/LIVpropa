@@ -1,24 +1,10 @@
-import os
-import sys
 import numpy as np
-import warnings
-
 from abc import ABC, abstractmethod
-
-warnings.filterwarnings('ignore')
-
-# import from CRPropa3-data folder
-sys.path.append('CRPropa3-data/')
-import gitHelp as gh
-import photonField
-
-# import kinematics (SR, LIV)
 from kinematics import *
-
-# units and constants
 from constantsUnits import *
+from warnings import filterwarnings
 
-
+filterwarnings('ignore')
 
 ###############################################################################
 ###############################################################################
@@ -229,3 +215,5 @@ class InverseComptonScattering(ElectromagneticInteraction):
 		else:
 			raise TypeError('Unknown type of kinematics.')
 
+###############################################################################
+###############################################################################
