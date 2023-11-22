@@ -1,235 +1,19 @@
 import os
 import sys
 import numpy as np
-import warnings
-
-from abc import ABC, abstractmethod
-
-warnings.filterwarnings('ignore')
 
 # import from CRPropa3-data folder
 sys.path.append('CRPropa3-data/')
 import gitHelp as gh
 import photonField
 
-# import kinematics (SR, LIV)
 from kinematics import *
-
-# import modified interaction rate
-from interactionRateLIV import *
-
-# units and constants
+from interactionsElectromagnetic import *
+from meanFreePath import computeInteractionRate
 from constantsUnits import *
+from warnings import filterwarnings
 
-
-###############################################################################
-###############################################################################
-class ElectromagneticInteraction(ABC):
-	"""
-	Abstract base class for electromagnetic processes of the type:
-	  X + gamma -> ...,
-	wherein X is a photon or charged lepton.
-	"""
-	@property
-	def name(self):
-		return self._name
-	
-	@name.setter
-	def name(self, n):
-		self._name = n
-	
-	@property
-	def label(self):
-		return self._label
-	
-	@label.setter
-	def label(self, l):
-		self._label = l
-
-	@property
-	def sMin0(self):
-		return self._sMin0
-	
-	@sMin0.setter
-	def sMin0(self, s):
-		self._sMin0 = s
-
-	@property
-	def incidentParticle(self):
-		return self._incidentParticle
-	
-	@incidentParticle.setter
-	def incidentParticle(self, p):
-		self._incidentParticle = p
-
-	@property
-	def massInitial(self):
-		return self._massInitial
-	
-	@massInitial.setter
-	def massInitial(self, m):
-		self._massInitial = m
-
-	def thresholdEnergy2(self, Erange, kinematics = SpecialRelativity()):
-		if kinematics.label == 'SR':
-			return self.sMin0
-		
-		elif kinematics.label == 'LIV':
-			particle = self.incidentParticle
-			
-			sMin = kinematics.computeDispersionCorrection(Erange[0], particle)
-			sMax = kinematics.computeDispersionCorrection(Erange[1], particle)
-			if sMin > sMax:
-				sMin, sMax = sMax, sMin
-
-			return np.maximum(sMin, self.sMin0)
-		
-		else:
-			raise TypeError('Unknown type of kinematics.')
-	
-	@abstractmethod
-	def thresholdEnergy2Outer(self, E, kinematics = SpecialRelativity()):
-		"""
-		Calculate threshold s for the outer interaction rate integral.
-		"""
-		pass
-
-	def thresholdEnergy2Inner(self, E, Erange, kinematics = SpecialRelativity()):
-		"""
-		Calculate threshold s for the inner interaction rate integral.
-		"""
-		ds = kinematics.computeDispersionCorrection(E, self.incidentParticle)
-		sMin = self.thresholdEnergy2(Erange, kinematics = kinematics)
-		
-		return np.maximum(sMin, ds)
-
-	@abstractmethod
-	def crossSection(self, s):
-		pass
-
-	@abstractmethod
-	def computeCrossSections(self, sKin):
-		""" 
-		Get cross section for tabulated s_kin 
-		"""
-		pass
-
-	def minimumEnergyLab(self, field, Erange, kinematics = SpecialRelativity()):
-		""" 
-		Return minimum required cosmic ray energy for interaction *sigma* with *field* 
-		"""
-		return self.thresholdEnergy2(Erange, kinematics = kinematics) / 4. / field.getEmax()
-
-	# @abstractmethod
-	# def minimumEnergyBackground(self, field, kinematics = SpecialRelativity()):
-	# 	pass
-
-
-###############################################################################
-###############################################################################
-class PairProduction(ElectromagneticInteraction):
-	"""
-	Breit-Wheeler pair production:
-	  gamma + gamma -> e+ + e-
-	"""
-	def __init__(self):
-		self.name = 'pair production'
-		self.label = 'PairProduction'
-		self.sMin0 = 4. * me2
-		self.incidentParticle = 22
-		self.massInitial = 0.
-
-	def crossSection(self, s):
-		""" 
-		Pair production cross section (Breit-Wheeler), see Lee 1996 
-		"""
-		smin = 4 * me2
-		if (s < smin):
-			return 0.
-
-		b = np.sqrt(1. - smin / s)
-		return sigmaThomson * 3 / 16 * (1 - b * b) * ((3 - b ** 4) * (np.log1p(b) - np.log1p(-b)) - 2. * b * (2 - b * b))
-
-	def computeCrossSections(self, sKin):
-		""" 
-		Get cross section for tabulated s_kin 
-		"""
-		return np.array([self.crossSection(s) for s in sKin])
-
-	def thresholdEnergy2Outer(self, E, kinematics = SpecialRelativity()):		
-		if kinematics.label == 'SR':
-			return self.sMin0
-		
-		elif kinematics.label == 'LIV':
-			chiPh = kinematics.getChi(particle = 22)
-			if chiPh == 0.:
-				return self.sMin0
-			
-			dsPh = kinematics.computeDispersionCorrection(E, 22)
-			dsEl = kinematics.computeDispersionCorrection(E, 11)
-
-			sThrPh = np.maximum(dsPh, self.sMin0)
-			sThrEl = 4 * me2 + dsEl / 2 ** (kinematics.getNLIV() - 2)
-
-			return np.maximum(sThrPh, sThrEl)
-
-		else:
-			raise TypeError('Unknown type of kinematics.')
-
-
-
-###############################################################################
-###############################################################################
-class InverseComptonScattering(ElectromagneticInteraction):
-	"""
-	Inverse Compton Scattering:
-	  e + gamma -> e + gamma
-	"""
-	def __init__(self):
-		self.name = 'inverse Compton scattering'
-		self.label = 'InverseComptonScattering'
-		self.sMin0 = 1e-40 * me2
-		self.incidentParticle = 11
-		self.massInitial = mass_electron
-
-	def crossSection(self, s):
-		"""
-		Inverse Compton scattering cross sections, see Lee 1996
-		"""
-		smin = me2
-		if (s < smin):  # numerically unstable close to smin
-			return 0.
-
-		# note: formula unstable for (s - smin) / smin < 1E-5
-		b = (s - smin) / (s + smin)
-		A = 2. / b / (1 + b) * (2 + 2 * b - b * b - 2 * b * b * b)
-		B = (2 - 3 * b * b - b * b * b) / b ** 2 * (np.log1p(b) - np.log1p(-b))
-
-		return sigmaThomson * 3. / 8. * smin / s / b * (A - B)
-
-	def computeCrossSections(self, sKin):
-		""" 
-		Get cross section for tabulated s_kin 
-		"""
-		return np.array([self.crossSection(sK + me2) for sK in (sKin)])
-
-	def thresholdEnergy2Outer(self, E, kinematics = SpecialRelativity()):
-		if kinematics.label == 'SR':
-			return me2
-
-		elif kinematics.label == 'LIV':
-			chi = kinematics.getChi(particle = 11)
-			if chi == 0.:
-				return me2
-			
-			ds = kinematics.computeDispersionCorrection(E, 11)
-			sThr = np.maximum(ds, self.sMin0)
-			sThr = np.maximum(me2 + ds, sThr)
-			
-			return sThr
-		
-		else:
-			raise TypeError('Unknown type of kinematics.')
+filterwarnings('ignore')
 
 
 ###############################################################################
@@ -256,8 +40,10 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 
 	elif kinematics.label == 'LIV':
 		chi = kinematics.getChi(particle = particle)
+		chiEl = kinematics.getChi(particle = 11)
+		chiPh = kinematics.getChi(particle = 22)
 		order = kinematics.getOrder()
-		subfolder = 'chi_%+2.1e-order_%i' % (chi, order)
+		subfolder = 'chiEl_%+2.1e-chiPh_%+2.1e-order_%i' % (chiEl, chiPh, order)
 
 	else:
 		raise TypeError('Unknown type of kinematics.')
@@ -281,13 +67,13 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 	# -------------------------------------------
 	# tabulated values of s_kin = s - mc^2
 	# Note: integration method (Romberg) requires 2^n + 1 log-spaced tabulation points
-	sKin = np.logspace(4, 23, 2 ** 20 + 1) * eV ** 2
+	sKin = np.logspace(4, 23, 2 ** 21 + 1) * eV ** 2
 	xs = interaction.computeCrossSections(sKin)
 
 	sThrIn = interaction.thresholdEnergy2Inner(E, Erange, kinematics = kinematics) 
 	sThrOut = interaction.thresholdEnergy2Outer(E, kinematics = kinematics)
 
-	rate = calc_rate_s_liv(sKin, xs, E, field, sThrIn, sThrOut, kinematics = kinematics, particle = particle)
+	rate = computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = kinematics, particle = particle)
 
 	# save
 	fname = folder + '/rate_%s.txt' % field.name
@@ -318,7 +104,7 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 	sKin = sKin[sKin > sKinMin]
 
 	xs = interaction.computeCrossSections(sKin)
-	rate = calc_rate_s_liv(sKin, xs, E, field, sThrIn, sThrOut, cdf = True, kinematics = kinematics, particle = particle)
+	rate = computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, cdf = True, kinematics = kinematics, particle = particle)
 
 	# downsample
 	sKin_save = np.logspace(4, 23, 190 + 1) * eV ** 2
@@ -358,29 +144,80 @@ if __name__ == "__main__":
 	pp = PairProduction()
 	ics = InverseComptonScattering()
 
-	interactions = [pp, ics]
+	interactions = [pp]
 	fields = [
 		photonField.CMB(),
 		photonField.EBL_Gilmore12(),
-		# photonField.URB_Protheroe96()
+		# photonField.URB_Protheroe96() # breaking down (why?)
 	]
-	orders = [2]
+	orders = [1, 2]
 	chis = np.logspace(-10., 10., 21, endpoint = True)
 	chis = [1e-10, 1e-5, 1., 1e5]
-	# interactions = [ics]
-	# chis = [1e-10]
+	
+	chisMix = [1e-3, 1e-2, 1e-1, 1., 1e1]
+
+	# define the range within which chi values for photons and electrons will be allowed to differ
+	chiRange = (1e-3, 1e3)
 
 	for interaction in interactions:
-		print('-------------------------------')
+		print('##########################################')
 		print('=> interaction = ', interaction.name)
-		for order in orders:
-			for chi in chis:
-				for field in fields:
-					chiDictP = {-11: chi, 11: chi, 22: chi}
-					chiDictM = {-11: chi, 11: -1. * chi, 22: -1. * chi}
-					livP = MonochromaticLIV(chi = chiDictP, order = order)
-					livM = MonochromaticLIV(chi = chiDictM, order = order)
-					print(livP, ', photon field =', field.name)
-					process(interaction, field, livM)
-					print(livM, ', photon field =', field.name)
-					process(interaction, field, livP)
+
+		for field in fields:
+			print('  ==> photon field = ', field.name)
+
+			## LIV 
+			print('   ===> LIV')
+			for order in orders:
+
+				if interaction.label == 'PairProduction':
+					for chiEl in chis:
+						chiPh = chiEl
+						chiDictP = {-11: chiEl, 11: chiEl, 22: chiPh}
+						chiDictM = {-11: chiEl, 11: -1. * chiEl, 22: -1. * chiPh}
+						livP = MonochromaticLIV(chi = chiDictP, order = order)
+						livM = MonochromaticLIV(chi = chiDictM, order = order)	
+						print('       ', livP)
+						process(interaction, field, livP)
+						print('       ', livM)
+						process(interaction, field, livM)
+
+						for chiPh in chisMix: # 
+							chiRatio = np.abs(chiEl / chiPh)
+							chiDictPP = {-11: chiEl, 11: chiEl, 22: chiPh}
+							chiDictMM = {-11: chiEl, 11: -1. * chiEl, 22: -1. * chiPh}
+							chiDictPM = {-11: chiEl, 11: chiEl, 22: -1. * chiPh}
+							chiDictMP = {-11: chiEl, 11: -1. * chiEl, 22: chiPh}
+							livPM = MonochromaticLIV(chi = chiDictPM, order = order)
+							livMP = MonochromaticLIV(chi = chiDictMP, order = order)	
+							livPP = MonochromaticLIV(chi = chiDictPP, order = order)
+							livMM = MonochromaticLIV(chi = chiDictMM, order = order)	
+
+							# run for different value
+							if chiPh == chiEl and chiEl > chisMix[0] and chiEl < chisMix[-1]:
+								print('       ', livPM)
+								process(interaction, field, livPM)
+								print('       ', livMP)
+								process(interaction, field, livMP)
+								print('       ', livPP)
+								process(interaction, field, livPP)
+								print('       ', livMM)
+								process(interaction, field, livMM)
+
+
+				elif interaction.label == 'InverseComptonScattering':
+					for chiEl in chis:
+						chiDictP = {-11: chiEl, 11: chiEl, 22: chiEl}
+						chiDictM = {-11: chiEl, 11: -1. * chiEl, 22: -1. * chiEl}
+						livP = MonochromaticLIV(chi = chiDictP, order = order)
+						livM = MonochromaticLIV(chi = chiDictM, order = order)		
+						print('       ', livP)
+						process(interaction, field, livM)
+						print('       ', livM)
+						process(interaction, field, livP)
+							
+
+			## SR (for cross checks with CRPropa)
+			sr = SpecialRelativity()
+			print('  ===> SR')
+			process(interaction, field, sr)
