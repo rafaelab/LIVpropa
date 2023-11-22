@@ -11,6 +11,11 @@ else
 	git clone https://github.com/CRPropa/CRPropa3-data.git
 fi
 
+# directory where data will be stored
+dataDir="../build/data"
+
+# folders with tabulated interactions
+folders=("PairProductionSR", "PairProductionLIV", "InverseComptonScatteringSR", "InverseComptonScatteringLIV")
 
 
 # compute the tables
@@ -18,12 +23,26 @@ echo "Generating the interaction tables..."
 $PYTHON_EXECUTABLE computeElectromagneticInteractions.py
 
 # copy to the installation directory (assumed to be build/data)
-if [ -d "../build/data" ]
+if [ -d ${dataDir} ]
 then
-	cp -r ../data/PairProductionLIV/* ../build/data/PairProductionLIV/.
-	cp -r ../data/PairProductionLIV/* ../build/share/livpropa/PairProductionLIV/.
-	cp -r ../data/InverseComptonScatteringLIV/* ../build/data/InverseComptonScatteringLIV/.
-	cp -r ../data/InverseComptonScatteringLIV/* ../build/share/livpropa/InverseComptonScatteringLIV/.
+
+	interactionDataDir="${dataDir}/${folder}"
+	if ! [ -d ${interactionDataDir} ]
+	then
+		mkdir ${interactionDataDir}
+	fi
+
+	for folder in ${folders[@]}
+	do
+
+		if [ -d "../build/data/${folder}" ]
+		then
+			cp -r ../data/${folder}/* ../build/data/${folder}/.
+			cp -r ../data/${folder}/* ../build/share/livpropa/${folder}/.
+		fi
+
+	done
+
 	echo "Files copied to the appropriate folder." 
 else
 	echo "Installation path is not standard." 
