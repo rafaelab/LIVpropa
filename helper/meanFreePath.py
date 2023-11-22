@@ -40,7 +40,8 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 		raise KeyError('Particle %i not provided for rate computation.')
 	m = particleMassesDictionary[particle]
 	m2 = (m * c_squared) ** 2
-	
+	ds = kinematics.computeDispersionCorrection(E, particle)
+
 	# size of table
 	nE, nS = len(E), len(sKin)
 
@@ -59,7 +60,6 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 			y = np.array([xs * sKin for i in range(nE)]) * I
 		
 		elif kinematics.label == 'LIV':
-			ds = kinematics.computeDispersionCorrection(E, particle)
 			for i in range(nE):
 				sMin = sThrOut[i]
 				j = np.where(sKin > sMin)
@@ -86,7 +86,7 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 			G1 = np.zeros((nE, nS))
 
 			for i, s in enumerate(sThrIn):
-				thr = sKin > s # - m2 ?
+				thr = sKin > s - m2
 				if np.any(thr):
 					j = np.where(thr)
 					jMin = np.amin(j)
@@ -105,8 +105,8 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 					j = np.where(thr)
 					y[i, j] = 0.
 
-			else:
-				raise TypeError('Unknown type of kinematics \'%s\'.' % kinematics.label)
+		else:
+			raise TypeError('Unknown type of kinematics \'%s\'.' % kinematics.label)
 
 		return romb(y, dx = mean_log_spacing(sKin)) / 2. / E * Mpc
 
