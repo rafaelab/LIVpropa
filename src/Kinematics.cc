@@ -40,6 +40,43 @@ double SpecialRelativity::computeEnergyFromMomentum(const double& p, const doubl
 MonochromaticLIV::MonochromaticLIV() {
 }
 
+MonochromaticLIV::MonochromaticLIV(unsigned int n) {
+	setOrder(n);
+}
+
+MonochromaticLIV::MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeffs) {
+	setCoefficients(coeffs);
+}
+
+MonochromaticLIV::MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> coeffs) {
+	if (particles.size() != coeffs.size())
+		throw std::length_error("Vectors provided to initialise MonochromaticLIV must be of same size.");
+
+	for (size_t i = 0; i < particles.size(); i++) {
+		addCoefficient(particles[i], coeffs[i]);
+	}
+}
+
+void MonochromaticLIV::setOrder(unsigned int n) {
+	order = n;
+}
+
+void MonochromaticLIV::setCoefficients(std::unordered_map<int, double> coeffs) {
+	coefficients = coeffs;
+}
+
+void MonochromaticLIV::addCoefficient(int particle, double coeff) {
+	coefficients.insert({{particle, coeff}});
+}
+
+unsigned int MonochromaticLIV::getOrder() const {
+	return order;
+}
+
+std::unordered_map<int, double> MonochromaticLIV::getCoefficients() const {
+	return coefficients;
+}
+
 std::string MonochromaticLIV::getShortIdentifier() const {
 	return "LIV";
 }
@@ -60,21 +97,9 @@ std::string MonochromaticLIV::getLocationData(std::vector<int> particles) const 
 	return std::string(dir);
 }
 
-void MonochromaticLIV::addCoefficient(int particle, double coeff) {
-	coefficients.insert({{particle, coeff}});
-}
-
 std::vector<int> MonochromaticLIV::getParticles() const {
 	std::vector<int> particles;
 	return particles;
-}
-
-unsigned int MonochromaticLIV::getOrder() const {
-	return order;
-}
-
-std::unordered_map<int, double> MonochromaticLIV::getCoefficients() const {
-	return coefficients;
 }
 
 double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {

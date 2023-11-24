@@ -71,12 +71,17 @@ class MonochromaticLIV : public Kinematics {
 
 	public:
 		MonochromaticLIV();
+		MonochromaticLIV(unsigned int n);
+		MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeff);
+		MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> chi);
+		void setOrder(unsigned int n);
+		void setCoefficients(std::unordered_map<int, double> coeffs);
+		void addCoefficient(int particle, double coeff);
+		unsigned int getOrder() const;
+		std::unordered_map<int, double> getCoefficients() const;
 		std::string getShortIdentifier() const;
 		std::string getLocationData(std::vector<int> particles = {}) const;
-		unsigned int getOrder() const;
-		void addCoefficient(int particle, double coeff);
 		std::vector<int> getParticles()  const;
-		std::unordered_map<int, double> getCoefficients() const;
 		double getCoefficientForParticle(const int& particle) const;
 		double getSymmetryBreakingShift(const double& p) const;
 		double computeEnergyFromMomentum(const double& p, const double& m) const;
