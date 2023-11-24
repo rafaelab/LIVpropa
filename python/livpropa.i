@@ -17,18 +17,16 @@
 %include "typemaps.i"
 
 
-// /* Ignore list */
-// %ignore operator alpinist::PlasmaDensity*;
-
-
 /* Headers */
 %{
 	#include "CRPropa.h"
 	#include "livpropa/Data.h"
+	#include "livpropa/InverseComptonScattering.h"
+	#include "livpropa/Kinematics.h"
+	#include "livpropa/PairProduction.h"
+	#include "livpropa/PhotonDecay.h"
 	#include "livpropa/UnitsAndConstants.h"
-	#include "livpropa/LorentzSymmetry.h"
-	#include "livpropa/PairProductionLIV.h"
-	#include "livpropa/InverseComptonScatteringLIV.h"
+	#include "livpropa/VacuumCherenkov.h"
 	
 	using namespace livpropa;
 %}
@@ -38,18 +36,15 @@
 %import (module = "crpropa") "crpropa.i"
 
 
-// /* Templates for ref_ptr */
-// %implicitconv crpropa::ref_ptr<alpinist::PlasmaDensity>;
-// %template(PlasmaDensityRefPtr) crpropa::ref_ptr<alpinist::PlasmaDensity>;
-// %feature("director") alpinist::PlasmaDensity;
-
 
 /* Include plugin parts to generate wrappers for */
 %include "livpropa/Data.h"
+%include "livpropa/InverseComptonScattering.h"
+%include "livpropa/Kinematics.h"
+%include "livpropa/PairProduction.h"
+%include "livpropa/PhotonDecay.h"
 %include "livpropa/UnitsAndConstants.h"
-%include "livpropa/LorentzSymmetry.h"
-%include "livpropa/PairProductionLIV.h"
-%include "livpropa/InverseComptonScatteringLIV.h"
+%include "livpropa/VacuumCherenkov.h"
 
 
 

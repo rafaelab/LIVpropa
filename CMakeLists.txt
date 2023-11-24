@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-set(PLUGINNAME "livpropa")
-project(${PLUGINNAME} CXX)
+project(livpropa CXX)
 
 find_package(PythonInterp)
 find_package(PythonLibs)
@@ -13,23 +12,14 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 set(crpropaSwigFile "crpropa.i")
 set(swigModeFlag "")
 
+
 # use SWIG's builtin
-option(ENABLE_SWIG_BUILTIN "Use SWIG builtin option" ON) # Segmentation errors if false
+option(ENABLE_SWIG_BUILTIN "Use SWIG builtin option" ON) # Segmentation errors on OSX if false
 if(ENABLE_SWIG_BUILTIN)
   set(crpropaSwigFile "crpropa-builtin.i")
   set(swigModeFlag "-builtin")
 endif(ENABLE_SWIG_BUILTIN)
 
-# # NumPy
-# execute_process(COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/python/checkNumpy.py" OUTPUT_VARIABLE numpyIncludePath)
-#   if(numpyIncludePath)
-#     MESSAGE(STATUS "Found NumPy headers in: " ${numpyIncludePath})
-#     SET(CMAKE_SWIG_FLAGS -DWITHNUMPY ${CRP})
-#     list(APPEND CRPROPA_SWIG_DEFINES -DWITHNUMPY)
-#     include_directories(${numpyIncludePath})
-#   else(numpyIncludePath)
-#     MESSAGE(STATUS "NumPy not found.")
-#   endif(numpyIncludePath)
 
 # get information on CRPropa
 execute_process(COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/python/findCRPropa.py" swig_interface OUTPUT_VARIABLE crpropaSwigPath)
@@ -51,26 +41,27 @@ include_directories(include ${crpropaInstallPrefix}/libs/kiss)
 
 # SWIG plugin
 file(GLOB_RECURSE CRPROPA_SWIG_INPUTS python/*.i)
-set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/${PLUGINNAME}_wrap.cxx PROPERTIES GENERATED true)
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PLUGINNAME}_wrap.cxx
-  COMMAND swig ${swigModeFlag} -c++ -python ${PY3} -I${CRPROPA_SWIG_INTERFACE_FILES} -I${CRPROPA_INCLUDE_PATH} -I${CMAKE_SOURCE_DIR}/include -I${PYTHON_INCLUDE_DIRS} ${CRPROPA_SWIG_DEFINES} -dirprot -o ${CMAKE_CURRENT_BINARY_DIR}/${PLUGINNAME}_wrap.cxx -outdir ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/python/${PLUGINNAME}.i
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx PROPERTIES GENERATED true)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx
+  COMMAND swig ${swigModeFlag} -c++ -python ${PY3} -I${CRPROPA_SWIG_INTERFACE_FILES} -I${CRPROPA_INCLUDE_PATH} -I${CMAKE_SOURCE_DIR}/include -I${PYTHON_INCLUDE_DIRS} ${CRPROPA_SWIG_DEFINES} -dirprot -o ${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx -outdir ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/python/livpropa.i
 )
 include_directories(include ${CMAKE_CURRENT_BINARY_DIR}/include ${CRPROPA_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 
 # build interface and source in one library
-add_library(${PLUGINNAME} MODULE 
-	${CMAKE_CURRENT_BINARY_DIR}/${PLUGINNAME}_wrap.cxx
+add_library(livpropa MODULE 
+	${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Data.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/src/LorentzSymmetry.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/src/PairProductionLIV.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/InverseComptonScatteringLIV.cc
-#   ${CMAKE_CURRENT_SOURCE_DIR}/src/LIVpropa.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/src/Kinematics.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/src/PairProduction.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/InverseComptonScattering.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/PhotonDecay.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/VacuumCherenkov.cc
   )
-target_link_libraries(${PLUGINNAME} ${CRPROPA_LIBRARY} ${PYTHON_LIBRARIES})
-set_target_properties(${PLUGINNAME} PROPERTIES PREFIX "")
-set_target_properties(${PLUGINNAME} PROPERTIES COMPILE_FLAGS "-w")
-set_target_properties(${PLUGINNAME} PROPERTIES OUTPUT_NAME "_${PLUGINNAME}")
+target_link_libraries(livpropa ${CRPROPA_LIBRARY} ${PYTHON_LIBRARIES})
+set_target_properties(livpropa PROPERTIES PREFIX "")
+set_target_properties(livpropa PROPERTIES COMPILE_FLAGS "-w")
+set_target_properties(livpropa PROPERTIES OUTPUT_NAME "_livpropa")
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; from distutils import sysconfig; sys.stdout.write(sysconfig.get_python_lib(1,0,prefix='${CMAKE_INSTALL_PREFIX}'))" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -84,13 +75,7 @@ if(ENABLE_TESTING)
   include_directories(${GTEST_INCLUDE_PATH})
   link_directories(${CRPROPA_INSTALL_PREFIX}/libs/gtest)
   message(STATUS "Google testing suite (from CRPropa): ${CRPROPA_INSTALL_PREFIX}/libs/gtest/include")
-
   enable_testing()
-
-  # add_executable(testRandomExtensions test/testRandomExtensions.cpp src/RandomExtensions.cc)
-  # target_link_libraries(testRandomExtensions ${CRPROPA_LIBRARY} gtest gtest_main pthread)
-  # add_test(testRandomExtensions testRandomExtensions)
-
 endif(ENABLE_TESTING)
 
 
