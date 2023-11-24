@@ -116,5 +116,4 @@ double MonochromaticLIV::computeEnergyFromMomentum(const double& p, const double
 }
 
 
-
 } // namespace livpropa
