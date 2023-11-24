@@ -20,12 +20,13 @@
 /* Headers */
 %{
 	#include "CRPropa.h"
+	#include "livpropa/UnitsAndConstants.h"
 	#include "livpropa/Data.h"
-	#include "livpropa/InverseComptonScattering.h"
 	#include "livpropa/Kinematics.h"
+	#include "livpropa/InverseComptonScattering.h"
 	#include "livpropa/PairProduction.h"
 	#include "livpropa/PhotonDecay.h"
-	#include "livpropa/UnitsAndConstants.h"
+	
 	#include "livpropa/VacuumCherenkov.h"
 	
 	using namespace livpropa;
@@ -36,16 +37,20 @@
 %import (module = "crpropa") "crpropa.i"
 
 
-
-/* Include plugin parts to generate wrappers for */
+/* Include plugin parts to generate wrappers  */
 %include "livpropa/Data.h"
-%include "livpropa/InverseComptonScattering.h"
+%include "livpropa/UnitsAndConstants.h"
 %include "livpropa/Kinematics.h"
+%include "livpropa/InverseComptonScattering.h"
 %include "livpropa/PairProduction.h"
 %include "livpropa/PhotonDecay.h"
-%include "livpropa/UnitsAndConstants.h"
 %include "livpropa/VacuumCherenkov.h"
 
+
+/* To enable access to abstract base class Kinematics */
+%implicitconv crpropa::ref_ptr<livpropa::Kinematics>;
+%feature("director") livpropa::Kinematics;
+%template(KinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
 
 
 /* Hide warnings */
