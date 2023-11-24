@@ -1,76 +1,95 @@
-#include "livpropa/LorentzSymmetry.h"
+#include "livpropa/Kinematics.h"
 
 
 
 namespace livpropa {
 
 
-LorentzSymmetry::LorentzSymmetry() {
+double Kinematics::computeEnergy2FromMomentum(const double& p, const double& m) const {
+	double ds = getSymmetryBreakingShift(p);
+	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
 }
 
-LorentzSymmetry::LorentzSymmetry(int particle, unsigned int orderLIV, double parameterLIV) {
-	setOrder(orderLIV);
-	setCoefficient(parameterLIV);
-	setParticleId(particle);
+double Kinematics::computeEnergyFromMomentum(const double& p, const double& m) const {
+	return sqrt(computeEnergy2FromMomentum(p, m));
 }
 
-void LorentzSymmetry::setOrder(unsigned int orderLIV) {
-	order = orderLIV;
+
+
+SpecialRelativity::SpecialRelativity() {
 }
 
-void LorentzSymmetry::setCoefficient(double parameterLIV) {
-	coefficient = parameterLIV;
+std::string SpecialRelativity::getShortIdentifier() const {
+	return "SR";
 }
 
-void LorentzSymmetry::setParticleId(int id) {
-	particleId = id;
+std::string SpecialRelativity::getLocationData(std::vector<int> particles) const {
+	return "";
 }
 
-unsigned int LorentzSymmetry::getOrder() const {
+double SpecialRelativity::getSymmetryBreakingShift(const double& p) const {
+	return 0;
+}
+
+double SpecialRelativity::computeEnergyFromMomentum(const double& p, const double&m ) const {
+	return hypot(p * c_light, m * c_squared);
+}
+
+
+
+MonochromaticLIV::MonochromaticLIV() {
+}
+
+std::string MonochromaticLIV::getShortIdentifier() const {
+	return "LIV";
+}
+
+std::string MonochromaticLIV::getLocationData(std::vector<int> particles) const {
+	char dir[512] = "";
+
+	size_t s = 0;
+	if (std::find(particles.begin(), particles.end(), 11) != particles.end()) {
+		s += sprintf(dir + s, "chiEl_%+2.1e", getCoefficientForParticle(11));
+	} 
+	if (std::find(particles.begin(), particles.end(), 22) != particles.end()) {
+		s += sprintf(dir + s, "-chiPh_%+2.1e", getCoefficientForParticle(22));
+	}
+	s += sprintf(dir + s, "-order_%i", order);
+
+
+	return std::string(dir);
+}
+
+void MonochromaticLIV::addCoefficient(int particle, double coeff) {
+	coefficients.insert({{particle, coeff}});
+}
+
+std::vector<int> MonochromaticLIV::getParticles() const {
+	std::vector<int> particles;
+	return particles;
+}
+
+unsigned int MonochromaticLIV::getOrder() const {
 	return order;
 }
 
-double LorentzSymmetry::getCoefficient() const {
-	return coefficient;
+std::unordered_map<int, double> MonochromaticLIV::getCoefficients() const {
+	return coefficients;
 }
 
-int LorentzSymmetry::getParticleId() const {
-	return particleId;
+double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {
+	CoefficientsIterator it = coefficients.find(particle);
+	return (*it).second;
 }
 
-double LorentzSymmetry::getEnergyScale() const {
-	return abs(coefficient) * energy_planck;
+double MonochromaticLIV::getSymmetryBreakingShift(const double& p) const {
+	return 0;
 }
 
-bool LorentzSymmetry::isSuperluminal() const {
-	return coefficient > 0 ? true : false; 
+double MonochromaticLIV::computeEnergyFromMomentum(const double& p, const double& m) const {
+	return 0;
 }
 
-bool LorentzSymmetry::isSubluminal() const {
-	return coefficient < 0 ? true : false; 
-}
-
-double LorentzSymmetry::getSymmetryBreakingShift(const double& p) const {
-	return coefficient * pow((p * c_light) / energy_planck, order);
-}
-
-double LorentzSymmetry::computeEnergyFromMomentum(const double& p) const {
-	double m = 0;
-	switch (particleId) {
-		case 22:
-			m = 0;
-			break;
-		case 11:
-			m = mass_electron;
-			break;
-		default:
-			throw std::runtime_error("LorentzSymmetry: unknown particle id.");
-	}
-	
-	double dE = getSymmetryBreakingShift(p);
-
-	return sqrt(pow_integer<2>(m * c_squared) + pow_integer<2>(p * c_light) + dE);
-}
 
 
 } // namespace livpropa
