@@ -1,5 +1,5 @@
-#ifndef LIVPROPA_PAIRPRODUCTIONLIV_H
-#define LIVPROPA_PAIRPRODUCTIONLIV_H
+#ifndef LIVPROPA_PAIRPRODUCTION_H
+#define LIVPROPA_PAIRPRODUCTION_H
 
 #include <cmath>
 #include <fstream>
@@ -16,13 +16,14 @@
 #include <crpropa/Vector3.h>
 
 #include "livpropa/Data.h"
-#include "livpropa/LorentzSymmetry.h"
+#include "livpropa/Kinematics.h"
 #include "livpropa/UnitsAndConstants.h"
 
 using crpropa::Candidate;
 using crpropa::Module;
 using crpropa::PhotonField;
 using crpropa::Random;
+using crpropa::Referenced;
 using crpropa::Vector3d;
 using crpropa::ref_ptr;
 using crpropa::pow_integer;
@@ -34,7 +35,7 @@ namespace livpropa {
 
 
 /**
- @class PairProductionLIV
+ @class PairProduction
  @brief Breit-Wheeler pair production of photons with background photons considering Lorentz invariance violation (LIV).
 
  This module simulates electron-pair production of photons with background photons:
@@ -45,9 +46,9 @@ namespace livpropa {
  For the maximum thinning of 1, only a few representative particles are added to the list of secondaries.
  Note that for thinning>0 the output must contain the column "weights", which should be included in the post-processing.
  */
-class PairProductionLIV: public Module {
+class PairProduction: public Module {
 	protected:
-		LorentzSymmetry lorentzSymmetry; //!< the LIV object containing relevant information
+		ref_ptr<Kinematics> kinematics; //!< the type of kinematics (SR, LIV)
 		ref_ptr<PhotonField> photonField; 	// target photon field
 		bool haveElectrons; // add secondary electrons to simulation
 		double limit; // limit the step to a fraction of the mean free path
@@ -60,12 +61,12 @@ class PairProductionLIV: public Module {
 		std::vector<std::vector<double>> tabCDF;  //!< cumulative interaction rate
 
 	public:
-		PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSymmetry liv, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
+		PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
 		void setPhotonField(ref_ptr<PhotonField> photonField);
 		void setHaveElectrons(bool haveElectrons);
 		void setLimit(double limit);
 		void setThinning(double thinning);
-		void setLorentzSymmetry(LorentzSymmetry liv);
+		void setKinematics(ref_ptr<Kinematics> kin);
 		void setInteractionTag(std::string tag);
 		std::string getInteractionTag() const;
 		void initRate(std::string filename);
@@ -77,4 +78,4 @@ class PairProductionLIV: public Module {
 
 } // namespace livpropa
 
-#endif // LIVPROPA_PAIRPRODUCTIONLIV_H
+#endif // LIVPROPA_PAIRPRODUCTION_H

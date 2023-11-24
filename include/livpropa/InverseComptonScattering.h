@@ -1,5 +1,5 @@
-#ifndef LIVPROPA_INVERSECOMPTONSCATTERINGLIV_H
-#define LIVPROPA_INVERSECOMPTONSCATTERINGLIV_H
+#ifndef LIVPROPA_INVERSECOMPTONSCATTERING_H
+#define LIVPROPA_INVERSECOMPTONSCATTERING_H
 
 #include <cmath>
 #include <fstream>
@@ -16,7 +16,7 @@
 #include <crpropa/Vector3.h>
 
 #include "livpropa/Data.h"
-#include "livpropa/LorentzSymmetry.h"
+#include "livpropa/Kinematics.h"
 #include "livpropa/UnitsAndConstants.h"
 
 using crpropa::Candidate;
@@ -32,7 +32,7 @@ using crpropa::closestIndex;
 namespace livpropa {
 
 /**
- @class InverseComptonScatteringLIV
+ @class InverseComptonScattering
  @brief Inverse Compton scattering of electrons with background photons.
 
  This module simulates inverse Compton scattering of electrons with background photons for several photon fields.
@@ -42,9 +42,10 @@ namespace livpropa {
  For the maximum thinning of 1, only a few representative particles are added to the list of secondaries.
  Note that for thinning>0 the output must contain the column "weights", which should be included in the post-processing.
 */
-class InverseComptonScatteringLIV: public Module {
+class InverseComptonScattering: public Module {
 private:
 	ref_ptr<PhotonField> photonField;
+	ref_ptr<Kinematics> kinematics;
 	bool havePhotons;
 	double limit;
 	double thinning;
@@ -66,7 +67,7 @@ public:
 	 @param thinning		weighted sampling of secondaries (0: all particles are tracked; 1: maximum thinning)
 	 @param limit			step size limit as fraction of mean free path
 	 */
-	InverseComptonScatteringLIV(ref_ptr<PhotonField> photonField, bool havePhotons = false, double thinning = 0, double limit = 0.1);
+	InverseComptonScattering(ref_ptr<PhotonField> photonField, bool havePhotons = false, double thinning = 0, double limit = 0.1);
 
 	// set the target photon field 
 	void setPhotonField(ref_ptr<PhotonField> photonField);
@@ -100,4 +101,4 @@ public:
 
 } // namespace livpropa
 
-#endif // LIVPROPA_INVERSECOMPTONSCATTERINGLIV_H
+#endif // LIVPROPA_INVERSECOMPTONSCATTERING_H

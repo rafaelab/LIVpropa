@@ -1,42 +1,49 @@
-#include "livpropa/InverseComptonScatteringLIV.h"
+#include "livpropa/InverseComptonScattering.h"
 
 
 namespace livpropa {
 
-static const double mec2 = mass_electron * c_squared;
 
-InverseComptonScatteringLIV::InverseComptonScatteringLIV(ref_ptr<PhotonField> photonField, bool havePhotons, double thinning, double limit) {
+InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> photonField, bool havePhotons, double thinning, double limit) {
 	setPhotonField(photonField);
 	setHavePhotons(havePhotons);
 	setLimit(limit);
 	setThinning(thinning);
 }
 
-void InverseComptonScatteringLIV::setPhotonField(ref_ptr<PhotonField> photonField) {
+void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> photonField) {
 	this->photonField = photonField;
 	std::string fname = photonField->getFieldName();
-	setDescription("InverseComptonScatteringLIV: " + fname);
-	initRate(getDataPath("InverseComptonScatteringLIV/rate_" + fname + ".txt"));
-	initCumulativeRate(getDataPath("InverseComptonScatteringLIV/cdf_" + fname + ".txt"));
+	setDescription("InverseComptonScattering: " + fname);
+	initRate(getDataPath("InverseComptonScattering/rate_" + fname + ".txt"));
+	initCumulativeRate(getDataPath("InverseComptonScattering/cdf_" + fname + ".txt"));
 }
 
-void InverseComptonScatteringLIV::setHavePhotons(bool havePhotons) {
+void InverseComptonScattering::setHavePhotons(bool havePhotons) {
 	this->havePhotons = havePhotons;
 }
 
-void InverseComptonScatteringLIV::setLimit(double limit) {
+void InverseComptonScattering::setLimit(double limit) {
 	this->limit = limit;
 }
 
-void InverseComptonScatteringLIV::setThinning(double thinning) {
+void InverseComptonScattering::setThinning(double thinning) {
 	this->thinning = thinning;
 }
 
-void InverseComptonScatteringLIV::initRate(std::string filename) {
+void InverseComptonScattering::setInteractionTag(std::string tag) {
+	interactionTag = tag;
+}
+
+std::string InverseComptonScattering::getInteractionTag() const {
+	return interactionTag;
+}
+
+void InverseComptonScattering::initRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (!infile.good())
-		throw std::runtime_error("InverseComptonScatteringLIV: could not open file " + filename);
+		throw std::runtime_error("InverseComptonScattering: could not open file " + filename);
 
 	// clear previously loaded tables
 	tabEnergy.clear();
@@ -56,11 +63,11 @@ void InverseComptonScatteringLIV::initRate(std::string filename) {
 	infile.close();
 }
 
-void InverseComptonScatteringLIV::initCumulativeRate(std::string filename) {
+void InverseComptonScattering::initCumulativeRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (!infile.good())
-		throw std::runtime_error("InverseComptonScatteringLIV: could not open file " + filename);
+		throw std::runtime_error("InverseComptonScattering: could not open file " + filename);
 
 	// clear previously loaded tables
 	tabE.clear();
@@ -163,13 +170,19 @@ class ICSSecondariesEnergyDistribution {
 		}
 };
 
-void InverseComptonScatteringLIV::performInteraction(Candidate *candidate) const {
+void InverseComptonScattering::performInteraction(Candidate *candidate) const {
 	// scale the particle energy instead of background photons
 	double z = candidate->getRedshift();
 	double E = candidate->current.getEnergy() * (1 + z);
 
 	if (E < tabE.front() or E > tabE.back())
 		return;
+
+
+	// possible corrections in thresholds
+	double sShift = kinematics->getSymmetryBreakingShift(E);
+	////////////// argument above should be p!!!!
+
 
 	// sample the value of s
 	Random &random = Random::instance();
@@ -197,7 +210,7 @@ void InverseComptonScatteringLIV::performInteraction(Candidate *candidate) const
 	candidate->current.setEnergy(Enew / (1 + z));
 }
 
-void InverseComptonScatteringLIV::process(Candidate *candidate) const {
+void InverseComptonScattering::process(Candidate *candidate) const {
 	// check if electron / positron
 	int id = candidate->current.getId();
 	if (abs(id) != 11)
@@ -230,14 +243,6 @@ void InverseComptonScatteringLIV::process(Candidate *candidate) const {
 		// repeat with remaining step
 		step -= randDistance;
 	} while (step > 0);
-}
-
-void InverseComptonScatteringLIV::setInteractionTag(std::string tag) {
-	interactionTag = tag;
-}
-
-std::string InverseComptonScatteringLIV::getInteractionTag() const {
-	return interactionTag;
 }
 
 } // namespace livpropa

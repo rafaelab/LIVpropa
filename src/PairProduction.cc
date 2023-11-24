@@ -1,13 +1,11 @@
-#include "livpropa/PairProductionLIV.h"
+#include "livpropa/PairProduction.h"
 
 
 namespace livpropa {
 
-static const double mec2 = mass_electron * c_squared;
 
-
-PairProductionLIV::PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSymmetry liv, bool haveElectrons, double thinning, double limit) {
-	setLorentzSymmetry(liv);
+PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool haveElectrons, double thinning, double limit) {
+	setKinematics(kinematics);
 	setPhotonField(photonField);
 	setThinning(thinning);
 	setLimit(limit);
@@ -15,54 +13,46 @@ PairProductionLIV::PairProductionLIV(ref_ptr<PhotonField> photonField, LorentzSy
 	setInteractionTag("EMPP");
 }
 
-void PairProductionLIV::setPhotonField(ref_ptr<PhotonField> field) {
-	photonField = field;
-	std::string fname = photonField->getFieldName();
-	char path[1024];
-	size_t s = 0;
-	s += std::sprintf(path + s, "PairProductionLIV/Eqg_%2.1eeV", lorentzSymmetry.getEnergyScale() / eV);
-	s += std::sprintf(path + s, "-order_%i", lorentzSymmetry.getOrder());
-	if (lorentzSymmetry.isSubluminal())
-		s += std::sprintf(path + s, "-subluminal/");
-	else
-		s += std::sprintf(path + s, "-superluminal/");
+void PairProduction::setPhotonField(ref_ptr<PhotonField> field) {
+	std::string kinematicsId = kinematics->getShortIdentifier();
+	std::string dataPath = "PairProduction" + kinematicsId + "/";
+	dataPath += kinematics->getLocationData();
 	
-	std::string dataPath = path;
-
-	setDescription("PairProductionLIV: " + fname);
-	initRate(getDataPath(dataPath + "rate_" + fname + ".txt"));
-	initCumulativeRate(getDataPath(dataPath + "cdf_" + fname + ".txt"));
+	std::string photonField = field->getFieldName();
+	setDescription("PairProduction: " + photonField);
+	initRate(getDataPath(dataPath + "rate_" + photonField + ".txt"));
+	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonField + ".txt"));
 }
 
-void PairProductionLIV::setHaveElectrons(bool electrons) {
+void PairProduction::setHaveElectrons(bool electrons) {
 	haveElectrons = electrons;
 }
 
-void PairProductionLIV::setLimit(double l) {
+void PairProduction::setLimit(double l) {
 	limit = l;
 }
 
-void PairProductionLIV::setThinning(double t) {
+void PairProduction::setThinning(double t) {
 	thinning = t;
 }
 
-void PairProductionLIV::setInteractionTag(std::string tag) {
+void PairProduction::setInteractionTag(std::string tag) {
 	interactionTag = tag;
 }
 
-void PairProductionLIV::setLorentzSymmetry(LorentzSymmetry liv) {
-	lorentzSymmetry = liv;
+void PairProduction::setKinematics(ref_ptr<Kinematics> kin) {
+	kinematics = kin;
 }
 
-std::string PairProductionLIV::getInteractionTag() const {
+std::string PairProduction::getInteractionTag() const {
 	return interactionTag;
 }
 
-void PairProductionLIV::initRate(std::string filename) {
+void PairProduction::initRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (!infile.good())
-		throw std::runtime_error("PairProductionLIV: could not open file " + filename);
+		throw std::runtime_error("PairProduction: could not open file " + filename);
 
 	// clear previously loaded interaction rates
 	tabEnergy.clear();
@@ -82,11 +72,11 @@ void PairProductionLIV::initRate(std::string filename) {
 	infile.close();
 }
 
-void PairProductionLIV::initCumulativeRate(std::string filename) {
+void PairProduction::initCumulativeRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (!infile.good())
-		throw std::runtime_error("PairProductionLIV: could not open file " + filename);
+		throw std::runtime_error("PairProduction: could not open file " + filename);
 
 	// clear previously loaded tables
 	tabE.clear();
@@ -190,10 +180,11 @@ class PPSecondariesEnergyDistribution {
 		}
 };
 
-void PairProductionLIV::performInteraction(Candidate* candidate) const {
+void PairProduction::performInteraction(Candidate* candidate) const {
 	// scale particle energy instead of background photon energy
 	double z = candidate->getRedshift();
 	double E = candidate->current.getEnergy() * (1 + z);
+	double lf = candidate->current.getLorentzFactor() * (1 + z);
 
 	// photon is lost after interacting
 	candidate->setActive(false);
@@ -206,13 +197,9 @@ void PairProductionLIV::performInteraction(Candidate* candidate) const {
 	if (E < tabE.front() or (E > tabE.back()))
 		return;
 
-	// LIV corrections
-	int sign = lorentzSymmetry.isSuperluminal() ? 1 : -1;
-	double Eqg = lorentzSymmetry.getEnergyScale();
-	unsigned int order = lorentzSymmetry.getOrder();
-	double xi = sign * energy_planck / Eqg;
-	double sShift = xi * pow(E, order + 2) / pow(2., order) / pow(energy_planck, order);
-
+	// possible corrections in thresholds
+	double sShift = kinematics->getSymmetryBreakingShift(E);
+	////////////// argument above should be p!!!!
 
 	// sample the value of s
 	Random& random = Random::instance();
@@ -245,7 +232,7 @@ void PairProductionLIV::performInteraction(Candidate* candidate) const {
 	}
 }
 
-void PairProductionLIV::process(Candidate *candidate) const {
+void PairProduction::process(Candidate *candidate) const {
 	// check if photon
 	if (candidate->current.getId() != 22)
 		return;
