@@ -4,19 +4,33 @@
 namespace livpropa {
 
 
-InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> photonField, bool havePhotons, double thinning, double limit) {
-	setPhotonField(photonField);
+InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, ref_ptr<Kinematics> kinematics, bool havePhotons, double thinning, double limit) {
+	setKinematics(kinematics);
+	setPhotonField(field);
 	setHavePhotons(havePhotons);
 	setLimit(limit);
 	setThinning(thinning);
+	setInteractionTag("EMIC");
 }
 
-void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> photonField) {
-	this->photonField = photonField;
-	std::string fname = photonField->getFieldName();
-	setDescription("InverseComptonScattering: " + fname);
-	initRate(getDataPath("InverseComptonScattering/rate_" + fname + ".txt"));
-	initCumulativeRate(getDataPath("InverseComptonScattering/cdf_" + fname + ".txt"));
+void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> field) {
+	photonField = field;
+
+	std::string kinematicsId = kinematics->getShortIdentifier();
+	std::string dataPath = "InverseComptonScattering" + kinematicsId + "/";
+	dataPath += kinematics->getLocationData(std::vector<int>({-11, 11, 22}));
+	dataPath += "/";
+
+	std::cout << dataPath << std::endl;
+	
+	std::string photonBgName = field->getFieldName();
+	setDescription("InverseComptonScattering: " + photonBgName);
+	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
+	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
+}
+
+void InverseComptonScattering::setKinematics(ref_ptr<Kinematics> kin) {
+	kinematics = kin;
 }
 
 void InverseComptonScattering::setHavePhotons(bool havePhotons) {
@@ -170,14 +184,13 @@ class ICSSecondariesEnergyDistribution {
 		}
 };
 
-void InverseComptonScattering::performInteraction(Candidate *candidate) const {
+void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 	// scale the particle energy instead of background photons
 	double z = candidate->getRedshift();
 	double E = candidate->current.getEnergy() * (1 + z);
 
 	if (E < tabE.front() or E > tabE.back())
 		return;
-
 
 	// possible corrections in thresholds
 	double sShift = kinematics->getSymmetryBreakingShift(E);
@@ -189,7 +202,7 @@ void InverseComptonScattering::performInteraction(Candidate *candidate) const {
 	size_t i = closestIndex(E, tabE);
 	size_t j = random.randBin(tabCDF[i]);
 	double s_kin = pow(10, log10(tabs[j]) + (random.rand() - 0.5) * 0.1);
-	double s = s_kin + mec2 * mec2;
+	double s = s_kin + mec2 * mec2 + sShift;
 
 	// sample electron energy after scattering
 	static ICSSecondariesEnergyDistribution distribution;
@@ -210,7 +223,7 @@ void InverseComptonScattering::performInteraction(Candidate *candidate) const {
 	candidate->current.setEnergy(Enew / (1 + z));
 }
 
-void InverseComptonScattering::process(Candidate *candidate) const {
+void InverseComptonScattering::process(Candidate* candidate) const {
 	// check if electron / positron
 	int id = candidate->current.getId();
 	if (abs(id) != 11)
