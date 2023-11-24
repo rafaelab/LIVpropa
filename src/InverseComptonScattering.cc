@@ -20,8 +20,6 @@ void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> field) {
 	std::string dataPath = "InverseComptonScattering" + kinematicsId + "/";
 	dataPath += kinematics->getLocationData(std::vector<int>({-11, 11, 22}));
 	dataPath += "/";
-
-	std::cout << dataPath << std::endl;
 	
 	std::string photonBgName = field->getFieldName();
 	setDescription("InverseComptonScattering: " + photonBgName);
