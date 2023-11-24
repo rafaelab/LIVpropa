@@ -48,8 +48,8 @@ namespace livpropa {
  */
 class PairProduction: public Module {
 	protected:
-		ref_ptr<Kinematics> kinematics; //!< the type of kinematics (SR, LIV)
 		ref_ptr<PhotonField> photonField; 	// target photon field
+		ref_ptr<Kinematics> kinematics; //!< the type of kinematics (SR, LIV)
 		bool haveElectrons; // add secondary electrons to simulation
 		double limit; // limit the step to a fraction of the mean free path
 		double thinning; // factor of the thinning (0: no thinning, 1: maximum thinning)

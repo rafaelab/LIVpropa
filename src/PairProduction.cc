@@ -14,14 +14,17 @@ PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinemat
 }
 
 void PairProduction::setPhotonField(ref_ptr<PhotonField> field) {
+	photonField = field;
+
 	std::string kinematicsId = kinematics->getShortIdentifier();
 	std::string dataPath = "PairProduction" + kinematicsId + "/";
-	dataPath += kinematics->getLocationData();
+	dataPath += kinematics->getLocationData(std::vector<int>({-11, 11, 22}));
+	dataPath += "/";
 	
-	std::string photonField = field->getFieldName();
-	setDescription("PairProduction: " + photonField);
-	initRate(getDataPath(dataPath + "rate_" + photonField + ".txt"));
-	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonField + ".txt"));
+	std::string photonBgName = field->getFieldName();
+	setDescription("PairProduction: " + photonBgName);
+	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
+	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
 }
 
 void PairProduction::setHaveElectrons(bool electrons) {
@@ -232,7 +235,7 @@ void PairProduction::performInteraction(Candidate* candidate) const {
 	}
 }
 
-void PairProduction::process(Candidate *candidate) const {
+void PairProduction::process(Candidate* candidate) const {
 	// check if photon
 	if (candidate->current.getId() != 22)
 		return;
