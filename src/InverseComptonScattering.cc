@@ -191,7 +191,8 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 		return;
 
 	// possible corrections in thresholds
-	double sShift = kinematics->getSymmetryBreakingShift(E);
+	double p = E / c_light; // ultrarelativistic
+	double sShift = kinematics->getSymmetryBreakingShift(p);
 	////////////// argument above should be p!!!!
 
 
