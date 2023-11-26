@@ -117,7 +117,7 @@ void InverseComptonScattering::initCumulativeRate(std::string filename) {
 // Class to calculate the energy distribution of the ICS photon and to sample from it
 class ICSSecondariesEnergyDistribution {
 	private:
-		std::vector< std::vector<double> > data;
+		std::vector<std::vector<double>> data;
 		std::vector<double> s_values;
 		size_t Ns;
 		size_t Nrer;
@@ -139,18 +139,18 @@ class ICSSecondariesEnergyDistribution {
 			s_min = mec2 * mec2;
 			s_max = 1e23 * eV * eV;
 			dls = (log(s_max) - log(s_min)) / Ns;
-			data = std::vector< std::vector<double> >(1000, std::vector<double>(1000));
+			data = std::vector<std::vector<double>>(1000, std::vector<double>(1000));
 			std::vector<double> data_i(1000);
 
 			// tabulate s bin borders
 			s_values = std::vector<double>(1001);
 			for (size_t i = 0; i < Ns + 1; ++i)
-				s_values[i] = s_min * exp(i*dls);
+				s_values[i] = s_min * exp(i * dls);
 
 
 			// for each s tabulate cumulative differential cross section
 			for (size_t i = 0; i < Ns; i++) {
-				double s = s_min * exp((i+0.5) * dls);
+				double s = s_min * exp((i + 0.5) * dls);
 				double beta = (s - s_min) / (s + s_min);
 				double x0 = (1 - beta) / (1 + beta);
 				double dlx = -log(x0) / Nrer;
@@ -158,10 +158,10 @@ class ICSSecondariesEnergyDistribution {
 				// cumulative midpoint integration
 				data_i[0] = dSigmadE(x0, beta) * expm1(dlx);
 				for (size_t j = 1; j < Nrer; j++) {
-					double x = x0 * exp((j+0.5) * dlx);
-					double dx = exp((j+1) * dlx) - exp(j * dlx);
+					double x = x0 * exp((j + 0.5) * dlx);
+					double dx = exp((j + 1) * dlx) - exp(j * dlx);
 					data_i[j] = dSigmadE(x, beta) * dx;
-					data_i[j] += data_i[j-1];
+					data_i[j] += data_i[j - 1];
 				}
 				data[i] = data_i;
 			}
@@ -194,7 +194,6 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 	double p = E / c_light; // ultrarelativistic
 	double sShift = kinematics->getSymmetryBreakingShift(p);
 	////////////// argument above should be p!!!!
-
 
 	// sample the value of s
 	Random &random = Random::instance();

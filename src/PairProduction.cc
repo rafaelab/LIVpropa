@@ -255,16 +255,21 @@ void PairProduction::process(Candidate* candidate) const {
 	// run this loop at least once to limit the step size 
 	double step = candidate->getCurrentStep();
 	Random &random = Random::instance();
+	double randDistance = -log(random.rand()) / rate;
+	if (candidate->getCurrentStep() > randDistance)
+		performInteraction(candidate);
+	candidate->limitNextStep(limit / rate);
+
 	do {
 		double randDistance = -log(random.rand()) / rate;
+		
 		// check for interaction; if it doesn't ocurr, limit next step
-		if (step < randDistance) { 
+		if (step < randDistance) {
 			candidate->limitNextStep(limit / rate);
-		} else {
-			performInteraction(candidate);
 			return;
 		}
-		step -= randDistance; 
+		performInteraction(candidate);
+
 	} while (step > 0.);
 
 }
