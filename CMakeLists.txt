@@ -32,6 +32,31 @@ message(STATUS "CRPropa SWIG interface files: ${CRPROPA_SWIG_INTERFACE_FILES}")
 message(STATUS "CRPropa include path : ${CRPROPA_INCLUDE_PATH}")
 message(STATUS "CRPropa library: ${CRPROPA_LIBRARY}")
 
+
+
+if(CMAKE_VERSION VERSION_LESS "3.12")
+  # Use built-in Python finder; otherwise use CMake's
+  include(python/Python.cmake)
+  set(PYTHON_VERSION ${PYTHON_VERSION_STRING})
+else()
+  set(PYTHON_INCLUDE_PATH ${Python_INCLUDE_DIRS})
+  set(PYTHON_VERSION ${Python_VERSION})
+endif()
+include_directories(${PYTHON_INCLUDE_PATH})
+
+# Python
+if(PYTHON_VERSION VERSION_GREATER 3.9)
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; import sysconfig; sys.stdout.write(sysconfig.get_path(\'stdlib\'))" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; from distutils import sysconfig; sys.stdout.write(sysconfig.get_python_lib(1,0,prefix='${CMAKE_INSTALL_PREFIX}'))" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
+message(STATUS "Python version: ${PYTHON_VERSION}")
+message(STATUS "Python headers: ${PYTHON_INCLUDE_PATH}")
+message(STATUS "Python library: ${PYTHON_LIBRARY}")
+message(STATUS "Python site packages: ${PYTHON_SITE_PACKAGES}")
+
+
 # kiss library (provided by CRPropa)
 include_directories(include ${crpropaInstallPrefix}/libs/kiss)
 
@@ -57,17 +82,11 @@ add_library(livpropa MODULE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/PhotonDecay.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/VacuumCherenkov.cc
   )
-target_link_libraries(livpropa ${CRPROPA_LIBRARY} ${PYTHON_LIBRARY})
+target_link_libraries(livpropa ${CRPROPA_LIBRARY} ${Python_LIBRARY})
 set_target_properties(livpropa PROPERTIES PREFIX "")
 set_target_properties(livpropa PROPERTIES COMPILE_FLAGS "-w")
 set_target_properties(livpropa PROPERTIES OUTPUT_NAME "_livpropa")
 
-
-if(PYTHON_VERSION VERSION_GREATER 3.9)
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; import sysconfig; sys.stdout.write(sysconfig.get_path('${CMAKE_INSTALL_PREFIX}'))" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-else(PYTHON_VERSION VERSION_GREATER 3.9)
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys; from distutils import sysconfig; sys.stdout.write(sysconfig.get_python_lib(1,0,prefix='${CMAKE_INSTALL_PREFIX}'))" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif(PYTHON_VERSION VERSION_GREATER 3.9)
 
 
 
