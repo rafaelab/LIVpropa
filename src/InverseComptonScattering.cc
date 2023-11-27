@@ -183,6 +183,8 @@ class ICSSecondariesEnergyDistribution {
 };
 
 void InverseComptonScattering::performInteraction(Candidate* candidate) const {
+	int id = candidate->current.getId();
+
 	// scale the particle energy instead of background photons
 	double z = candidate->getRedshift();
 	double E = candidate->current.getEnergy() * (1 + z);
@@ -191,9 +193,8 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 		return;
 
 	// possible corrections in thresholds
-	double p = E / c_light; // ultrarelativistic
+	double p = kinematics->computeMomentumFromEnergy(E, id);
 	double sShift = kinematics->getSymmetryBreakingShift(p);
-	////////////// argument above should be p!!!!
 
 	// sample the value of s
 	Random &random = Random::instance();

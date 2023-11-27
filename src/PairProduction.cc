@@ -184,6 +184,8 @@ class PPSecondariesEnergyDistribution {
 };
 
 void PairProduction::performInteraction(Candidate* candidate) const {
+	int id = candidate->current.getId();
+
 	// scale particle energy instead of background photon energy
 	double z = candidate->getRedshift();
 	double E = candidate->current.getEnergy() * (1 + z);
@@ -201,8 +203,8 @@ void PairProduction::performInteraction(Candidate* candidate) const {
 		return;
 
 	// possible corrections in thresholds
-	double sShift = kinematics->getSymmetryBreakingShift(E);
-	////////////// argument above should be p!!!!
+	double p = kinematics->computeMomentumFromEnergy(E, id);
+	double sShift = kinematics->getSymmetryBreakingShift(p);
 
 	// sample the value of s
 	Random& random = Random::instance();
