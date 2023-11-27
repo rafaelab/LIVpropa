@@ -35,6 +35,9 @@ message(STATUS "CRPropa library: ${CRPROPA_LIBRARY}")
 # kiss library (provided by CRPropa)
 include_directories(include ${crpropaInstallPrefix}/libs/kiss)
 
+# Eigen library
+include_directories(include external/eigen3)
+
 # SWIG plugin
 file(GLOB_RECURSE CRPROPA_SWIG_INPUTS python/*.i)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx PROPERTIES GENERATED true)
