@@ -5,13 +5,14 @@
 namespace livpropa {
 
 
-double Kinematics::computeEnergy2FromMomentum(const double& p, const double& m) const {
+double Kinematics::computeEnergy2FromMomentum(const double& p, const int& id) const {
+	double m = particleMasses.at(id);
 	double ds = getSymmetryBreakingShift(p);
 	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
 }
 
-double Kinematics::computeEnergyFromMomentum(const double& p, const double& m) const {
-	return sqrt(computeEnergy2FromMomentum(p, m));
+double Kinematics::computeEnergyFromMomentum(const double& p, const int& id) const {
+	return sqrt(computeEnergy2FromMomentum(p, id));
 }
 
 
@@ -27,14 +28,14 @@ std::string SpecialRelativity::getLocationData(std::vector<int> particles) const
 	return "";
 }
 
-double SpecialRelativity::getSymmetryBreakingShift(const double& p) const {
+double SpecialRelativity::getSymmetryBreakingShift(const double& p, const int& id) const {
 	return 0;
 }
 
-double SpecialRelativity::computeEnergyFromMomentum(const double& p, const double&m ) const {
-	return hypot(p * c_light, m * c_squared);
+double SpecialRelativity::computeMomentumFromEnergy(const double& E, const int& id) const {
+	double m = particleMasses.at(id);
+	return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light;
 }
-
 
 
 MonochromaticLIV::MonochromaticLIV() {
@@ -107,13 +108,47 @@ double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {
 	return (*it).second;
 }
 
-double MonochromaticLIV::getSymmetryBreakingShift(const double& p) const {
-	return 0;
+double MonochromaticLIV::getSymmetryBreakingShift(const double& p, const int& id) const {
+	double chi = getCoefficientForParticle(id);
+	return chi * pow(p * c_light / energy_planck, getOrder()) * pow_integer<2>(p * c_light);
 }
 
-double MonochromaticLIV::computeEnergyFromMomentum(const double& p, const double& m) const {
-	return 0;
+double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& id) const {
+	unsigned int n = getOrder();
+	unsigned int nCoeffs = n + 3;
+	double m = particleMasses.at(id);
+	double chi = getCoefficientForParticle(id);
+
+	// get vector of coefficients
+	std::vector<double> coeffsVec;
+	coeffsVec.reserve(nCoeffs);
+	for (size_t i = 0; i < nCoeffs; i++) {
+		coeffsVec[i] = 0;
+	}
+	coeffsVec[0] = - pow_integer<2>(E) + pow_integer<2>(m * c_squared);
+	coeffsVec[2] = c_squared;
+	coeffsVec[n + 2] = chi / pow(c_light / energy_planck, n + 2) * c_squared;
+
+	// convert std::vector to Eigen vector for root finding
+	Eigen::VectorXd coeffs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(coeffsVec.data(), coeffsVec.size());
+
+	// declare solver and find roots
+	Eigen::PolynomialSolver<double, Eigen::Dynamic> solver;
+	solver.compute(coeffs);
+	const Eigen::PolynomialSolver<double, Eigen::Dynamic>::RootsType &roots = solver.roots();
+
+	// select the largest among the positive roots
+	// this is completely arbitrary and should be rethought
+	std::vector<double> ps;
+	for (auto& root : roots) {
+		if (root.real() > 0.)
+			ps.push_back(root.real());
+	}
+	std::sort(ps.begin(), ps.end(), std::greater<double>()); 
+	
+	return ps[0];
 }
+
 
 
 } // namespace livpropa
