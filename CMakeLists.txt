@@ -41,6 +41,7 @@ if(CMAKE_VERSION VERSION_LESS "3.12")
 else()
   set(PYTHON_INCLUDE_PATH ${Python_INCLUDE_DIRS})
   set(PYTHON_VERSION ${Python_VERSION})
+  set(PYTHON_LIBRARY ${Python_LIBRARY})
 endif()
 include_directories(${PYTHON_INCLUDE_PATH})
 
@@ -82,7 +83,7 @@ add_library(livpropa MODULE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/PhotonDecay.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/VacuumCherenkov.cc
   )
-target_link_libraries(livpropa ${CRPROPA_LIBRARY} ${Python_LIBRARY})
+target_link_libraries(livpropa ${CRPROPA_LIBRARY} ${PYTHON_LIBRARY})
 set_target_properties(livpropa PROPERTIES PREFIX "")
 set_target_properties(livpropa PROPERTIES COMPILE_FLAGS "-w")
 set_target_properties(livpropa PROPERTIES OUTPUT_NAME "_livpropa")
