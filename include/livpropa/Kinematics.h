@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include <crpropa/Common.h>
+#include <crpropa/Random.h>
 #include <crpropa/Referenced.h>
 #include <crpropa/Units.h>
 
@@ -74,28 +75,49 @@ class SpecialRelativity : public Kinematics {
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 };
 
+/**
+  Sometimes we need to solve the equation for p and there are multiple real positive solutions.
+  In this case, one of the following strategies can be adopted:
+    (1) randomly pick one of the possible values;
+	(2) compute the average;
+	(3) the closest to the usual special-relativistic result;
+	(4) the lowest among the values;
+	(5) the largest among the values.
+  Note that 1 and 2 are the most "sensible" ones.
+  The third is phenomenologically motivated, but not physically justifiable.
+*/
+enum class SymmetryBreakingTreatment {
+	Random,
+	Average,
+	Smallest,
+	Largest,
+	Closest
+};
+
 
 /**
  @class MonochromaticLIV
  @brief Class holding information about a scenario with monochromatic LIV.
   A simple phenomenological implementation of LIV.
   This preserves energy-momentum conservations and modifies the dispersion relations as:
-	E^2 = m^2 + p^2 + f^n.
+	E^2 = m^2 + p^2 + chi (pc / E_pl)^n.
   The fact that only a single value of n is taken into account defines the naming choice "monochromatic".
  */
 class MonochromaticLIV : public Kinematics {
 	protected:
 		unsigned int order; 
 		std::unordered_map<int, double> coefficients;
+		SymmetryBreakingTreatment symmetryBreakingStrategy;
 		using CoefficientsIterator = typename std::unordered_map<int, double>::const_iterator;
 
 	public:
-		MonochromaticLIV();
-		MonochromaticLIV(unsigned int n);
-		MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeff);
-		MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> chi);
+		MonochromaticLIV(SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
+		MonochromaticLIV(unsigned int n, SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
+		MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeff, SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
+		MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> chi, SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
 		~MonochromaticLIV();
 		void setOrder(unsigned int n);
+		void setSymmetryBreakingTreatment(SymmetryBreakingTreatment treatment);
 		void setCoefficients(std::unordered_map<int, double> coeffs);
 		void addCoefficient(int particle, double coeff);
 		unsigned int getOrder() const;
