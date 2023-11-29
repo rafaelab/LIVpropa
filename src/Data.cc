@@ -9,7 +9,7 @@ std::string getDataPath(std::string filename) {
 	if (dataPath.size())
 		return concat_path(dataPath, filename);
 
-	const char* environmentPath = getenv("LIVPROPA_DATA_PATH");
+	const char* environmentPath = getenv("LIVpropa_DATA_PATH");
 	if (environmentPath) {
 		if (is_directory(environmentPath)) {
 			dataPath = environmentPath;
@@ -18,9 +18,9 @@ std::string getDataPath(std::string filename) {
 		}
 	}
 
-	#ifdef LIVPROPA_INSTALL_PREFIX
+	#ifdef LIVpropa_INSTALL_PREFIX
 	{
-		std::string path = LIVPROPA_INSTALL_PREFIX "/share/livpropa";
+		std::string path = LIVpropa_INSTALL_PREFIX  "/share/livpropa";
 		if (is_directory(path)) {
 			dataPath = path;
 			KISS_LOG_INFO << "locateDataFiles: use install prefix, " << dataPath << std::endl;
@@ -46,8 +46,8 @@ std::string getDataPath(std::string filename) {
 
 std::string getInstallPrefix() {
 	std::string path = "";
-	#ifdef LIVPROPA_INSTALL_PREFIX
-		path += LIVPROPA_INSTALL_PREFIX;
+	#ifdef LIVpropa_INSTALL_PREFIX
+		path += LIVpropa_INSTALL_PREFIX;
 	#endif
 
 	return path;
