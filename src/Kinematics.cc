@@ -1,15 +1,8 @@
 #include "livpropa/Kinematics.h"
 
 
-
 namespace livpropa {
 
-
-double Kinematics::computeEnergy2FromMomentum(const double& p, const int& id) const {
-	double m = particleMasses.at(id);
-	double ds = getSymmetryBreakingShift(p);
-	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
-}
 
 double Kinematics::computeEnergyFromMomentum(const double& p, const int& id) const {
 	return sqrt(computeEnergy2FromMomentum(p, id));
@@ -18,6 +11,9 @@ double Kinematics::computeEnergyFromMomentum(const double& p, const int& id) con
 
 
 SpecialRelativity::SpecialRelativity() {
+}
+
+SpecialRelativity::~SpecialRelativity() {
 }
 
 std::string SpecialRelativity::getShortIdentifier() const {
@@ -30,6 +26,11 @@ std::string SpecialRelativity::getLocationData(std::vector<int> particles) const
 
 double SpecialRelativity::getSymmetryBreakingShift(const double& p, const int& id) const {
 	return 0;
+}
+
+double SpecialRelativity::computeEnergy2FromMomentum(const double& p, const int& id) const {
+	double m = particleMasses.at(id);
+	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared);
 }
 
 double SpecialRelativity::computeMomentumFromEnergy(const double& E, const int& id) const {
@@ -56,6 +57,9 @@ MonochromaticLIV::MonochromaticLIV(unsigned int order, std::vector<int> particle
 	for (size_t i = 0; i < particles.size(); i++) {
 		addCoefficient(particles[i], coeffs[i]);
 	}
+}
+
+MonochromaticLIV::~MonochromaticLIV() {
 }
 
 void MonochromaticLIV::setOrder(unsigned int n) {
@@ -111,6 +115,12 @@ double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {
 double MonochromaticLIV::getSymmetryBreakingShift(const double& p, const int& id) const {
 	double chi = getCoefficientForParticle(id);
 	return chi * pow(p * c_light / energy_planck, getOrder()) * pow_integer<2>(p * c_light);
+}
+
+double MonochromaticLIV::computeEnergy2FromMomentum(const double& p, const int& id) const {
+	double m = particleMasses.at(id);
+	double ds = this->getSymmetryBreakingShift(p, id);
+	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
 }
 
 double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& id) const {

@@ -6,11 +6,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <unordered_map>
 
 #include <crpropa/Common.h>
 #include <crpropa/Referenced.h>
 #include <crpropa/Units.h>
+
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/Polynomials>
@@ -30,15 +32,26 @@ namespace livpropa {
  @class Kinematics
  @brief Class holding information about the kinematics at play.
   The class is abstract.
+  Note that the virtual methods are explicitly implemented with dummy values to workaround a SWIG bug.
  */
 class Kinematics : public Referenced {
 	public:
 		virtual ~Kinematics() = default;
-		virtual std::string getShortIdentifier() const = 0;
-		virtual std::string getLocationData(std::vector<int> particles = {}) const = 0;
-		virtual double getSymmetryBreakingShift(const double& p) const = 0;
-		virtual double computeMomentumFromEnergy(const double& E, const int& id) const = 0;
-		double computeEnergy2FromMomentum(const double& p, const int& id) const;
+		virtual std::string getShortIdentifier() const {
+			return "KinematicsBase";
+		};
+		virtual std::string getLocationData(std::vector<int> particles) const {
+			return "";
+		};
+		virtual double getSymmetryBreakingShift(const double& p) const {
+			return 0;
+		};
+		virtual double computeMomentumFromEnergy(const double& E, const int& id) const {
+			return 0;
+		};
+		virtual double computeEnergy2FromMomentum(const double& p, const int& id) const {
+			return 0;
+		};
 		double computeEnergyFromMomentum(const double& p, const int& id) const;
 		
 };
@@ -53,11 +66,11 @@ class Kinematics : public Referenced {
 class SpecialRelativity : public Kinematics {
 	public:
 		SpecialRelativity();
+		~SpecialRelativity();
 		std::string getShortIdentifier() const;
-		std::string getLocationData(std::vector<int> particles = {}) const;
+		std::string getLocationData(std::vector<int> particles) const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
-		// double computeEnergy2FromMomentum(const double& p, const int& id) const;
-		// double computeEnergyFromMomentum(const double& p, const int& id) const;
+		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 };
 
@@ -81,16 +94,18 @@ class MonochromaticLIV : public Kinematics {
 		MonochromaticLIV(unsigned int n);
 		MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeff);
 		MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> chi);
+		~MonochromaticLIV();
 		void setOrder(unsigned int n);
 		void setCoefficients(std::unordered_map<int, double> coeffs);
 		void addCoefficient(int particle, double coeff);
 		unsigned int getOrder() const;
 		std::unordered_map<int, double> getCoefficients() const;
 		std::string getShortIdentifier() const;
-		std::string getLocationData(std::vector<int> particles = {}) const;
+		std::string getLocationData(std::vector<int> particles) const;
 		std::vector<int> getParticles()  const;
 		double getCoefficientForParticle(const int& particle) const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
+		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 };
 
