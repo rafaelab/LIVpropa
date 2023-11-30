@@ -105,6 +105,7 @@ endif(ENABLE_TESTING)
 # ----------------------------------------------------------------------------
 add_definitions(-DLIVpropa_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}")
 install(TARGETS livpropa DESTINATION lib)
+install(DIRECTORY external/eigen3 DESTINATION include)
 install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
