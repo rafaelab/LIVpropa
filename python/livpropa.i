@@ -77,6 +77,8 @@
 
 /* Instantiate template to ensure that maps of particles-LIV_coefficients are propertly handled */
 %template (CoefficientsMap) std::unordered_map<int, double>;
+%template(IntVector) vector<int>;
+%template(DoubleVector) vector<double>;
 
 /* Hide warnings */
 #pragma SWIG nowarn=312,325,361,389,401,508,509
