@@ -54,12 +54,13 @@ include_directories(include ${CRPropa_INSTALL_PREFIX}/libs/kiss)
 
 # Eigen library
 include_directories(include external/eigen3)
+set(Eigen_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external/eigen3)
 
 # SWIG plugin
 file(GLOB_RECURSE CRPROPA_SWIG_INPUTS python/*.i)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx PROPERTIES GENERATED true)
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx
-  COMMAND swig ${SWIG_MODE_FLAG} -c++ -python ${PY3} -I${CRPropa_SWIG_INTERFACE_FILES} -I${CRPropa_INCLUDE_PATH} -I${CMAKE_SOURCE_DIR}/include -I${Python_INCLUDE_DIRS} ${CRPROPA_SWIG_DEFINES} -dirprot -o ${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx -outdir ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/python/livpropa.i
+  COMMAND swig ${SWIG_MODE_FLAG} -c++ -python ${PY3} -I${CRPropa_SWIG_INTERFACE_FILES} -I${CRPropa_INCLUDE_PATH} -I${CMAKE_SOURCE_DIR}/include -I${Eigen_INCLUDE_PATH} -I${Python_INCLUDE_DIRS} ${CRPROPA_SWIG_DEFINES} -dirprot -o ${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx -outdir ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/python/livpropa.i
 )
 include_directories(include ${CMAKE_CURRENT_BINARY_DIR}/include ${CRPropa_INCLUDE_PATH} ${Python_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
