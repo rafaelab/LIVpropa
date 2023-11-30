@@ -56,6 +56,7 @@ include_directories(include ${CRPropa_INSTALL_PREFIX}/libs/kiss)
 include_directories(include external/eigen3)
 set(Eigen_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external/eigen3)
 
+
 # SWIG plugin
 file(GLOB_RECURSE CRPROPA_SWIG_INPUTS python/*.i)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/livpropa_wrap.cxx PROPERTIES GENERATED true)
@@ -81,7 +82,6 @@ set_target_properties(livpropa PROPERTIES COMPILE_FLAGS "-w")
 set_target_properties(livpropa PROPERTIES OUTPUT_NAME "_livpropa")
 
 
-
 # ----------------------------------------------------------------------------
 # Tests
 # ----------------------------------------------------------------------------
@@ -104,16 +104,15 @@ endif(ENABLE_TESTING)
 # ----------------------------------------------------------------------------
 # Install
 # ----------------------------------------------------------------------------
+
 add_definitions(-DLIVpropa_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}")
+
 install(TARGETS livpropa DESTINATION lib)
+
 install(DIRECTORY external/eigen3/Eigen DESTINATION include)
 install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/data/ DESTINATION share/livpropa/ PATTERN ".git" EXCLUDE)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_INSTALL_PREFIX}/.)
-
-
-install(DIRECTORY ${CMAKE_BINARY_DIR}/data/ DESTINATION share/livpropa/ PATTERN ".git" EXCLUDE)
-# install(DIRECTORY libs/kiss/include/ DESTINATION include)
-
 
