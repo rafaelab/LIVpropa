@@ -39,18 +39,23 @@ double SpecialRelativity::computeMomentumFromEnergy(const double& E, const int& 
 }
 
 
-MonochromaticLIV::MonochromaticLIV(SymmetryBreakingTreatment symmetryBreakingTreatment) {
+MonochromaticLIV::MonochromaticLIV(SymmetryBreaking symmetryBreaking) {
 }
 
-MonochromaticLIV::MonochromaticLIV(unsigned int n, SymmetryBreakingTreatment symmetryBreakingTreatment) {
+MonochromaticLIV::MonochromaticLIV(unsigned int n, SymmetryBreaking symmetryBreaking) {
 	setOrder(n);
 }
 
-MonochromaticLIV::MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeffs, SymmetryBreakingTreatment symmetryBreakingTreatment) {
+MonochromaticLIV::MonochromaticLIV(unsigned int n, double chi, SymmetryBreaking symmetryBreaking) {
+	setOrder(n);
+	addCoefficient(0, chi);
+}
+
+MonochromaticLIV::MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeffs, SymmetryBreaking symmetryBreaking) {
 	setCoefficients(coeffs);
 }
 
-MonochromaticLIV::MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> coeffs, SymmetryBreakingTreatment symmetryBreakingTreatment) {
+MonochromaticLIV::MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> coeffs, SymmetryBreaking symmetryBreaking) {
 	if (particles.size() != coeffs.size())
 		throw std::length_error("Vectors provided to initialise MonochromaticLIV must be of same size.");
 
@@ -66,8 +71,8 @@ void MonochromaticLIV::setOrder(unsigned int n) {
 	order = n;
 }
 
-void MonochromaticLIV::setSymmetryBreakingTreatment(SymmetryBreakingTreatment treatment) {
-	symmetryBreakingStrategy = treatment;
+void MonochromaticLIV::setSymmetryBreaking(SymmetryBreaking treatment) {
+	symmetryBreaking = treatment;
 }
 
 void MonochromaticLIV::setCoefficients(std::unordered_map<int, double> coeffs) {
@@ -113,6 +118,16 @@ std::vector<int> MonochromaticLIV::getParticles() const {
 
 double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {
 	CoefficientsIterator it = coefficients.find(particle);
+
+	if (it == coefficients.end()) {
+		CoefficientsIterator it0 = coefficients.find(0);
+		if (it0 == coefficients.end()) {
+			std::cout << "Particle not found in list. Returning chi=0." << std::endl;
+			return 0;
+		} else {
+			return (*it0).second;
+		}
+	}
 	return (*it).second;
 }
 
@@ -136,20 +151,44 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 	std::vector<double> ps;
 
 	if (n == 0) {
-		return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared) - chi) / c_light;
-	// } 
-	// else if (n == 1) {
-	// 	return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light;
+		return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
+		
+	} else if (n == 1) {
+		double a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
+		a = pow(a, 1. / 3.);
+		
+		double sol1 = - (energy_planck / (3 * chi)) * (1. + pow(2, 1. / 3.) / a) * energy_planck / a - a / 3. / pow(2, 1. / 3.) / chi;
+		double sol2 = - (energy_planck / (3 * chi)) * (1. - energy_planck / pow(2., 2. / 3.) / a) + a / 6. / pow(2., 1. / 3.) / chi;
+
+		// convert units
+		sol1 /= c_light;
+		sol2 /= c_light;
+
+		// third solution is equal to the second (differs in imaginary part)
+		ps.push_back(sol1);
+		ps.push_back(sol2);
+
+	} else if (n == 2) {
+
+		double e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
+		
+		double sol1 = sqrt((- pow_integer<2>(energy_planck) - energy_planck * e) / chi / 2.);
+		double sol2 = sqrt((- pow_integer<2>(energy_planck) + energy_planck * e) / chi / 2.);
+
+		// the other two solutions lead to negative momenta
+		ps.push_back(sol1);
+		ps.push_back(sol2);
+
 	} else {
 		// get vector of coefficients
 		std::vector<double> coeffsVec;
 		coeffsVec.reserve(nCoeffs);
 		for (size_t i = 0; i < nCoeffs; i++) {
-			coeffsVec[i] = 0;
+			coeffsVec.push_back(0);
 		}
-		coeffsVec[0] = - pow_integer<2>(E) + pow_integer<2>(m * c_squared);
+		coeffsVec[0] = (- pow_integer<2>(E / c_light) + pow_integer<2>(m * c_light)) / c_squared;
 		coeffsVec[2] = c_squared;
-		coeffsVec[n + 2] = chi / pow(c_light / energy_planck, n + 2) * c_squared;
+		coeffsVec[nCoeffs - 1] = chi / pow(c_light / energy_planck, n + 2) * c_squared;
 
 		// convert std::vector to Eigen vector for root finding
 		Eigen::VectorXd coeffs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(coeffsVec.data(), coeffsVec.size());
@@ -167,7 +206,7 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 	unsigned int nSolutions = ps.size();
 
 	// strategies for treating multiple acceptable solutions
-	if (symmetryBreakingStrategy == SymmetryBreakingTreatment::Random) { 
+	if (symmetryBreaking == SymmetryBreaking::Random) { 
 		if (nSolutions == 0) {
 			std::cerr << "No solutions found. Momentum cannot be computed from energy in this case." << std::endl;
 			return 0;
@@ -191,18 +230,18 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 			return ps[*idxMin];
 		}
 
-	} else if (symmetryBreakingStrategy == SymmetryBreakingTreatment::Smallest) {
+	} else if (symmetryBreaking == SymmetryBreaking::Smallest) {
 		std::sort(ps.begin(), ps.end()); 
 		return ps[0];
-	} else if (symmetryBreakingStrategy == SymmetryBreakingTreatment::Largest) {
+	} else if (symmetryBreaking == SymmetryBreaking::Largest) {
 		std::sort(ps.begin(), ps.end()); 
 		return ps[nSolutions - 1];
-	} else if (symmetryBreakingStrategy == SymmetryBreakingTreatment::Average) {
+	} else if (symmetryBreaking == SymmetryBreaking::Average) {
 		double pTot = 0;
 		for (auto& p : ps)
 			pTot += p;
 		return pTot / nSolutions;
-	} else if (symmetryBreakingStrategy == SymmetryBreakingTreatment::Closest) {
+	} else if (symmetryBreaking == SymmetryBreaking::Closest) {
 		SpecialRelativity* sr  = new SpecialRelativity();
 		double p0 = sr->computeMomentumFromEnergy(E, id);
 

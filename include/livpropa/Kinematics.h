@@ -86,7 +86,7 @@ class SpecialRelativity : public Kinematics {
   Note that 1 and 2 are the most "sensible" ones.
   The third is phenomenologically motivated, but not physically justifiable.
 */
-enum class SymmetryBreakingTreatment {
+enum class SymmetryBreaking {
 	Random,
 	Average,
 	Smallest,
@@ -106,18 +106,19 @@ enum class SymmetryBreakingTreatment {
 class MonochromaticLIV : public Kinematics {
 	protected:
 		unsigned int order; 
-		std::unordered_map<int, double> coefficients;
-		SymmetryBreakingTreatment symmetryBreakingStrategy;
+		std::unordered_map<int, double> coefficients = {};
+		SymmetryBreaking symmetryBreaking;
 		using CoefficientsIterator = typename std::unordered_map<int, double>::const_iterator;
 
 	public:
-		MonochromaticLIV(SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
-		MonochromaticLIV(unsigned int n, SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
-		MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeff, SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
-		MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> chi, SymmetryBreakingTreatment symmetryBreakingTreatment = SymmetryBreakingTreatment::Random);
+		MonochromaticLIV(SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
+		MonochromaticLIV(unsigned int n, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
+		MonochromaticLIV(unsigned int n, double chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
+		MonochromaticLIV(unsigned int order, std::unordered_map<int, double> coeff, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
+		MonochromaticLIV(unsigned int order, std::vector<int> particles, std::vector<double> chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
 		~MonochromaticLIV();
 		void setOrder(unsigned int n);
-		void setSymmetryBreakingTreatment(SymmetryBreakingTreatment treatment);
+		void setSymmetryBreaking(SymmetryBreaking treatment);
 		void setCoefficients(std::unordered_map<int, double> coeffs);
 		void addCoefficient(int particle, double coeff);
 		unsigned int getOrder() const;
