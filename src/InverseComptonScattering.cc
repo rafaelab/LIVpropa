@@ -54,7 +54,7 @@ std::string InverseComptonScattering::getInteractionTag() const {
 void InverseComptonScattering::initRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
-	if (!infile.good())
+	if (! infile.good())
 		throw std::runtime_error("InverseComptonScattering: could not open file " + filename);
 
 	// clear previously loaded tables
@@ -78,7 +78,7 @@ void InverseComptonScattering::initRate(std::string filename) {
 void InverseComptonScattering::initCumulativeRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
-	if (!infile.good())
+	if (! infile.good())
 		throw std::runtime_error("InverseComptonScattering: could not open file " + filename);
 
 	// clear previously loaded tables

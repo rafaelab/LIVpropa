@@ -4,6 +4,9 @@
 namespace livpropa {
 
 
+PairProduction::PairProduction() {
+}
+
 PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool haveElectrons, double thinning, double limit) {
 	setKinematics(kinematics);
 	setPhotonField(photonField);
@@ -20,7 +23,7 @@ void PairProduction::setPhotonField(ref_ptr<PhotonField> field) {
 	std::string dataPath = "PairProduction" + kinematicsId + "/";
 	dataPath += kinematics->getLocationData(std::vector<int>({-11, 11, 22}));
 	dataPath += "/";
-	
+
 	std::string photonBgName = field->getFieldName();
 	setDescription("PairProduction: " + photonBgName);
 	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
@@ -54,7 +57,7 @@ std::string PairProduction::getInteractionTag() const {
 void PairProduction::initRate(std::string filename) {
 	std::ifstream infile(filename.c_str());
 
-	if (!infile.good())
+	if (! infile.good())
 		throw std::runtime_error("PairProduction: could not open file " + filename);
 
 	// clear previously loaded interaction rates

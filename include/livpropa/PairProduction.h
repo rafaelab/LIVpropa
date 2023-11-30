@@ -5,6 +5,7 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
+#include <string>
 
 #include <crpropa/Candidate.h>
 #include <crpropa/Common.h>
@@ -61,6 +62,7 @@ class PairProduction: public Module {
 		std::vector<std::vector<double>> tabCDF;  //!< cumulative interaction rate
 
 	public:
+		PairProduction();
 		PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
 		void setPhotonField(ref_ptr<PhotonField> photonField);
 		void setHaveElectrons(bool haveElectrons);

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
+#include <string>
 
 #include <crpropa/Candidate.h>
 #include <crpropa/Common.h>
