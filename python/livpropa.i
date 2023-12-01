@@ -32,10 +32,6 @@
 %ignore operator livpropa::Kinematics*;
 
 
-%begin %{
-	#define SWIG_PYTHON_CAST_MODE
-%}
-
 /* Headers */
 %{
 	#include "CRPropa.h"
@@ -75,10 +71,10 @@
 %include "livpropa/PhotonDecay.h"
 %include "livpropa/VacuumCherenkov.h"
 
-/* Instantiate template to ensure that maps of particles-LIV_coefficients are propertly handled */
+
+/* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
 %template (CoefficientsMap) std::unordered_map<int, double>;
-%template(IntVector) std::vector<int>;
-%template(DoubleVector) std::vector<double>;
+
 
 /* Hide warnings */
 #pragma SWIG nowarn=312,325,361,389,401,508,509
