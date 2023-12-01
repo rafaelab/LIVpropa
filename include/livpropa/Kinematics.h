@@ -41,7 +41,7 @@ class Kinematics : public Referenced {
 		virtual std::string getShortIdentifier() const {
 			return "KinematicsBase";
 		};
-		virtual std::string getLocationData(std::vector<int> particles) const {
+		virtual std::string getLocationData(const std::vector<int>& particles) const {
 			return "";
 		};
 		virtual double getSymmetryBreakingShift(const double& p) const {
@@ -69,7 +69,7 @@ class SpecialRelativity : public Kinematics {
 		SpecialRelativity();
 		~SpecialRelativity();
 		std::string getShortIdentifier() const;
-		std::string getLocationData(std::vector<int> particles) const;
+		std::string getLocationData(const std::vector<int>& particles) const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
@@ -124,7 +124,7 @@ class MonochromaticLIV : public Kinematics {
 		unsigned int getOrder() const;
 		std::unordered_map<int, double> getCoefficients() const;
 		std::string getShortIdentifier() const;
-		std::string getLocationData(std::vector<int> particles) const;
+		std::string getLocationData(const std::vector<int>& particles) const;
 		std::vector<int> getParticles()  const;
 		double getCoefficientForParticle(const int& particle) const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;

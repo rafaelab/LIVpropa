@@ -20,7 +20,7 @@ std::string SpecialRelativity::getShortIdentifier() const {
 	return "SR";
 }
 
-std::string SpecialRelativity::getLocationData(std::vector<int> particles) const {
+std::string SpecialRelativity::getLocationData(const std::vector<int>& particles) const {
 	return "";
 }
 
@@ -95,7 +95,7 @@ std::string MonochromaticLIV::getShortIdentifier() const {
 	return "LIV";
 }
 
-std::string MonochromaticLIV::getLocationData(std::vector<int> particles) const {
+std::string MonochromaticLIV::getLocationData(const std::vector<int>& particles) const {
 	char dir[512] = "";
 
 	size_t s = 0;
