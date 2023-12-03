@@ -6,7 +6,7 @@ find_package(Python COMPONENTS Interpreter Development)
 find_package(SWIG REQUIRED)
 
 # general options
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CRPropa_SWIG_FILE "crpropa.i")
 set(SWIG_MODE_FLAG "")
 
