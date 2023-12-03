@@ -205,8 +205,14 @@ void PairProduction::performInteraction(Candidate* candidate) const {
 	if (E < tabE.front() or (E > tabE.back()))
 		return;
 
-	// possible corrections in thresholds
+	// compute momentum from energy
 	double p = kinematics->computeMomentumFromEnergy(E, id);
+
+	// ignore if negative solutions
+	if (p < 0)
+		return;
+
+	// possible corrections in thresholds
 	double sShift = kinematics->getSymmetryBreakingShift(p);
 
 	// sample the value of s
