@@ -151,33 +151,53 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 	std::vector<double> ps;
 
 	if (n == 0) {
-		return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
+		std::complex<double> sol = sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
+		double solRe = sol.real();
+		if (solRe < 0)
+			return -1;
+		return solRe;
 		
 	} else if (n == 1) {
-		double a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
+
+		std::complex<double> a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
 		a = pow(a, 1. / 3.);
 		
-		double sol1 = - (energy_planck / (3 * chi)) * (1. + pow(2, 1. / 3.) / a) * energy_planck / a - a / 3. / pow(2, 1. / 3.) / chi;
-		double sol2 = - (energy_planck / (3 * chi)) * (1. - energy_planck / pow(2., 2. / 3.) / a) + a / 6. / pow(2., 1. / 3.) / chi;
+		std::complex<double> sol1 = - (energy_planck / (3 * chi)) * (1. + pow(2, 1. / 3.) / a) * energy_planck / a - a / 3. / pow(2, 1. / 3.) / chi;
+		std::complex<double> sol2 = - (energy_planck / (3 * chi)) * (1. - energy_planck / pow(2., 2. / 3.) / a) + a / 6. / pow(2., 1. / 3.) / chi;
+		
+		// third solution is equal to the second (differs in imaginary part), but is considered for averaging algorithm
+		std::complex<double> sol3 = sol2;
 
 		// convert units
 		sol1 /= c_light;
 		sol2 /= c_light;
+		sol3 /= c_light;
 
-		// third solution is equal to the second (differs in imaginary part)
-		ps.push_back(sol1);
-		ps.push_back(sol2);
+		double sol1Re = sol1.real();
+		double sol2Re = sol2.real();
+		double sol3Re = sol3.real();
+
+		if (sol1Re > 0)
+			ps.push_back(sol1Re);
+		if (sol2Re > 0)
+			ps.push_back(sol2Re);
+		if (sol3Re > 0)
+			ps.push_back(sol3Re);
 
 	} else if (n == 2) {
-
-		double e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
+		std::complex<double> e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
 		
-		double sol1 = sqrt((- pow_integer<2>(energy_planck) - energy_planck * e) / chi / 2.);
-		double sol2 = sqrt((- pow_integer<2>(energy_planck) + energy_planck * e) / chi / 2.);
+		// only two out of the fours solutions lead to positive momenta
+		std::complex<double> sol1 = sqrt((- pow_integer<2>(energy_planck) - energy_planck * e) / chi / 2.);
+		std::complex<double> sol2 = sqrt((- pow_integer<2>(energy_planck) + energy_planck * e) / chi / 2.);
 
-		// the other two solutions lead to negative momenta
-		ps.push_back(sol1);
-		ps.push_back(sol2);
+		double sol1Re = sol1.real();
+		double sol2Re = sol2.real();
+		
+		if (sol1Re > 0)
+			ps.push_back(sol1Re);
+		if (sol2Re > 0)
+			ps.push_back(sol2Re);
 
 	} else {
 		// get vector of coefficients
@@ -204,6 +224,8 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 		}
 	}
 	unsigned int nSolutions = ps.size();
+	if (nSolutions < 1)
+		return -1;
 
 	// strategies for treating multiple acceptable solutions
 	if (symmetryBreaking == SymmetryBreaking::Random) { 
