@@ -34,10 +34,10 @@ namespace livpropa {
  @brief Simulate the emission of vacuum Cherenkov radiation due to LIV effects.
 
  This implementation follows the description from:
- 	arXiv:2311.XXXXX
+ 	arXiv:2312.XXXXX
  Exactly one Cherenkov photon is emitted at a time, with an energy equal to the difference between the primary's energy and the threshold energy.
- The emission is consider to be instantaneous (this might change in the future).
- While the structure here is meant to be generic, it is likely applicable only to electrons.
+ The emission is considered to be instantaneous (this might change in the future).
+ While the structure here is meant to be generic, it was tested only for electrons.
 */
 class VacuumCherenkov: public Module {
 	private:
@@ -55,7 +55,8 @@ class VacuumCherenkov: public Module {
 		void setThinning(double thinning);
 		void setInteractionTag(std::string tag);
 		std::string getInteractionTag() const;
-		double computeThresholdEnergy() const;
+		double computeThresholdMomentum(const int& id) const;
+		double computeThresholdEnergy(const int& id) const;
 		void process(Candidate* candidate) const;
 };
 /** @}*/
