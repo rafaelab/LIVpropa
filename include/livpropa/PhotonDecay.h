@@ -35,8 +35,8 @@ namespace livpropa {
  @brief Simulate the decay of a photon into a pair, due to LIV effects.
 
  This implementation follows the description from:
- 	arXiv:2311.XXXXX
- The emission is consider to be instantaneous (this might change in the future).
+ 	arXiv:2312.XXXXX
+ The emission is considered to be instantaneous (this might change in the future).
 */
 class PhotonDecay: public Module {
 	private:
@@ -54,6 +54,7 @@ class PhotonDecay: public Module {
 		void setThinning(double thinning);
 		void setInteractionTag(std::string tag);
 		std::string getInteractionTag() const;
+		double computeThresholdMomentum() const;
 		double computeThresholdEnergy() const;
 		void process(Candidate* candidate) const;
 };
