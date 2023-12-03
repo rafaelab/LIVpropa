@@ -50,6 +50,7 @@ class InverseComptonScattering: public Module {
 		bool havePhotons; // add secondary photons to simulation
 		double limit; // limit the step to a fraction of the mean free path
 		double thinning; // factor of the thinning (0: no thinning, 1: maximum thinning)
+		unsigned int nSubsteps; // do-while loop in process is performed (limiting next step) only nSubsteps times
 		std::string interactionTag;
 		std::vector<double> tabEnergy;  //!< electron energy in [J]
 		std::vector<double> tabRate;  //!< interaction rate in [1/m]
@@ -58,12 +59,13 @@ class InverseComptonScattering: public Module {
 		std::vector<std::vector<double>> tabCDF;  //!< cumulative interaction rate
 
 	public:
-		InverseComptonScattering(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool havePhotons = false, double thinning = 0, double limit = 0.1);
+		InverseComptonScattering(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool havePhotons = false, double thinning = 0, double limit = 0.1, unsigned int numberOfSubsteps = 10000);
 		void setPhotonField(ref_ptr<PhotonField> photonField);
 		void setKinematics(ref_ptr<Kinematics> kin);
 		void setHavePhotons(bool havePhotons);
 		void setLimit(double limit);
 		void setThinning(double thinning);
+		void setNumberOfSubsteps(unsigned int n);
 		void setInteractionTag(std::string tag);
 		std::string getInteractionTag() const;
 		void initRate(std::string filename);

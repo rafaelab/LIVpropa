@@ -4,12 +4,13 @@
 namespace livpropa {
 
 
-InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, ref_ptr<Kinematics> kinematics, bool havePhotons, double thinning, double limit) {
+InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, ref_ptr<Kinematics> kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
 	setKinematics(kinematics);
 	setPhotonField(field);
 	setHavePhotons(havePhotons);
 	setLimit(limit);
 	setThinning(thinning);
+	setNumberOfSubsteps(numberOfSubsteps);
 	setInteractionTag("EMIC");
 }
 
@@ -45,6 +46,10 @@ void InverseComptonScattering::setThinning(double thinning) {
 
 void InverseComptonScattering::setInteractionTag(std::string tag) {
 	interactionTag = tag;
+}
+
+void InverseComptonScattering::setNumberOfSubsteps(unsigned int n) {
+	nSubsteps = n;
 }
 
 std::string InverseComptonScattering::getInteractionTag() const {
@@ -128,8 +133,8 @@ class ICSSecondariesEnergyDistribution {
 	public:
 		// differential cross-section, see Lee '96 (arXiv:9604098), eq. 23 for x = Ee'/Ee
 		double dSigmadE(double x, double beta) {
-			double q = ((1 - beta) / beta) * (1 - 1./x);
-			return ((1 + beta) / beta) * (x + 1./x + 2 * q + q * q);
+			double q = ((1 - beta) / beta) * (1 - 1. / x);
+			return ((1 + beta) / beta) * (x + 1. / x + 2 * q + q * q);
 		}
 
 		// create the cumulative energy distribution of the up-scattered photon
@@ -176,8 +181,8 @@ class ICSSecondariesEnergyDistribution {
 			double beta = (s - s_min) / (s + s_min);
 			double x0 = (1 - beta) / (1 + beta);
 			double dlx = -log(x0) / Nrer;
-			double binWidth = x0 * (exp(j * dlx) - exp((j-1) * dlx));
-			double Ep = (x0 * exp((j-1) * dlx) + binWidth) * Ee;
+			double binWidth = x0 * (exp(j * dlx) - exp((j - 1) * dlx));
+			double Ep = (x0 * exp((j - 1) * dlx) + binWidth) * Ee;
 			return std::min(Ee, Ep); // prevent Ep > Ee from numerical inaccuracies
 		}
 };
@@ -192,8 +197,14 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 	if (E < tabE.front() or E > tabE.back())
 		return;
 
-	// possible corrections in thresholds
+	// compute momentum from energy
 	double p = kinematics->computeMomentumFromEnergy(E, id);
+
+	// ignore if negative solutions
+	if (p < 0)
+		return;
+
+	// possible corrections in thresholds
 	double sShift = kinematics->getSymmetryBreakingShift(p);
 
 	// sample the value of s
@@ -206,9 +217,15 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 	// sample electron energy after scattering
 	static ICSSecondariesEnergyDistribution distribution;
 	double Enew = distribution.sample(E, s);
+		
 
 	// add up-scattered photon
 	double Esecondary = E - Enew;
+
+	// avoid possible problems with superluminal case
+	if (Esecondary <= 0.)
+		return;
+
 	double f = Enew / E;
 	if (havePhotons) {
 		if (random.rand() < pow(1 - f, thinning)) {
@@ -242,18 +259,24 @@ void InverseComptonScattering::process(Candidate* candidate) const {
 	// run this loop at least once to limit the step size
 	double step = candidate->getCurrentStep();
 	Random &random = Random::instance();
+	int substepCounter = 0;
 	do {
 		double randDistance = -log(random.rand()) / rate;
 
-		// check for interaction; if it doesn't ocurr, limit next step
+		// check for interaction; if it doesn't occur, limit next step
 		if (step < randDistance) {
 			candidate->limitNextStep(limit / rate);
 			return;
 		}
 		performInteraction(candidate);
 
+		// performance improvement for interactions near the threshold
+		if (substepCounter >= nSubsteps)
+			return;
+
 		// repeat with remaining step
 		step -= randDistance;
+		substepCounter++;
 	} while (step > 0);
 }
 
