@@ -42,7 +42,7 @@ double VacuumCherenkov::computeThresholdMomentum(const int& id) const {
 	// check type of kinematics
 	std::string livType = kinematics->getShortIdentifier();
 
-	double pThr = 0;
+	double pThr = std::numeric_limits<float>::max();
 	if (livType == "LIV") {
 		// type casting
 		MonochromaticLIV* kin = static_cast<MonochromaticLIV*>(kinematics.get()); 
