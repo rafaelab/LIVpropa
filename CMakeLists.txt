@@ -52,6 +52,7 @@ include_directories(include
 set(SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Data.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Kinematics.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Sampler.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/PairProduction.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/InverseComptonScattering.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/PhotonDecay.cc

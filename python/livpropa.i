@@ -30,12 +30,17 @@
 
 /* Ignore list */
 %ignore operator livpropa::Kinematics*;
+%ignore operator livpropa::Sampler*;
+%ignore operator livpropa::SamplerList*;
 
 
 /* Headers */
 %{
 	#include "CRPropa.h"
 	#include "livpropa/UnitsAndConstants.h"
+	#include "livpropa/Common.h"
+	#include "livpropa/Histogram.h"
+	#include "livpropa/Sampler.h"
 	#include "livpropa/Data.h"
 	#include "livpropa/Kinematics.h"
 	#include "livpropa/InverseComptonScattering.h"
@@ -56,15 +61,27 @@
 %template(KinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
 %feature("director") livpropa::Kinematics;
 
+%template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
+
+/* To enable access to abstract base class Sampler */
+%implicitconv crpropa::ref_ptr<crpropa::SamplerEvents>;
+%feature("director") livpropa::SamplerEvents;
+%template(SamplerEventsRefPtr) crpropa::ref_ptr<livpropa::SamplerEvents>;
+%implicitconv crpropa::ref_ptr<livpropa::SamplerDistribution>;
+%template(SamplerDistributionRefPtr) crpropa::ref_ptr<livpropa::SamplerDistribution>;
+%feature("director") livpropa::SamplerDistribution;
+
 
 /* Fix bug with some SWIG versions */
 %feature("notabstract") livpropa::SpecialRelativity;
 %feature("notabstract") livpropa::MonochromaticLIV;
 
-
 /* Include plugin parts to generate wrappers  */
+%include "livpropa/Common.h"
 %include "livpropa/Data.h"
 %include "livpropa/UnitsAndConstants.h"
+%include "livpropa/Histogram.h"
+%include "livpropa/Sampler.h"
 %include "livpropa/Kinematics.h"
 %include "livpropa/InverseComptonScattering.h"
 %include "livpropa/PairProduction.h"
