@@ -45,7 +45,7 @@ class VacuumCherenkov: public Module {
 		bool havePhotons;
 		double limit;
 		double thinning;
-		std::string interactionTag = "VC";
+		std::string interactionTag;
 
 	public:
 		VacuumCherenkov(ref_ptr<Kinematics> kinematics, bool havePhotons = false, double thinning = 0, double limit = 0.1);

@@ -10,6 +10,7 @@ VacuumCherenkov::VacuumCherenkov(ref_ptr<Kinematics> kinematics, bool havePhoton
 	setLimit(limit);
 	setThinning(thinning);
 	setKinematics(kinematics);
+	setInteractionTag("VC");
 }
 
 void VacuumCherenkov::setKinematics(ref_ptr<Kinematics> kin) {

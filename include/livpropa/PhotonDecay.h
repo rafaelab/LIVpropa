@@ -44,7 +44,7 @@ class PhotonDecay: public Module {
 		bool haveElectrons;
 		double limit;
 		double thinning;
-		std::string interactionTag = "PD";
+		std::string interactionTag;
 
 	public:
 		PhotonDecay(ref_ptr<Kinematics> kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);

@@ -10,6 +10,7 @@ PhotonDecay::PhotonDecay(ref_ptr<Kinematics> kinematics, bool haveElectrons, dou
 	setLimit(limit);
 	setThinning(thinning);
 	setKinematics(kinematics);
+	setInteractionTag("PD");
 }
 
 void PhotonDecay::setKinematics(ref_ptr<Kinematics> kin) {
