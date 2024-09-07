@@ -14,6 +14,7 @@ using crpropa::c_light;
 using crpropa::c_squared;
 using crpropa::eplus;
 using crpropa::h_planck;
+using crpropa::alpha_finestructure;
 
 // units
 using crpropa::eV;
