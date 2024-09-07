@@ -76,7 +76,7 @@
 %feature("notabstract") livpropa::SpecialRelativity;
 %feature("notabstract") livpropa::MonochromaticLIV;
 
-/* Prevent problems with homonimous functions in different namespace */
+/* Prevent problems with homonymous functions in different namespace */
 %rename(vcMono0_computeMomentumThreshold) livpropa::vc::monoLIV0::computeThresholdMomentum;
 %rename(vcMono1_computeMomentumThreshold) livpropa::vc::monoLIV1::computeThresholdMomentum;
 %rename(vcMono2_computeMomentumThreshold) livpropa::vc::monoLIV2::computeThresholdMomentum;
