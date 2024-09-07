@@ -76,6 +76,12 @@
 %feature("notabstract") livpropa::SpecialRelativity;
 %feature("notabstract") livpropa::MonochromaticLIV;
 
+/* Prevent problems with homonimous functions in different namespace */
+%rename(vcMono0_computeMomentumThreshold) livpropa::vc::monoLIV0::computeThresholdMomentum;
+%rename(vcMono1_computeMomentumThreshold) livpropa::vc::monoLIV1::computeThresholdMomentum;
+%rename(vcMono2_computeMomentumThreshold) livpropa::vc::monoLIV2::computeThresholdMomentum;
+
+
 /* Include plugin parts to generate wrappers  */
 %include "livpropa/Common.h"
 %include "livpropa/Data.h"
@@ -91,6 +97,8 @@
 
 /* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
 %template (CoefficientsMap) std::unordered_map<int, double>;
+
+
 
 
 /* Hide warnings */
