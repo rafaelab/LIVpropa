@@ -12,6 +12,9 @@
 
 namespace livpropa {
 
+
+
+
 /**
  @class Histogram1D
  @brief Builds a one-dimensional histogram
@@ -26,12 +29,16 @@ class Histogram1D : public Referenced {
 		std::string scale;
 
 	public:
+		Histogram1D(std::string scale = "lin") {
+			setScale(scale);
+		}
+
 		Histogram1D(double vmin, double vmax, int nBins, std::string scale = "lin") {
 			setScale(scale);
 			initBins(vmin, vmax, nBins);
 		}
 
-		~Histogram1D(){
+		~Histogram1D() {
 		}
 
 		void initBins(double vmin, double vmax, int nBins) {
@@ -100,7 +107,7 @@ class Histogram1D : public Referenced {
 		double getSample() const {
 			Random &random = Random::instance();
 			size_t bin = random.randBin(contents);
-			if (scale == "log") {
+			if (scale == "log10") {
 				return pow(10, log10(edges[bin]) + random.rand() * log10(widths[bin]));
 			} else {
 				return edges[bin] + random.rand() * widths[bin];
@@ -167,6 +174,29 @@ class Histogram1D : public Referenced {
 			}
 		}
 
+		void setBinContent(size_t i, double v) {
+			contents[i] = v;
+		}
+
+		std::pair<double, double> getBin(const size_t& i) const {
+			return std::make_pair(edges[i], edges[i + 1]);
+		}
+
+		double getBinCentre(const size_t& i) const {
+			if (scale == "log10") {
+				return pow(10, (log10(edges[i]) + log10(edges[i + 1])) / 2.);
+			} else {
+				return (edges[i] + edges[i + 1]) / 2.;
+			}
+		}
+
+		double getBinContent(const size_t& i) const {
+			return contents[i];
+		}
+
+		double operator[](const size_t& i) const {
+			return getBinContent(i);
+		}
 };
 
 
