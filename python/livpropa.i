@@ -86,6 +86,27 @@
 %rename(vcMono2_computeMomentumThreshold) livpropa::vc::monoLIV2::computeThresholdMomentum;
 
 
+		typedef unordered_map<int, ref_ptr<AbstractKinematics>> ParticleKinematics;
+
+
+/* convert unordered_dict to Python dict */
+%typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>> (PyObject* obj) %{
+	obj = PyDict_New();
+	for (const auto& n : $1) {
+		// convert int to Python integer
+		PyObject* pId = PyLong_FromLong(n.first); // Convert int to Python integer
+
+		// convert crpropa::ref_ptr<livpropa::AbstractKinematics> to Python object
+		PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second), SWIGTYPE_p_crpropa__ref_ptrT_livpropa__AbstractKinematics_t, SWIG_POINTER_OWN);
+
+		PyDict_SetItem(obj, pId, kin);
+		Py_XDECREF(pId);
+		Py_XDECREF(kin);
+	}
+	$result = SWIG_Python_AppendOutput($result, obj);
+%}
+
+
 /* Include plugin parts to generate wrappers  */
 %include "livpropa/Common.h"
 %include "livpropa/Data.h"
