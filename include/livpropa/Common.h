@@ -2,6 +2,7 @@
 #define LIVPROPA_COMMON_H
 
 #include <complex>
+#include <utility>
 
 #include <crpropa/Candidate.h>
 #include <crpropa/Common.h>
@@ -22,6 +23,7 @@ using std::endl;
 using std::complex;
 using std::string;
 using std::vector;
+using std::pair;
 using std::unordered_map;
 using std::runtime_error;
 
