@@ -1,14 +1,13 @@
 #ifndef LIVPROPA_DATA_H
 #define LIVPROPA_DATA_H
 
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
-
 
 #include <kiss/path.h>
 #include <kiss/logger.h>
 
+#include "livpropa/Common.h"
 
 
 namespace livpropa {
@@ -17,12 +16,12 @@ namespace livpropa {
 /*
  Returns the full path to the data files
 */
-std::string getDataPath(std::string filename);
+string getDataPath(string filename);
 
 /* 
  Returns the location where LIVpropa was installed
 */
-std::string  getInstallPrefix();
+string  getInstallPrefix();
 
 
 } // namespace livpropa

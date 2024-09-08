@@ -4,9 +4,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <crpropa/Random.h>
-#include <crpropa/Referenced.h>
-
 #include "livpropa/Common.h"
 #include "livpropa/Histogram.h"
 
@@ -123,12 +120,12 @@ class SamplerEventsNull : public SamplerEvents {
  */
 class SamplerEventsList : public SamplerEvents {
 	protected:
-		std::vector<ref_ptr<SamplerEvents>> samplers;
+		vector<ref_ptr<SamplerEvents>> samplers;
 
 	public:
 		SamplerEventsList();
-		SamplerEventsList(std::vector<ref_ptr<SamplerEvents>> samplers);
-		void add(SamplerEvents *samplers);
+		SamplerEventsList(vector<ref_ptr<SamplerEvents>> samplers);
+		void add(SamplerEvents* samplers);
 		// inline void add(ref_ptr<SamplerEvents> SamplerEvents) {
 		// 	add(SamplerEvents.get());
 		// }
@@ -142,13 +139,13 @@ class SamplerEventsList : public SamplerEvents {
  */
 class SamplerDistribution : public Referenced {
 	public:
-		virtual std::vector<double> getSample(int nSamples) const = 0;
+		virtual vector<double> getSample(int nSamples) const = 0;
 		virtual int getSize() const = 0;
 		virtual ref_ptr<Histogram1D> getDistribution() const = 0;
 		virtual void transformToPDF() = 0;
 		virtual void transformToCDF() = 0;
-		virtual void append(const std::vector<double> &v) = 0;
-		virtual void push(const double &v) = 0;
+		virtual void append(const vector<double>& v) = 0;
+		virtual void push(const double& v) = 0;
 		virtual void clear() = 0; 
 };
 
@@ -158,16 +155,16 @@ class SamplerDistributionUniform : public SamplerDistribution {
 		int datasetSize;
 
 	public:
-		SamplerDistributionUniform(double vmin, double vmax, int nBins, std::string scale = "lin");
+		SamplerDistributionUniform(double vmin, double vmax, int nBins, string scale = "lin");
 		void setSize(int size);
 		int getSize() const;
 		void setDistribution(ref_ptr<Histogram1D> dist);
 		ref_ptr<Histogram1D> getDistribution() const;
-		std::vector<double> getSample(int nSamples) const;
+		vector<double> getSample(int nSamples) const;
 		void transformToPDF();
 		void transformToCDF();
-		void append(const std::vector<double> &v);
-		void push(const double &v);
+		void append(const vector<double>& v);
+		void push(const double& v);
 		void clear();
 };
 

@@ -2,11 +2,13 @@
 #define LIVPROPA_UNITSANDCONSTANTS_H
 
 #include <unordered_map>
+
 #include <crpropa/Units.h>
+
+#include "livpropa/Common.h"
 
 
 namespace livpropa {
-
 
 // constants
 using crpropa::mass_electron;
@@ -30,7 +32,7 @@ static const double energy_planck = mass_planck * c_squared;
 static const double mec2 = mass_electron * c_squared;
 
 // particle masses
-static const std::unordered_map<int, double> particleMasses = {
+static const unordered_map<int, double> particleMasses = {
 	{ 11, mass_electron}, 
 	{-11, mass_electron},
 	{ 22, 0.}

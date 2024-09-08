@@ -7,25 +7,11 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include <crpropa/Candidate.h>
-#include <crpropa/Common.h>
-#include <crpropa/Module.h>
-#include <crpropa/Random.h>
-#include <crpropa/Referenced.h>
-#include <crpropa/Units.h>
-#include <crpropa/Vector3.h>
-
+#include "livpropa/Common.h"
 #include "livpropa/Data.h"
 #include "livpropa/Kinematics.h"
 #include "livpropa/UnitsAndConstants.h"
 
-using crpropa::Candidate;
-using crpropa::Module;
-using crpropa::Random;
-using crpropa::Referenced;
-using crpropa::Vector3d;
-using crpropa::pow_integer;
-using crpropa::ref_ptr;
 
 
 namespace livpropa {
@@ -40,20 +26,20 @@ namespace livpropa {
 */
 class PhotonDecay: public Module {
 	private:
-		ref_ptr<Kinematics> kinematics;
+		ref_ptr<AbstractKinematics> kinematics;
 		bool haveElectrons;
 		double limit;
 		double thinning;
-		std::string interactionTag;
+		string interactionTag;
 
 	public:
-		PhotonDecay(ref_ptr<Kinematics> kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
-		void setKinematics(ref_ptr<Kinematics> kinematics);
+		PhotonDecay(ref_ptr<AbstractKinematics> kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
+		void setKinematics(ref_ptr<AbstractKinematics> kinematics);
 		void setHaveElectrons(bool electrons);
 		void setLimit(double limit);
 		void setThinning(double thinning);
-		void setInteractionTag(std::string tag);
-		std::string getInteractionTag() const;
+		void setInteractionTag(string tag);
+		string getInteractionTag() const;
 		double computeThresholdMomentum() const;
 		double computeThresholdEnergy() const;
 		void process(Candidate* candidate) const;

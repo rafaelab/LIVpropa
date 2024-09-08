@@ -1,12 +1,9 @@
 #ifndef LIVPROPA_HISTOGRAM_H
 #define LIVPROPA_HISTOGRAM_H
 
-
+#include <algorithm>
 #include <string>
 #include <vector>
-
-#include <crpropa/Random.h>
-#include <crpropa/Referenced.h>
 
 #include "livpropa/Common.h"
 
@@ -21,18 +18,18 @@ namespace livpropa {
  */
 class Histogram1D : public Referenced {
 	protected:
-		std::vector<double> edges;
-		std::vector<double> centres;
-		std::vector<double> widths;
-		std::vector<double> contents;
-		std::string scale;
+		vector<double> edges;
+		vector<double> centres;
+		vector<double> widths;
+		vector<double> contents;
+		string scale;
 
 	public:
-		Histogram1D(std::string scale = "lin") {
+		Histogram1D(string scale = "lin") {
 			setScale(scale);
 		}
 
-		Histogram1D(double vmin, double vmax, int nBins, std::string scale = "lin") {
+		Histogram1D(double vmin, double vmax, int nBins, string scale = "lin") {
 			setScale(scale);
 			initBins(vmin, vmax, nBins);
 		}
@@ -69,7 +66,7 @@ class Histogram1D : public Referenced {
 			}
 		}
 
-		void setScale(std::string s) {
+		void setScale(string s) {
 			if (s == "log")
 				scale = "log10";
 
@@ -79,23 +76,23 @@ class Histogram1D : public Referenced {
 			scale = s;
 		}
 
-		std::string getScale() const {
+		string getScale() const {
 			return scale;
 		}
 
-		std::vector<double> getBinEdges() const {
+		vector<double> getBinEdges() const {
 			return edges;
 		}
 
-		std::vector<double> getBinWidths() const {
+		vector<double> getBinWidths() const {
 			return widths;
 		}
 
-		std::vector<double> getBinCentres() const {
+		vector<double> getBinCentres() const {
 			return centres;
 		}
 
-		std::vector<double> getBinContents() const {
+		vector<double> getBinContents() const {
 			return contents;
 		}
 
@@ -114,7 +111,7 @@ class Histogram1D : public Referenced {
 		}
 
 		void push(double v, double w = 1) {
-			std::vector<double>::const_iterator it = std::lower_bound(edges.begin(), edges.end(), v);
+			vector<double>::const_iterator it = std::lower_bound(edges.begin(), edges.end(), v);
 			if (it == edges.begin() || it == edges.end())
 				return;
 
