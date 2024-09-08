@@ -75,7 +75,15 @@ class SpecialRelativity : public Kinematics {
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 };
 
+
 /**
+ @class MonochromaticLIV
+ @brief Class holding information about a scenario with monochromatic LIV.
+  A simple phenomenological implementation of LIV.
+  This preserves energy-momentum conservations and modifies the dispersion relations as:
+	E^2 = m^2 + p^2 + chi (pc / E_pl)^n.
+  The fact that only a single value of n is taken into account defines the naming choice "monochromatic".
+
   Sometimes we need to solve the equation for p and there are multiple real positive solutions.
   In this case, one of the following strategies can be adopted:
     (1) randomly pick one of the possible values;
@@ -85,25 +93,17 @@ class SpecialRelativity : public Kinematics {
 	(5) the largest among the values.
   Note that 1 and 2 are the most "sensible" ones.
   The third is phenomenologically motivated, but not physically justifiable.
-*/
-enum class SymmetryBreaking {
-	Random,
-	Average,
-	Smallest,
-	Largest,
-	Closest
-};
-
-
-/**
- @class MonochromaticLIV
- @brief Class holding information about a scenario with monochromatic LIV.
-  A simple phenomenological implementation of LIV.
-  This preserves energy-momentum conservations and modifies the dispersion relations as:
-	E^2 = m^2 + p^2 + chi (pc / E_pl)^n.
-  The fact that only a single value of n is taken into account defines the naming choice "monochromatic".
  */
 class MonochromaticLIV : public Kinematics {
+	public:
+		enum class SymmetryBreaking {
+			Random,
+			Average,
+			Smallest,
+			Largest,
+			Closest
+		};
+
 	protected:
 		unsigned int order; 
 		std::unordered_map<int, double> coefficients = {};
@@ -130,6 +130,7 @@ class MonochromaticLIV : public Kinematics {
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
+
 };
 
 
