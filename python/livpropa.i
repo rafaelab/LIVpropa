@@ -29,7 +29,8 @@
 %}
 
 /* Ignore list */
-%ignore operator livpropa::Kinematics*;
+%ignore operator livpropa::AbstractKinematics*;
+%ignore operator livpropa::LorentzViolating*;
 %ignore operator livpropa::Sampler*;
 %ignore operator livpropa::SamplerList*;
 
@@ -57,10 +58,12 @@
 
 
 /* To enable access to abstract base class Kinematics */
-%implicitconv crpropa::ref_ptr<livpropa::Kinematics>;
-%template(KinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
-%feature("director") livpropa::Kinematics;
+%implicitconv crpropa::ref_ptr<livpropa::AbstractKinematics>;
+%template(AbstractKinematicsRefPtr) crpropa::ref_ptr<livpropa::AbstractKinematics>;
+%feature("director") livpropa::AbstractKinematics;
 
+
+/* To enable access to abstract base class Histogram1D */
 %template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
 
 /* To enable access to abstract base class Sampler */
@@ -74,6 +77,7 @@
 
 /* Fix bug with some SWIG versions */
 %feature("notabstract") livpropa::SpecialRelativity;
+%feature("notabstract") livpropa::LorentzViolatingMonochromatic;
 %feature("notabstract") livpropa::MonochromaticLIV;
 
 /* Prevent problems with homonymous functions in different namespace */
@@ -96,8 +100,9 @@
 
 
 /* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
-%template (CoefficientsMap) std::unordered_map<int, double>;
-
+%template(CoefficientsMap) std::unordered_map<int, double>;
+%template(ParticleKinematicsIterator) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
+// %template(EmissionSpectraTable) std::unordered_map<int, livpropa::EmissionSpectrum>;
 
 
 
