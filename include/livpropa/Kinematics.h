@@ -168,7 +168,7 @@ class MonochromaticLIV : public LorentzViolating {
 		unsigned int order; 
 		unordered_map<int, double> coefficients = {};
 		SymmetryBreaking symmetryBreaking;
-		using CoefficientsIterator = typename std::unordered_map<int, double>::const_iterator;
+		using CoefficientsIterator = typename unordered_map<int, double>::const_iterator;
 
 	public:
 		MonochromaticLIV(SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
@@ -178,14 +178,13 @@ class MonochromaticLIV : public LorentzViolating {
 		MonochromaticLIV(unsigned int order, vector<int> particles, vector<double> chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Random);
 		~MonochromaticLIV();
 		void setOrder(unsigned int n);
-		// void setSymmetryBreaking(SymmetryBreaking treatment);
 		void setCoefficients(unordered_map<int, double> coeffs);
 		void addCoefficient(int particle, double coeff);
 		unsigned int getOrder() const;
-		std::unordered_map<int, double> getCoefficients() const;
-		std::string getShortIdentifier() const;
-		std::string getLocationData(const std::vector<int>& particles) const;
-		std::vector<int> getParticles()  const;
+		unordered_map<int, double> getCoefficients() const;
+		string getShortIdentifier() const;
+		string getLocationData(const vector<int>& particles) const;
+		vector<int> getParticles()  const;
 		double getCoefficientForParticle(const int& particle) const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
@@ -195,14 +194,27 @@ class MonochromaticLIV : public LorentzViolating {
 
 
 
-// class Kinematics {
-// 	protected:
-// 		// std::ref_ptr<AbstractKinematics> kinematics;
+class Kinematics {
+	public:
+		typedef unordered_map<int, ref_ptr<AbstractKinematics>> ParticleKinematics;
 
-// 	public:
-// 		Kinematics();
+	private:
+		using ParticleKinematicsIterator = typename unordered_map<int, ParticleKinematics>::const_iterator;
 
-// };
+	protected:
+		ParticleKinematics kinematics;
+
+	public:
+		Kinematics();
+		Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin);
+		Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>>);
+		Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin);
+		void add(int particle, ref_ptr<AbstractKinematics> kin);
+		// void addCoefficient(int particle, double coeff);
+		// string getLocationData(const vector<int>& particles) const;
+		// vector<int> getParticles()  const;
+
+};
 
 
 

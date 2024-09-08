@@ -541,4 +541,34 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 
 
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+Kinematics::Kinematics() {
+}
+
+Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
+	if (p.size() != kin.size())
+		throw std::length_error("Vector of particles and kinematics must have the same length.");
+
+	for (size_t i = 0; i < p.size(); i++) 
+		add(p[i], kin[i]);
+}
+
+Kinematics::Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin) {
+	for (size_t i = 0; i < p.size(); i++) 
+		add(p[i], kin);
+}
+
+Kinematics::Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>> kin) {
+	for (size_t i = 0; i < kin.size(); i++) 
+		add(kin[i].first, kin[i].second);
+}
+
+void Kinematics::add(int particle, ref_ptr<AbstractKinematics> kin) {
+	kinematics[particle] = kin;
+}
+
+
+
 } // namespace livpropa
