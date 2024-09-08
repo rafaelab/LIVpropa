@@ -10,10 +10,9 @@
 
 #include "livpropa/Common.h"
 
+
+
 namespace livpropa {
-
-
-
 
 /**
  @class Histogram1D
