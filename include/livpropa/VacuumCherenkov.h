@@ -50,12 +50,15 @@ class VacuumCherenkov: public Module {
 		bool isSpectrumFull(EmissionSpectrum spec) const {
 			return spec == EmissionSpectrum::Full;
 		}
+		typedef unordered_map<int, EmissionSpectrum> EmissionSpectraTable;
 
+	private:
+		using EmissionSpectraIterator = typename EmissionSpectraTable::const_iterator;
 
 	protected:
 		string interactionTag;
-		ref_ptr<AbstractKinematics> kinematics;
-		EmissionSpectrum spectrum;
+		Kinematics kinematics;
+		EmissionSpectraTable spectra;
 		bool havePhotons;
 		double limit;
 		double thinning;
@@ -65,15 +68,16 @@ class VacuumCherenkov: public Module {
 		Histogram1D distribution;
 
 	public:
-		VacuumCherenkov(ref_ptr<AbstractKinematics> kinematics, EmissionSpectrum spectrum = EmissionSpectrum::Default, bool havePhotons = false, ref_ptr<SamplerEvents> samplerEvents = NULL, ref_ptr<SamplerDistribution> samplerDistribution = NULL, int maximumSamples = 0, double limit = 0.1);
-		void setKinematics(ref_ptr<AbstractKinematics> kinematics);
+		VacuumCherenkov(Kinematics kinematics, EmissionSpectraTable spectra = unordered_map<int, EmissionSpectrum>(), bool havePhotons = false, ref_ptr<SamplerEvents> samplerEvents = NULL, ref_ptr<SamplerDistribution> samplerDistribution = NULL, int maximumSamples = 0, double limit = 0.1);
+		void setKinematics(Kinematics kinematics);
 		void setHavePhotons(bool photons);
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
-		void setSpectrum(EmissionSpectrum spectrum, unsigned int nPoints = 1000);
+		void setSpectra(EmissionSpectraTable spectra, unsigned int nPoints = 1000);
 		void setSamplerEvents(ref_ptr<SamplerEvents> sampler);
 		void setSamplerDistribution(ref_ptr<SamplerDistribution> sampler);
 		void setMaximumSamples(int nSamples);
+		bool isImplemented(const int& id) const;
 		string getInteractionTag() const;
 		double computeThresholdMomentum(const int& id) const;
 		double computeThresholdEnergy(const int& id) const;

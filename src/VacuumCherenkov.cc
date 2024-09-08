@@ -5,18 +5,18 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(ref_ptr<AbstractKinematics> kinematics, EmissionSpectrum spec,  bool havePhotons, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
+VacuumCherenkov::VacuumCherenkov(Kinematics kinematics, EmissionSpectraTable spec,  bool havePhotons, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
 	setInteractionTag("VC");
 	setHavePhotons(havePhotons);
 	setLimit(limit);
 	setKinematics(kinematics);
-	setSpectrum(spec);
+	setSpectra(spec);
 	setSamplerEvents(samplerEvents);
 	setSamplerDistribution(samplerDistribution);
 	setMaximumSamples(maxSamples);
 }
 
-void VacuumCherenkov::setKinematics(ref_ptr<AbstractKinematics> kin) {
+void VacuumCherenkov::setKinematics(Kinematics kin) {
 	kinematics = kin;
 }
 
@@ -32,42 +32,55 @@ void VacuumCherenkov::setInteractionTag(std::string tag) {
 	interactionTag = tag;
 }
 
-void VacuumCherenkov::setSpectrum(EmissionSpectrum spec, const unsigned int nPoints) {
-	std::string kin = kinematics->getShortIdentifier();
+void VacuumCherenkov::setSpectra(EmissionSpectraTable spec, const unsigned int nPoints) {
+	if (spec.empty()) {
+		spectra[ 11] = EmissionSpectrum::Default;
+		spectra[-11] = EmissionSpectrum::Default;
+	}
 
-	if (kin == "SR") {
-		if (spec != EmissionSpectrum::Default)
-			throw std::runtime_error("No vacuum Cherenkov implemented for special-relativistic kinematics.");
 
-	} else if (kin == "LIV") {
-		MonochromaticLIV* kin = static_cast<MonochromaticLIV*>(kinematics.get()); 
-		unsigned int order = kin->getOrder();
+	// vector<int> particles = kinematics.getParticles();
+	// if (std::find(particles.begin(), particles.end(), x) != v.end())
 
-		if (order == 0 || order == 1) {
-			if (spec == EmissionSpectrum::Default)
-				spec = EmissionSpectrum::Step;
 
-			if (spec == EmissionSpectrum::Step) {
-				return;
-			} else {
-				throw std::runtime_error("Only step-like spectrum is implemented for LIV of order 0 and 1.");
-			}
-		}
+	// auto kinPh = kinematics[ 22];
 
-		else if (order == 2) {
-			if (spec == EmissionSpectrum::Default)
-				spec = EmissionSpectrum::Full;
 
-			if (spec == EmissionSpectrum::Full) {
-				vc::monoLIV2::loadSpectrumDistribution(distribution, kin->getCoefficientForParticle(11), kin->getCoefficientForParticle(22));
-				return;
-			} else {
-				throw std::runtime_error("Only full spectrum is implemented for LIV of order 2.");
-			}
-		}
+	// std::string kin = kinematics.getNameTag();
 
-		throw std::runtime_error("VacuumCherenkov: only LIV of orders 0 and 1 (step-like spectrum) and 2 (full spectrum) are implemented.");
-	}	
+	// if (kin == "SR") {
+	// 	if (spec != EmissionSpectrum::Default)
+	// 		throw std::runtime_error("No vacuum Cherenkov implemented for special-relativistic kinematics.");
+
+	// } else if (kin == "LIV") {
+	// 	MonochromaticLIV* kin = static_cast<MonochromaticLIV*>(kinematics.get()); 
+	// 	unsigned int order = kin->getOrder();
+
+	// 	if (order == 0 || order == 1) {
+	// 		if (spec == EmissionSpectrum::Default)
+	// 			spec = EmissionSpectrum::Step;
+
+	// 		if (spec == EmissionSpectrum::Step) {
+	// 			return;
+	// 		} else {
+	// 			throw std::runtime_error("Only step-like spectrum is implemented for LIV of order 0 and 1.");
+	// 		}
+	// 	}
+
+	// 	else if (order == 2) {
+	// 		if (spec == EmissionSpectrum::Default)
+	// 			spec = EmissionSpectrum::Full;
+
+	// 		if (spec == EmissionSpectrum::Full) {
+	// 			vc::monoLIV2::loadSpectrumDistribution(distribution, kin->getCoefficientForParticle(11), kin->getCoefficientForParticle(22));
+	// 			return;
+	// 		} else {
+	// 			throw std::runtime_error("Only full spectrum is implemented for LIV of order 2.");
+	// 		}
+	// 	}
+
+	// 	throw std::runtime_error("VacuumCherenkov: only LIV of orders 0 and 1 (step-like spectrum) and 2 (full spectrum) are implemented.");
+	// }	
 
 	return;
 }
@@ -91,21 +104,43 @@ std::string VacuumCherenkov::getInteractionTag() const {
 	return interactionTag;
 }
 
+bool VacuumCherenkov::isImplemented(const int& id) const {
+	std::string kinOt = kinematics[id]->getNameTag();
+	std::string kinPh = kinematics[22]->getNameTag();
+
+	if (kinOt == "LIVmono" && kinPh == "LIVmono") {
+		auto kinOt = kinematics[id]->toLorentzViolatingKinematicsMonochromatic();
+		auto kinPh = kinematics[22]->toLorentzViolatingKinematicsMonochromatic();
+		if (kinOt->getOrder() == kinPh->getOrder())
+			return true;
+
+	} else if (kinOt == "LIVmono" && kinPh == "SR") {
+		return true;
+	} 
+	
+	return false;
+}
+
 double VacuumCherenkov::computeThresholdMomentum(const int& id) const {
-	double m = particleMasses.at(id);
-
-	// check type of kinematics (this is a bit ugly, but it is the only way I found to properly handle the types)
-	std::string livType = kinematics->getShortIdentifier();
-
 	double pThr = std::numeric_limits<double>::max();
+	if (! isImplemented(id))
+		return pThr;
 
-	if (livType == "LIV") {
-		MonochromaticLIV* kin = static_cast<MonochromaticLIV*>(kinematics.get()); 
-		unsigned int n = kin->getOrder();
-		double chiOt = kin->getCoefficientForParticle(id);
-		double chiPh = kin->getCoefficientForParticle(22);
+	if (kinematics[id]->isLorentzViolatingMonochromatic()) {
+		auto kinOt = kinematics[id]->toLorentzViolatingKinematicsMonochromatic();
+		double chiOt = kinOt->getCoefficient();
 
-		switch (n) {
+		// note that the SR case can be seen as LIV with coefficient equal to 0
+		double chiPh = 0.;
+		if (kinematics[22]->isLorentzViolatingMonochromatic()) {
+			auto kinPh = kinematics[22]->toLorentzViolatingKinematicsMonochromatic();
+			chiPh = kinPh->getCoefficient();
+		}
+
+		double m = particleMasses.at(id);
+		pThr = vc::monoLIV0::computeThresholdMomentum(chiOt, chiPh, m);
+
+		switch (kinOt->getOrder()) {
 			case 0:
 				pThr = vc::monoLIV0::computeThresholdMomentum(chiOt, chiPh, m);
 				break;
@@ -125,19 +160,28 @@ double VacuumCherenkov::computeThresholdMomentum(const int& id) const {
 
 double VacuumCherenkov::computeThresholdEnergy(const int& id) const {
 	double p = computeThresholdMomentum(id);
-	return kinematics->computeEnergyFromMomentum(p, id);
+	return kinematics[id]->computeEnergyFromMomentum(p, id);
 }
 
 void VacuumCherenkov::process(Candidate* candidate) const {
-	// do not perform any calculations for the special-relativistic case
-	std::string kin = kinematics->getShortIdentifier();
-	if (kin == "SR")
-		return;
-
-	// check if electron/positron
+	// check if electron/positron (only particles implemented so far)
 	int id = candidate->current.getId();
 	if (abs(id) != 11)
 		return;
+
+	// do not perform any calculations for the special-relativistic case
+	std::string kin = kinematics[id]->getNameTag();
+	if (kin == "SR")
+		return;
+
+	// get the emission spectrum
+	EmissionSpectrum spectrum;
+	try {
+		spectrum = spectra.at(id);
+	} catch (const int& id) {
+		throw runtime_error("No emission spectrum defined for particle with id " + std::to_string(id) + ". Using default behaviour.\n");
+	}
+
 
 	// get and scale the particle energy
 	double z = candidate->getRedshift();
@@ -191,6 +235,7 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 }
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace vc::monoLIV0 {
 

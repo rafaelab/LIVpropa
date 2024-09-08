@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-PhotonDecay::PhotonDecay(ref_ptr<AbstractKinematics> kinematics, bool haveElectrons, double thinning, double limit) {
+PhotonDecay::PhotonDecay(Kinematics kinematics, bool haveElectrons, double thinning, double limit) {
 	setHaveElectrons(haveElectrons);
 	setLimit(limit);
 	setThinning(thinning);
@@ -13,7 +13,7 @@ PhotonDecay::PhotonDecay(ref_ptr<AbstractKinematics> kinematics, bool haveElectr
 	setInteractionTag("PD");
 }
 
-void PhotonDecay::setKinematics(ref_ptr<AbstractKinematics> kin) {
+void PhotonDecay::setKinematics(Kinematics kin) {
 	kinematics = kin;
 }
 
@@ -33,43 +33,82 @@ void PhotonDecay::setInteractionTag(string tag) {
 	interactionTag = tag;
 }
 
+bool PhotonDecay::isImplemented() const {
+	std::string typeEl = kinematics[ 11]->getNameTag();
+	std::string typePo = kinematics[-11]->getNameTag();
+	std::string typePh = kinematics[ 22]->getNameTag();
+
+	if (typeEl != typePo)
+		return false;
+
+	if (typePh != "SR" and (typePh != typeEl or typePh != typePo))
+		return false;
+
+	if (kinematics[11]->isLorentzViolatingMonochromatic() && kinematics[-11]->isLorentzViolatingMonochromatic()) {
+		auto kinEl = kinematics[ 11]->toLorentzViolatingKinematicsMonochromatic();
+		auto kinPo = kinematics[-11]->toLorentzViolatingKinematicsMonochromatic();
+		if (kinEl->getOrder() != kinPo->getOrder())
+			return false;
+
+		if (kinematics[22]->isLorentzViolatingMonochromatic()) {
+			auto kinPh = kinematics[ 22]->toLorentzViolatingKinematicsMonochromatic();
+			if (kinEl->getOrder() != kinPh->getOrder())
+				return true;
+		}
+	} 
+	
+	return false;
+}
+
 string PhotonDecay::getInteractionTag() const {
 	return interactionTag;
 }
 
 double PhotonDecay::computeThresholdMomentum() const {
-	// check type of kinematics
-	string livType = kinematics->getShortIdentifier();
+	double pThr = std::numeric_limits<double>::max();
+	if (! isImplemented())
+		return pThr;
 
-	double pThr = std::numeric_limits<float>::max();
-	if (livType == "LIV") {
-		// type casting
-		MonochromaticLIV* kin = static_cast<MonochromaticLIV*>(kinematics.get()); 
+	double chiEl = 0;
+	double chiPo = 0;
+	double chiPh = 0;
 
-		// LIV order
-		unsigned int n = kin->getOrder();
+	if (kinematics[22]->isLorentzViolatingMonochromatic())
+		chiPh = kinematics[22]->toLorentzViolatingKinematicsMonochromatic()->getCoefficient();
+	else if (kinematics[22]->isSpecialRelativistic())
+		chiPh = 0;
 
-		// get coefficients
-		double chiEl = kin->getCoefficientForParticle(11);
-		double chiPh = kin->getCoefficientForParticle(22);
-		
-		if (n == 0) {
+	if (kinematics[11]->isLorentzViolatingMonochromatic())
+		chiEl = kinematics[11]->toLorentzViolatingKinematicsMonochromatic()->getCoefficient();
+	else if (kinematics[11]->isSpecialRelativistic())
+		chiEl = 0;
+
+	// current limitation
+	chiPo = chiEl;
+
+	double m = particleMasses.at(11);
+	unsigned int order = kinematics[22]->toLorentzViolatingKinematicsMonochromatic()->getOrder();
+
+	switch (order) {
+		case 0:
 			if (chiPh > chiEl) 
 				pThr = 2. * mass_electron * c_light / sqrt(chiPh - chiEl);
-		} else if (n == 1) {
+			break;
+		case 1:
 			if (chiPh >= 0.) 
 				pThr = cbrt(8 * pow_integer<2>(mass_electron * c_squared) * energy_planck / (2 * chiPh - chiEl)) / c_light;
-		} else {
-			throw runtime_error("PhotonDecay: only LIV of orders 0 and 1 are implemented.");
-		}
+			break;
+		default:	
+			throw std::runtime_error("PhotonDecay: only LIV of orders 0, 1 are implemented.");
 	}
 
 	return pThr;
 }
 
 double PhotonDecay::computeThresholdEnergy() const {
+	int id = 22;
 	double p = computeThresholdMomentum();
-	return kinematics->computeEnergyFromMomentum(p, 22);
+	return kinematics[id]->computeEnergyFromMomentum(p, id);
 }
 
 void PhotonDecay::process(Candidate* candidate) const {

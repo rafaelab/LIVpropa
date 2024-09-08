@@ -25,20 +25,38 @@ namespace livpropa {
  The emission is considered to be instantaneous (this might change in the future).
 */
 class PhotonDecay: public Module {
-	private:
-		ref_ptr<AbstractKinematics> kinematics;
+	public:
+		enum EmissionSpectrum {
+			Default,
+			Step,
+			Full
+		};
+		bool isSpectrumDefault(EmissionSpectrum spec) const {
+			return spec == EmissionSpectrum::Default	;
+		}
+		bool isSpectrumStep(EmissionSpectrum spec) const {
+			return spec == EmissionSpectrum::Step;
+		}
+		bool isSpectrumFull(EmissionSpectrum spec) const {
+			return spec == EmissionSpectrum::Full;
+		}
+		typedef unordered_map<int, EmissionSpectrum> EmissionSpectraTable;
+
+	protected:
+		Kinematics kinematics;
 		bool haveElectrons;
 		double limit;
 		double thinning;
 		string interactionTag;
 
 	public:
-		PhotonDecay(ref_ptr<AbstractKinematics> kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
-		void setKinematics(ref_ptr<AbstractKinematics> kinematics);
+		PhotonDecay(Kinematics kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
+		void setKinematics(Kinematics kinematics);
 		void setHaveElectrons(bool electrons);
 		void setLimit(double limit);
 		void setThinning(double thinning);
 		void setInteractionTag(string tag);
+		bool isImplemented() const;
 		string getInteractionTag() const;
 		double computeThresholdMomentum() const;
 		double computeThresholdEnergy() const;
