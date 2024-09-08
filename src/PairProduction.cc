@@ -7,7 +7,7 @@ namespace livpropa {
 PairProduction::PairProduction() {
 }
 
-PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinematics> kinematics, bool haveElectrons, double thinning, double limit) {
+PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<AbstractKinematics> kinematics, bool haveElectrons, double thinning, double limit) {
 	setKinematics(kinematics);
 	setPhotonField(photonField);
 	setThinning(thinning);
@@ -19,12 +19,12 @@ PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Kinemat
 void PairProduction::setPhotonField(ref_ptr<PhotonField> field) {
 	photonField = field;
 
-	std::string kinematicsId = kinematics->getShortIdentifier();
-	std::string dataPath = "PairProduction" + kinematicsId + "/";
-	dataPath += kinematics->getLocationData(std::vector<int>({-11, 11, 22}));
+	string kinematicsId = kinematics->getShortIdentifier();
+	string dataPath = "PairProduction" + kinematicsId + "/";
+	dataPath += kinematics->getLocationData(vector<int>({-11, 11, 22}));
 	dataPath += "/";
 
-	std::string photonBgName = field->getFieldName();
+	string photonBgName = field->getFieldName();
 	setDescription("PairProduction: " + photonBgName);
 	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
 	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
@@ -42,23 +42,23 @@ void PairProduction::setThinning(double t) {
 	thinning = t;
 }
 
-void PairProduction::setInteractionTag(std::string tag) {
+void PairProduction::setInteractionTag(string tag) {
 	interactionTag = tag;
 }
 
-void PairProduction::setKinematics(ref_ptr<Kinematics> kin) {
+void PairProduction::setKinematics(ref_ptr<AbstractKinematics> kin) {
 	kinematics = kin;
 }
 
-std::string PairProduction::getInteractionTag() const {
+string PairProduction::getInteractionTag() const {
 	return interactionTag;
 }
 
-void PairProduction::initRate(std::string filename) {
+void PairProduction::initRate(string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (! infile.good())
-		throw std::runtime_error("PairProduction: could not open file " + filename);
+		throw runtime_error("PairProduction: could not open file " + filename);
 
 	// clear previously loaded interaction rates
 	tabEnergy.clear();
@@ -73,16 +73,16 @@ void PairProduction::initRate(std::string filename) {
 				tabRate.push_back(b / Mpc);
 			}
 		}
-		infile.ignore(std::numeric_limits < std::streamsize > ::max(), '\n');
+		infile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 	infile.close();
 }
 
-void PairProduction::initCumulativeRate(std::string filename) {
+void PairProduction::initCumulativeRate(string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (!infile.good())
-		throw std::runtime_error("PairProduction: could not open file " + filename);
+		throw runtime_error("PairProduction: could not open file " + filename);
 
 	// clear previously loaded tables
 	tabE.clear();
@@ -91,7 +91,7 @@ void PairProduction::initCumulativeRate(std::string filename) {
 	
 	// skip header
 	while (infile.peek() == '#')
-		infile.ignore(std::numeric_limits < std::streamsize > ::max(), '\n');
+		infile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 	// read s values in first line
 	double a;
@@ -107,7 +107,7 @@ void PairProduction::initCumulativeRate(std::string filename) {
 		if (!infile)
 			break;  // end of file
 		tabE.push_back(pow(10, a) * eV);
-		std::vector<double> cdf;
+		vector<double> cdf;
 		for (int i = 0; i < tabs.size(); i++) {
 			infile >> a;
 			cdf.push_back(a / Mpc);
@@ -120,8 +120,8 @@ void PairProduction::initCumulativeRate(std::string filename) {
 // Hold an array to interpolate the energy distribution
 class PPSecondariesEnergyDistribution {
 	private:
-		std::vector<double> tab_s;
-		std::vector< std::vector<double>> data;
+		vector<double> tab_s;
+		vector< vector<double>> data;
 		size_t N;
 
 	public:
@@ -139,8 +139,8 @@ class PPSecondariesEnergyDistribution {
 			double s_min = 4 * mec2 * mec2;
 			double s_max = 1e23 * eV * eV;
 			double dls = log(s_max / s_min) / Ns;
-			data = std::vector< std::vector<double> >(Ns, std::vector<double>(N));
-			tab_s = std::vector<double>(Ns + 1);
+			data = vector< vector<double> >(Ns, vector<double>(N));
+			tab_s = vector<double>(Ns + 1);
 
 			for (size_t i = 0; i < Ns + 1; ++i)
 				tab_s[i] = s_min * exp(i * dls); // tabulate s bin borders
@@ -152,7 +152,7 @@ class PPSecondariesEnergyDistribution {
 				double dx = log((1 + beta) / (1 - beta)) / N;
 
 				// cumulative midpoint integration
-				std::vector<double> data_i(1000);
+				vector<double> data_i(1000);
 				data_i[0] = dSigmadE_PPx(x0, beta) * expm1(dx);
 				for (size_t j = 1; j < N; j++) {
 					double x = x0 * exp(j * dx + 0.5 * dx);
@@ -167,7 +167,7 @@ class PPSecondariesEnergyDistribution {
 		double sample(double E0, double s) {
 			// get distribution for given s
 			size_t idx = std::lower_bound(tab_s.begin(), tab_s.end(), s) - tab_s.begin();
-			std::vector<double> s0 = data[idx];
+			vector<double> s0 = data[idx];
 
 			// draw random bin
 			Random& random = Random::instance();

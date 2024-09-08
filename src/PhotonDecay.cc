@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-PhotonDecay::PhotonDecay(ref_ptr<Kinematics> kinematics, bool haveElectrons, double thinning, double limit) {
+PhotonDecay::PhotonDecay(ref_ptr<AbstractKinematics> kinematics, bool haveElectrons, double thinning, double limit) {
 	setHaveElectrons(haveElectrons);
 	setLimit(limit);
 	setThinning(thinning);
@@ -13,7 +13,7 @@ PhotonDecay::PhotonDecay(ref_ptr<Kinematics> kinematics, bool haveElectrons, dou
 	setInteractionTag("PD");
 }
 
-void PhotonDecay::setKinematics(ref_ptr<Kinematics> kin) {
+void PhotonDecay::setKinematics(ref_ptr<AbstractKinematics> kin) {
 	kinematics = kin;
 }
 
@@ -29,17 +29,17 @@ void PhotonDecay::setThinning(double t) {
 	thinning = t;
 }
 
-void PhotonDecay::setInteractionTag(std::string tag) {
+void PhotonDecay::setInteractionTag(string tag) {
 	interactionTag = tag;
 }
 
-std::string PhotonDecay::getInteractionTag() const {
+string PhotonDecay::getInteractionTag() const {
 	return interactionTag;
 }
 
 double PhotonDecay::computeThresholdMomentum() const {
 	// check type of kinematics
-	std::string livType = kinematics->getShortIdentifier();
+	string livType = kinematics->getShortIdentifier();
 
 	double pThr = std::numeric_limits<float>::max();
 	if (livType == "LIV") {
@@ -60,7 +60,7 @@ double PhotonDecay::computeThresholdMomentum() const {
 			if (chiPh >= 0.) 
 				pThr = cbrt(8 * pow_integer<2>(mass_electron * c_squared) * energy_planck / (2 * chiPh - chiEl)) / c_light;
 		} else {
-			throw std::runtime_error("PhotonDecay: only LIV of orders 0 and 1 are implemented.");
+			throw runtime_error("PhotonDecay: only LIV of orders 0 and 1 are implemented.");
 		}
 	}
 

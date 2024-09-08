@@ -4,7 +4,7 @@
 namespace livpropa {
 
 
-InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, ref_ptr<Kinematics> kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
+InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, ref_ptr<AbstractKinematics> kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
 	setKinematics(kinematics);
 	setPhotonField(field);
 	setHavePhotons(havePhotons);
@@ -17,18 +17,18 @@ InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, r
 void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> field) {
 	photonField = field;
 
-	std::string kinematicsId = kinematics->getShortIdentifier();
-	std::string dataPath = "InverseComptonScattering" + kinematicsId + "/";
-	dataPath += kinematics->getLocationData(std::vector<int>({-11, 11, 22}));
+	string kinematicsId = kinematics->getShortIdentifier();
+	string dataPath = "InverseComptonScattering" + kinematicsId + "/";
+	dataPath += kinematics->getLocationData(vector<int>({-11, 11, 22}));
 	dataPath += "/";
 	
-	std::string photonBgName = field->getFieldName();
+	string photonBgName = field->getFieldName();
 	setDescription("InverseComptonScattering: " + photonBgName);
 	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
 	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
 }
 
-void InverseComptonScattering::setKinematics(ref_ptr<Kinematics> kin) {
+void InverseComptonScattering::setKinematics(ref_ptr<AbstractKinematics> kin) {
 	kinematics = kin;
 }
 
@@ -44,7 +44,7 @@ void InverseComptonScattering::setThinning(double thinning) {
 	this->thinning = thinning;
 }
 
-void InverseComptonScattering::setInteractionTag(std::string tag) {
+void InverseComptonScattering::setInteractionTag(string tag) {
 	interactionTag = tag;
 }
 
@@ -52,15 +52,15 @@ void InverseComptonScattering::setNumberOfSubsteps(unsigned int n) {
 	nSubsteps = n;
 }
 
-std::string InverseComptonScattering::getInteractionTag() const {
+string InverseComptonScattering::getInteractionTag() const {
 	return interactionTag;
 }
 
-void InverseComptonScattering::initRate(std::string filename) {
+void InverseComptonScattering::initRate(string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (! infile.good())
-		throw std::runtime_error("InverseComptonScattering: could not open file " + filename);
+		throw runtime_error("InverseComptonScattering: could not open file " + filename);
 
 	// clear previously loaded tables
 	tabEnergy.clear();
@@ -75,16 +75,16 @@ void InverseComptonScattering::initRate(std::string filename) {
 				tabRate.push_back(b / Mpc);
 			}
 		}
-		infile.ignore(std::numeric_limits < std::streamsize > ::max(), '\n');
+		infile.ignore(std::numeric_limits<std::streamsize> ::max(), '\n');
 	}
 	infile.close();
 }
 
-void InverseComptonScattering::initCumulativeRate(std::string filename) {
+void InverseComptonScattering::initCumulativeRate(string filename) {
 	std::ifstream infile(filename.c_str());
 
 	if (! infile.good())
-		throw std::runtime_error("InverseComptonScattering: could not open file " + filename);
+		throw runtime_error("InverseComptonScattering: could not open file " + filename);
 
 	// clear previously loaded tables
 	tabE.clear();
@@ -93,7 +93,7 @@ void InverseComptonScattering::initCumulativeRate(std::string filename) {
 	
 	// skip header
 	while (infile.peek() == '#')
-		infile.ignore(std::numeric_limits < std::streamsize > ::max(), '\n');
+		infile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 	// read s values in first line
 	double a;
@@ -109,7 +109,7 @@ void InverseComptonScattering::initCumulativeRate(std::string filename) {
 		if (!infile)
 			break;  // end of file
 		tabE.push_back(pow(10, a) * eV);
-		std::vector<double> cdf;
+		vector<double> cdf;
 		for (int i = 0; i < tabs.size(); i++) {
 			infile >> a;
 			cdf.push_back(a / Mpc);
@@ -122,8 +122,8 @@ void InverseComptonScattering::initCumulativeRate(std::string filename) {
 // Class to calculate the energy distribution of the ICS photon and to sample from it
 class ICSSecondariesEnergyDistribution {
 	private:
-		std::vector<std::vector<double>> data;
-		std::vector<double> s_values;
+		vector<vector<double>> data;
+		vector<double> s_values;
 		size_t Ns;
 		size_t Nrer;
 		double s_min;
@@ -144,11 +144,11 @@ class ICSSecondariesEnergyDistribution {
 			s_min = mec2 * mec2;
 			s_max = 1e23 * eV * eV;
 			dls = (log(s_max) - log(s_min)) / Ns;
-			data = std::vector<std::vector<double>>(1000, std::vector<double>(1000));
-			std::vector<double> data_i(1000);
+			data = vector<vector<double>>(1000, vector<double>(1000));
+			vector<double> data_i(1000);
 
 			// tabulate s bin borders
-			s_values = std::vector<double>(1001);
+			s_values = vector<double>(1001);
 			for (size_t i = 0; i < Ns + 1; ++i)
 				s_values[i] = s_min * exp(i * dls);
 
@@ -175,7 +175,7 @@ class ICSSecondariesEnergyDistribution {
 		// draw random energy for the up-scattered photon Ep(Ee, s)
 		double sample(double Ee, double s) {
 			size_t idx = std::lower_bound(s_values.begin(), s_values.end(), s) - s_values.begin();
-			std::vector<double> s0 = data[idx];
+			vector<double> s0 = data[idx];
 			Random &random = Random::instance();
 			size_t j = random.randBin(s0) + 1; // draw random bin (upper bin boundary returned)
 			double beta = (s - s_min) / (s + s_min);

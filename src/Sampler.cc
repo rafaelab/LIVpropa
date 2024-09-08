@@ -36,7 +36,7 @@ double  SamplerEventsEnergy::computeWeight(int id, double E, double f, int count
 	} else if (sampling < 0) {
 		return 0;
 	} else {
-		Random &random = Random::instance();
+		Random& random = Random::instance();
 		double r = weightFunction(id, E, f, counter);
 		if (random.rand() < r) // accept and return weight
 			return 1. / r;
@@ -79,7 +79,7 @@ double SamplerEventsUniform::computeWeight(int id, double E, double f, int count
 	} else if (sampling <= 0) {
 		return 0;
 	} else {
-		Random &random = Random::instance();
+		Random& random = Random::instance();
 		if (random.rand() < sampling) // accept and return weight
 			return 1 / sampling;
 		else // reject
@@ -255,14 +255,14 @@ void SamplerDistributionUniform::transformToCDF() {
 	distribution->transformToCDF();
 }
 
-void SamplerDistributionUniform::append(const std::vector<double> &v) {
+void SamplerDistributionUniform::append(const std::vector<double>& v) {
 	for (size_t i = 0; i < v.size(); i++) {
 		distribution->push(v[i]);
 	}
 	datasetSize = v.size();
 }
 
-void SamplerDistributionUniform::push(const double &v) {
+void SamplerDistributionUniform::push(const double& v) {
 	distribution->push(v);
 	datasetSize++;
 }
@@ -373,7 +373,7 @@ void SamplerDistributionUniform::clear() {
 // 	globalCounter++;
 
 // 	if (getStatus()) {
-// 		// Random &random = Random::instance();
+// 		// Random& random = Random::instance();
 // 		// size_t bin = random.randBin(binContents);
 // 		return 1;
 

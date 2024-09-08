@@ -4,8 +4,8 @@
 namespace livpropa {
 
 
-std::string getDataPath(std::string filename) {
-	static std::string dataPath;
+string getDataPath(string filename) {
+	static string dataPath;
 	if (dataPath.size())
 		return concat_path(dataPath, filename);
 
@@ -13,39 +13,39 @@ std::string getDataPath(std::string filename) {
 	if (environmentPath) {
 		if (is_directory(environmentPath)) {
 			dataPath = environmentPath;
-			KISS_LOG_INFO << "locateDataFiles: use environment variable, " << dataPath << std::endl;
+			KISS_LOG_INFO << "locateDataFiles: use environment variable, " << dataPath << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
 
 	#ifdef LIVpropa_INSTALL_PREFIX
 	{
-		std::string path = LIVpropa_INSTALL_PREFIX  "/share/livpropa";
+		string path = LIVpropa_INSTALL_PREFIX  "/share/livpropa";
 		if (is_directory(path)) {
 			dataPath = path;
-			KISS_LOG_INFO << "locateDataFiles: use install prefix, " << dataPath << std::endl;
+			KISS_LOG_INFO << "locateDataFiles: use install prefix, " << dataPath << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
 	#endif
 
 	{
-		std::string path = executable_path() + "../data";
+		string path = executable_path() + "../data";
 		if (is_directory(path)) {
 			dataPath = path;
-			KISS_LOG_INFO << "locateDataFiles: use executable path, " << dataPath << std::endl;
+			KISS_LOG_INFO << "locateDataFiles: use executable path, " << dataPath << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
 
 	dataPath = "data";
-	KISS_LOG_INFO << "locateDataFiles: use default, " << dataPath << std::endl;
+	KISS_LOG_INFO << "locateDataFiles: use default, " << dataPath << endl;
 	return concat_path(dataPath, filename);
 }
 
 
-std::string getInstallPrefix() {
-	std::string path = "";
+string getInstallPrefix() {
+	string path = "";
 	#ifdef LIVpropa_INSTALL_PREFIX
 		path += LIVpropa_INSTALL_PREFIX;
 	#endif
