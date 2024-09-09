@@ -55,7 +55,7 @@ double SpecialRelativisticKinematics::computeMomentumFromEnergy(const double& E,
 	return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light;
 }
 
-string SpecialRelativisticKinematics::getFilenamePart() const {
+string SpecialRelativisticKinematics::getIdentifier() const {
 	return "SR";
 }
 
@@ -192,7 +192,7 @@ string LorentzViolatingKinematicsMonochromatic::getNameTag() const {
 	return "LIVmono" + std::to_string(order);
 }
 
-string LorentzViolatingKinematicsMonochromatic::getFilenamePart() const {
+string LorentzViolatingKinematicsMonochromatic::getIdentifier() const {
 	char s[64];
 	sprintf(s, "LIV%i_chi_%+2.1e", order, coefficient);
 	return string(s);

@@ -75,7 +75,7 @@ class SpecialRelativisticKinematics : public AbstractKinematics {
 		SpecialRelativisticKinematics();
 		~SpecialRelativisticKinematics();
 		string getNameTag() const;
-		string getFilenamePart() const;
+		string getIdentifier() const;
 		// double getCoefficient() const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
@@ -154,7 +154,7 @@ class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematic
 		unsigned int getOrder() const;
 		double getCoefficient() const;
 		string getNameTag() const;
-		string getFilenamePart() const;
+		string getIdentifier() const;
 		double getSymmetryBreakingShift(const double& p) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
