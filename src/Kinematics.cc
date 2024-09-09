@@ -410,21 +410,49 @@ vector<int> Kinematics::getParticles() const {
 	return particles;
 }
 
-string Kinematics::getIdentifier(const std::vector<int>& particles) const {
-	char dir[1024] = "";
+string Kinematics::getIdentifierForParticle(const int& pId, bool showParticleId) const {
+	char identifier[128] = "";
+	string info = find(pId, false)->getFilenamePart().c_str();
+
+	size_t s = 0;
+	if (showParticleId)
+		s += sprintf(identifier + s, "Id_%+i-%s", pId, info.c_str());
+	else
+		s += sprintf(identifier + s, "%s", info.c_str());
+
+	return std::string(identifier);
+}
+
+string Kinematics::getIdentifier(const std::vector<int>& particles, bool simplify) const {
+	string identifier = "";
+
+	// if particles have exactly the same kinematics, return just one identifier.
+	if (simplify) {
+		int nParticles = particles.size();
+		if (nParticles == 1)
+			return getIdentifierForParticle(particles[0], false);
+
+		bool simplifiable = true;
+		for (size_t i = 1; i < particles.size(); i++) {
+			if (getIdentifierForParticle(particles[i - 1], false) != getIdentifierForParticle(particles[i], false)) {
+				simplifiable = false;
+				break;
+			}
+		}
+
+		if (simplifiable)
+			return getIdentifierForParticle(particles[0], false);
+	}
+
 
 	for (size_t i = 0; i < particles.size(); i++) {
 		int pId = particles[i];
-		const ref_ptr<AbstractKinematics>& kin = find(pId, false);
-		string name = kin->getNameTag();
-		string info = kin->getFilenamePart();
-		size_t s = 0;
-		s += sprintf(dir + s, "%+i_%s", pId, info.c_str());
+		identifier += getIdentifierForParticle(pId);
 		if (i < particles.size() - 1)
-			s += sprintf(dir + s, "-");
+			identifier += "-";
 	}
 
-	return std::string(dir);;
+	return identifier;
 }
 
 Kinematics::ParticleKinematicsMap Kinematics::getParticleKinematicsMap() const {

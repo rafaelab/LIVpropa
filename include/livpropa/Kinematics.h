@@ -63,12 +63,6 @@ class AbstractKinematics: public crpropa::Referenced {
 };
 
 
-/** 
-This function prints kinematics objects in a nice way
-*/
-std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin);
-
-
 
 /**
  @class SpecialRelativisticKinematics
@@ -88,7 +82,6 @@ class SpecialRelativisticKinematics : public AbstractKinematics {
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 		string info() const;
 };
-
 
 
 /**
@@ -166,7 +159,6 @@ class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematic
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 		string info() const;
-
 };
 
 
@@ -197,7 +189,8 @@ class Kinematics {
 		bool isLorentzViolatingKinematics() const;
 		bool exists(const int& pId) const;
 		vector<int> getParticles() const;
-		string getIdentifier(const std::vector<int>& particles) const;
+		string getIdentifierForParticle(const int& pId, bool showParticleId = true) const; 
+		string getIdentifier(const std::vector<int>& particles, bool simplify = false) const;
 		ParticleKinematicsMap getParticleKinematicsMap() const;
 		const ref_ptr<AbstractKinematics>& find(const int& id, bool showWarningInexistent = true) const;
 		const ref_ptr<AbstractKinematics>& operator[](const int& pId);
@@ -208,6 +201,7 @@ class Kinematics {
 /** 
 This function prints Kinematics-type objects in a nice way
 */
+std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin);
 std::ostream& operator<<(std::ostream& os, const Kinematics& kin);
 
 
