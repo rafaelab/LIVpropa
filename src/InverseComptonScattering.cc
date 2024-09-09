@@ -4,7 +4,7 @@
 namespace livpropa {
 
 
-InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, ref_ptr<AbstractKinematics> kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
+InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, Kinematics kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
 	setKinematics(kinematics);
 	setPhotonField(field);
 	setHavePhotons(havePhotons);
@@ -16,19 +16,18 @@ InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, r
 
 void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> field) {
 	photonField = field;
+	string photonBgName = field->getFieldName();
 
-	string kinematicsId = kinematics->getShortIdentifier();
-	string dataPath = "InverseComptonScattering" + kinematicsId + "/";
-	dataPath += kinematics->getLocationData(vector<int>({-11, 11, 22}));
+	string dataPath = "InverseComptonScattering/";
+	dataPath += kinematics.getIdentifier(vector<int>{-11, 11, 22});
 	dataPath += "/";
 	
-	string photonBgName = field->getFieldName();
 	setDescription("InverseComptonScattering: " + photonBgName);
 	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
 	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
 }
 
-void InverseComptonScattering::setKinematics(ref_ptr<AbstractKinematics> kin) {
+void InverseComptonScattering::setKinematics(Kinematics kin) {
 	kinematics = kin;
 }
 
@@ -58,7 +57,6 @@ string InverseComptonScattering::getInteractionTag() const {
 
 void InverseComptonScattering::initRate(string filename) {
 	std::ifstream infile(filename.c_str());
-
 	if (! infile.good())
 		throw runtime_error("InverseComptonScattering: could not open file " + filename);
 
@@ -82,7 +80,6 @@ void InverseComptonScattering::initRate(string filename) {
 
 void InverseComptonScattering::initCumulativeRate(string filename) {
 	std::ifstream infile(filename.c_str());
-
 	if (! infile.good())
 		throw runtime_error("InverseComptonScattering: could not open file " + filename);
 
@@ -198,14 +195,14 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 		return;
 
 	// compute momentum from energy
-	double p = kinematics->computeMomentumFromEnergy(E, id);
+	double p = kinematics[id]->computeMomentumFromEnergy(E, id);
 
 	// ignore if negative solutions
 	if (p < 0)
 		return;
 
 	// possible corrections in thresholds
-	double sShift = kinematics->getSymmetryBreakingShift(p);
+	double sShift = kinematics[id]->getSymmetryBreakingShift(p, id);
 
 	// sample the value of s
 	Random &random = Random::instance();
@@ -219,7 +216,7 @@ void InverseComptonScattering::performInteraction(Candidate* candidate) const {
 	double Enew = distribution.sample(E, s);
 		
 
-	// add up-scattered photon
+	// up-scattered photon
 	double Esecondary = E - Enew;
 
 	// avoid possible problems with superluminal case
@@ -258,7 +255,7 @@ void InverseComptonScattering::process(Candidate* candidate) const {
 
 	// run this loop at least once to limit the step size
 	double step = candidate->getCurrentStep();
-	Random &random = Random::instance();
+	Random& random = Random::instance();
 	int substepCounter = 0;
 	do {
 		double randDistance = -log(random.rand()) / rate;
@@ -277,6 +274,7 @@ void InverseComptonScattering::process(Candidate* candidate) const {
 		// repeat with remaining step
 		step -= randDistance;
 		substepCounter++;
+
 	} while (step > 0);
 }
 

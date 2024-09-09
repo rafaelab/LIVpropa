@@ -7,7 +7,7 @@ namespace livpropa {
 PairProduction::PairProduction() {
 }
 
-PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<AbstractKinematics> kinematics, bool haveElectrons, double thinning, double limit) {
+PairProduction::PairProduction(ref_ptr<PhotonField> photonField, Kinematics kinematics, bool haveElectrons, double thinning, double limit) {
 	setKinematics(kinematics);
 	setPhotonField(photonField);
 	setThinning(thinning);
@@ -18,16 +18,16 @@ PairProduction::PairProduction(ref_ptr<PhotonField> photonField, ref_ptr<Abstrac
 
 void PairProduction::setPhotonField(ref_ptr<PhotonField> field) {
 	photonField = field;
-
-	string kinematicsId = kinematics->getShortIdentifier();
-	string dataPath = "PairProduction" + kinematicsId + "/";
-	dataPath += kinematics->getLocationData(vector<int>({-11, 11, 22}));
-	dataPath += "/";
-
 	string photonBgName = field->getFieldName();
+
+	string dataPath = "PairProduction/";
+	dataPath += kinematics.getIdentifier(vector<int>{-11, 11, 22});
+	dataPath += "/";
+	
 	setDescription("PairProduction: " + photonBgName);
 	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
 	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
+
 }
 
 void PairProduction::setHaveElectrons(bool electrons) {
@@ -46,7 +46,7 @@ void PairProduction::setInteractionTag(string tag) {
 	interactionTag = tag;
 }
 
-void PairProduction::setKinematics(ref_ptr<AbstractKinematics> kin) {
+void PairProduction::setKinematics(Kinematics kin) {
 	kinematics = kin;
 }
 
@@ -206,14 +206,14 @@ void PairProduction::performInteraction(Candidate* candidate) const {
 		return;
 
 	// compute momentum from energy
-	double p = kinematics->computeMomentumFromEnergy(E, id);
+	double p = kinematics[id]->computeMomentumFromEnergy(E, id);
 
 	// ignore if negative solutions
 	if (p < 0)
 		return;
 
 	// possible corrections in thresholds
-	double sShift = kinematics->getSymmetryBreakingShift(p);
+	double sShift = kinematics[id]->getSymmetryBreakingShift(p, id);
 
 	// sample the value of s
 	Random& random = Random::instance();

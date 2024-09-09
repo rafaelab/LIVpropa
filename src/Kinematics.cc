@@ -9,50 +9,78 @@ double AbstractKinematics::computeEnergyFromMomentum(const double& p, const int&
 	return sqrt(computeEnergy2FromMomentum(p, id));
 }
 
+const SpecialRelativisticKinematics* AbstractKinematics::toSpecialRelativisticKinematics() const {
+	return static_cast<const SpecialRelativisticKinematics*>(this);
+};
+
+const LorentzViolatingKinematicsMonochromatic* AbstractKinematics::toLorentzViolatingKinematicsMonochromatic() const {
+	return static_cast<const LorentzViolatingKinematicsMonochromatic*>(this);
+};
+
+bool AbstractKinematics::isSpecialRelativistic() const {
+	return getNameTag() == "SR";
+}
+
+bool AbstractKinematics::isLorentzViolatingMonochromatic() const {
+	if (getNameTag().find("LIVmono") != std::string::npos)
+		return true;
+
+	return false;
+}
+
+std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin) {
+	os << kin.info();
+	return os;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-SpecialRelativity::SpecialRelativity() {
+SpecialRelativisticKinematics::SpecialRelativisticKinematics() {
 }
 
-SpecialRelativity::~SpecialRelativity() {
+SpecialRelativisticKinematics::~SpecialRelativisticKinematics() {
 }
 
-string SpecialRelativity::getShortIdentifier() const {
+string SpecialRelativisticKinematics::getNameTag() const {
 	return "SR";
 }
 
-string SpecialRelativity::getLocationData(const vector<int>& particles) const {
-	return "";
-}
-
-double SpecialRelativity::getSymmetryBreakingShift(const double& p, const int& id) const {
+double SpecialRelativisticKinematics::getSymmetryBreakingShift(const double& p, const int& id) const {
 	return 0;
 }
 
-double SpecialRelativity::computeEnergy2FromMomentum(const double& p, const int& id) const {
+double SpecialRelativisticKinematics::computeEnergy2FromMomentum(const double& p, const int& id) const {
 	double m = particleMasses.at(id);
 	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared);
 }
 
-double SpecialRelativity::computeMomentumFromEnergy(const double& E, const int& id) const {
+double SpecialRelativisticKinematics::computeMomentumFromEnergy(const double& E, const int& id) const {
 	double m = particleMasses.at(id);
 	return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light;
 }
 
+string SpecialRelativisticKinematics::getFilenamePart() const {
+	return "SR";
+}
+
+string SpecialRelativisticKinematics::info() const {
+	return "SpecialRelativisticKinematics";
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void LorentzViolating::setSymmetryBreaking(SymmetryBreaking treatment) {
+
+void LorentzViolatingKinematics::setSymmetryBreaking(SymmetryBreaking treatment) {
 	symmetryBreaking = treatment;
 }
 
-LorentzViolating::SymmetryBreaking LorentzViolating::getSymmetryBreaking() const {
+LorentzViolatingKinematics::SymmetryBreaking LorentzViolatingKinematics::getSymmetryBreaking() const {
 	return symmetryBreaking;
 }
 
-double LorentzViolating::selectFinalMomentum(const vector<double>& ps, const double& E, const int& id) const {
+double LorentzViolatingKinematics::selectFinalMomentum(const vector<double>& ps, const double& E, const int& id) const {
 	unsigned int nSolutions = ps.size();	
 	if (nSolutions <= 0) {
 		cerr << "No solutions found. Momentum cannot be computed from energy in this case." << endl;
@@ -75,7 +103,7 @@ double LorentzViolating::selectFinalMomentum(const vector<double>& ps, const dou
 	}
 }
 
-double LorentzViolating::selectFinalMomentumRandom(const vector<double>& ps) {
+double LorentzViolatingKinematics::selectFinalMomentumRandom(const vector<double>& ps) {
 	int nSolutions = ps.size();
 
 	if (nSolutions == 1) {
@@ -95,15 +123,15 @@ double LorentzViolating::selectFinalMomentumRandom(const vector<double>& ps) {
 
 }
 
-double LorentzViolating::selectFinalMomentumSmallest(const vector<double>& ps) {
+double LorentzViolatingKinematics::selectFinalMomentumSmallest(const vector<double>& ps) {
 	return *std::min_element(ps.begin(), ps.end());
 }
 
-double LorentzViolating::selectFinalMomentumLargest(const vector<double>& ps) {
+double LorentzViolatingKinematics::selectFinalMomentumLargest(const vector<double>& ps) {
 	return *std::max_element(ps.begin(), ps.end());
 }
 
-double LorentzViolating::selectFinalMomentumAverage(const vector<double>& ps) {
+double LorentzViolatingKinematics::selectFinalMomentumAverage(const vector<double>& ps) {
 	double pTot = 0;
 	for (auto& p : ps)
 		pTot += p;
@@ -111,8 +139,8 @@ double LorentzViolating::selectFinalMomentumAverage(const vector<double>& ps) {
 	return pTot / ps.size();
 }
 
-double LorentzViolating::selectFinalMomentumClosest(const vector<double>& ps, const double& E, const int& id) {
-	SpecialRelativity* sr = new SpecialRelativity();
+double LorentzViolatingKinematics::selectFinalMomentumClosest(const vector<double>& ps, const double& E, const int& id) {
+	SpecialRelativisticKinematics* sr = new SpecialRelativisticKinematics();
 	double p0 = sr->computeMomentumFromEnergy(E, id);
 	
 	vector<double> dps;
@@ -124,59 +152,68 @@ double LorentzViolating::selectFinalMomentumClosest(const vector<double>& ps, co
 	return dps[*idx];
 }
 
+string LorentzViolatingKinematics::info() const {
+	return "LorentzViolatingKinematics";
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-LorentzViolatingMonochromatic::LorentzViolatingMonochromatic(SymmetryBreaking symmetryBreaking) {
+LorentzViolatingKinematicsMonochromatic::LorentzViolatingKinematicsMonochromatic(SymmetryBreaking symmetryBreaking) {
 	setSymmetryBreaking(symmetryBreaking);
 }
 
-LorentzViolatingMonochromatic::LorentzViolatingMonochromatic(unsigned int n, SymmetryBreaking symmetryBreaking) {
+LorentzViolatingKinematicsMonochromatic::LorentzViolatingKinematicsMonochromatic(unsigned int n, SymmetryBreaking symmetryBreaking) {
 	setOrder(n);
 	setSymmetryBreaking(symmetryBreaking);
 }
 
-LorentzViolatingMonochromatic::LorentzViolatingMonochromatic(unsigned int n, double chi, SymmetryBreaking symmetryBreaking) {
+LorentzViolatingKinematicsMonochromatic::LorentzViolatingKinematicsMonochromatic(unsigned int n, double chi, SymmetryBreaking symmetryBreaking) {
 	setOrder(n);
 	setCoefficient(chi);
 	setSymmetryBreaking(symmetryBreaking);
 }
 
-LorentzViolatingMonochromatic::~LorentzViolatingMonochromatic() {
+LorentzViolatingKinematicsMonochromatic::~LorentzViolatingKinematicsMonochromatic() {
 }
 
-void LorentzViolatingMonochromatic::setOrder(unsigned int n) {
+void LorentzViolatingKinematicsMonochromatic::setOrder(unsigned int n) {
 	order = n;
 }
 
-void LorentzViolatingMonochromatic::setCoefficient(double coeff) {
+void LorentzViolatingKinematicsMonochromatic::setCoefficient(double coeff) {
 	coefficient = coeff;
 }
 
-unsigned int LorentzViolatingMonochromatic::getOrder() const {
+unsigned int LorentzViolatingKinematicsMonochromatic::getOrder() const {
 	return order;
 }
 
-double LorentzViolatingMonochromatic::getCoefficient() const {
+double LorentzViolatingKinematicsMonochromatic::getCoefficient() const {
 	return coefficient;
 }
 
-string LorentzViolatingMonochromatic::getShortIdentifier() const {
-	return "LIV_" + std::to_string(order);
+string LorentzViolatingKinematicsMonochromatic::getNameTag() const {
+	return "LIVmono" + std::to_string(order);
 }
 
-double LorentzViolatingMonochromatic::getSymmetryBreakingShift(const double& p) const {
+string LorentzViolatingKinematicsMonochromatic::getFilenamePart() const {
+	char s[64];
+	sprintf(s, "LIV%i_chi_%+2.1e", order, coefficient);
+	return string(s);
+}
+
+double LorentzViolatingKinematicsMonochromatic::getSymmetryBreakingShift(const double& p) const {
 	return coefficient * pow(p * c_light / energy_planck, order) * pow_integer<2>(p * c_light);
 }
 
-double LorentzViolatingMonochromatic::computeEnergy2FromMomentum(const double& p, const int& id) const {
+double LorentzViolatingKinematicsMonochromatic::computeEnergy2FromMomentum(const double& p, const int& id) const {
 	double m = particleMasses.at(id);
 	double ds = this->getSymmetryBreakingShift(p);
 	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
 }
 
-double LorentzViolatingMonochromatic::computeMomentumFromEnergy(const double& E, const int& id) const {
+double LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy(const double& E, const int& id) const {
 	unsigned int n = order;
 	double m = particleMasses.at(id);
 	double chi = coefficient;
@@ -209,7 +246,7 @@ double LorentzViolatingMonochromatic::computeMomentumFromEnergy(const double& E,
 	return p;
 }
 
-vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergy0(const double& E, const double& m, const double& chi) {
+vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy0(const double& E, const double& m, const double& chi) {
 	complex<double> sol = sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
 	
 	double solRe = sol.real();
@@ -219,7 +256,7 @@ vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergy0(const d
 	vector<double>({solRe});
 }
 
-vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergy1(const double& E, const double& m, const double& chi) {
+vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy1(const double& E, const double& m, const double& chi) {
 	complex<double> a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
 	a = pow(a, 1. / 3.);
 		
@@ -249,7 +286,7 @@ vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergy1(const d
 	return ps;
 }
 
-vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergy2(const double& E, const double& m, const double& chi) {
+vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy2(const double& E, const double& m, const double& chi) {
 	complex<double> e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
 		
 	// only two out of the fours solutions lead to positive momenta
@@ -268,7 +305,7 @@ vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergy2(const d
 	return ps;
 }
 
-vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergyN(const double& E, const double& m, const double& chi, const unsigned int& n) {
+vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergyN(const double& E, const double& m, const double& chi, const unsigned int& n) {
 	// UNTESTED!!!!
 
 	// get vector of coefficients
@@ -299,245 +336,235 @@ vector<double> LorentzViolatingMonochromatic::computeMomentumFromEnergyN(const d
 	return ps;
 }
 
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-MonochromaticLIV::MonochromaticLIV(SymmetryBreaking symmetryBreaking) {
+string LorentzViolatingKinematicsMonochromatic::info() const {
+	string s = "";
+	s += "LorentzViolatingKinematicsMonochromatic";
+	s += "(n = " + std::to_string(order) + "; chi = " + std::to_string(coefficient) + ")"; 
+	return s;
 }
 
-MonochromaticLIV::MonochromaticLIV(unsigned int n, SymmetryBreaking symmetryBreaking) {
-	setOrder(n);
-}
 
-MonochromaticLIV::MonochromaticLIV(unsigned int n, double chi, SymmetryBreaking symmetryBreaking) {
-	setOrder(n);
-	addCoefficient(0, chi);
-}
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-MonochromaticLIV::MonochromaticLIV(unsigned int order, unordered_map<int, double> coeffs, SymmetryBreaking symmetryBreaking) {
-	setCoefficients(coeffs);
-}
+// MonochromaticLIV::MonochromaticLIV(SymmetryBreaking symmetryBreaking) {
+// }
 
-MonochromaticLIV::MonochromaticLIV(unsigned int order, vector<int> particles, vector<double> coeffs, SymmetryBreaking symmetryBreaking) {
-	if (particles.size() != coeffs.size())
-		throw std::length_error("Vectors provided to initialise MonochromaticLIV must be of same size.");
+// MonochromaticLIV::MonochromaticLIV(unsigned int n, SymmetryBreaking symmetryBreaking) {
+// 	setOrder(n);
+// }
 
-	for (size_t i = 0; i < particles.size(); i++) {
-		addCoefficient(particles[i], coeffs[i]);
-	}
-}
+// MonochromaticLIV::MonochromaticLIV(unsigned int n, double chi, SymmetryBreaking symmetryBreaking) {
+// 	setOrder(n);
+// 	addCoefficient(0, chi);
+// }
 
-MonochromaticLIV::~MonochromaticLIV() {
-}
+// MonochromaticLIV::MonochromaticLIV(unsigned int order, unordered_map<int, double> coeffs, SymmetryBreaking symmetryBreaking) {
+// 	setCoefficients(coeffs);
+// }
 
-void MonochromaticLIV::setOrder(unsigned int n) {
-	order = n;
-}
+// MonochromaticLIV::MonochromaticLIV(unsigned int order, vector<int> particles, vector<double> coeffs, SymmetryBreaking symmetryBreaking) {
+// 	if (particles.size() != coeffs.size())
+// 		throw std::length_error("Vectors provided to initialise MonochromaticLIV must be of same size.");
 
-void MonochromaticLIV::setCoefficients(unordered_map<int, double> coeffs) {
-	coefficients = coeffs;
-}
+// 	for (size_t i = 0; i < particles.size(); i++) {
+// 		addCoefficient(particles[i], coeffs[i]);
+// 	}
+// }
 
-void MonochromaticLIV::addCoefficient(int particle, double coeff) {
-	coefficients.insert({{particle, coeff}});
-}
+// MonochromaticLIV::~MonochromaticLIV() {
+// }
 
-unsigned int MonochromaticLIV::getOrder() const {
-	return order;
-}
+// void MonochromaticLIV::setOrder(unsigned int n) {
+// 	order = n;
+// }
 
-unordered_map<int, double> MonochromaticLIV::getCoefficients() const {
-	return coefficients;
-}
+// void MonochromaticLIV::setCoefficients(unordered_map<int, double> coeffs) {
+// 	coefficients = coeffs;
+// }
 
-string MonochromaticLIV::getShortIdentifier() const {
-	return "LIV";
-}
+// void MonochromaticLIV::addCoefficient(int particle, double coeff) {
+// 	coefficients.insert({{particle, coeff}});
+// }
 
-string MonochromaticLIV::getLocationData(const vector<int>& particles) const {
-	char dir[512] = "";
+// unsigned int MonochromaticLIV::getOrder() const {
+// 	return order;
+// }
 
-	size_t s = 0;
-	if (std::find(particles.begin(), particles.end(), 11) != particles.end()) {
-		s += sprintf(dir + s, "chiEl_%+2.1e", getCoefficientForParticle(11));
-	} 
-	if (std::find(particles.begin(), particles.end(), 22) != particles.end()) {
-		s += sprintf(dir + s, "-chiPh_%+2.1e", getCoefficientForParticle(22));
-	}
-	s += sprintf(dir + s, "-order_%i", order);
+// unordered_map<int, double> MonochromaticLIV::getCoefficients() const {
+// 	return coefficients;
+// }
 
+// string MonochromaticLIV::getNameTag() const {
+// 	return "LIV";
+// }
 
-	return string(dir);
-}
+// vector<int> MonochromaticLIV::getParticles() const {
+// 	vector<int> particles;
+// 	return particles;
+// }
 
-vector<int> MonochromaticLIV::getParticles() const {
-	vector<int> particles;
-	return particles;
-}
+// double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {
+// 	CoefficientsIterator it = coefficients.find(particle);
 
-double MonochromaticLIV::getCoefficientForParticle(const int& particle) const {
-	CoefficientsIterator it = coefficients.find(particle);
+// 	if (it == coefficients.end()) {
+// 		CoefficientsIterator it0 = coefficients.find(0);
+// 		if (it0 == coefficients.end()) {
+// 			cout << "Particle not found in list. Returning chi=0." << endl;
+// 			return 0;
+// 		} else {
+// 			return (*it0).second;
+// 		}
+// 	}
+// 	return (*it).second;
+// }
 
-	if (it == coefficients.end()) {
-		CoefficientsIterator it0 = coefficients.find(0);
-		if (it0 == coefficients.end()) {
-			cout << "Particle not found in list. Returning chi=0." << endl;
-			return 0;
-		} else {
-			return (*it0).second;
-		}
-	}
-	return (*it).second;
-}
+// double MonochromaticLIV::getSymmetryBreakingShift(const double& p, const int& id) const {
+// 	double chi = getCoefficientForParticle(id);
+// 	return chi * pow(p * c_light / energy_planck, getOrder()) * pow_integer<2>(p * c_light);
+// }
 
-double MonochromaticLIV::getSymmetryBreakingShift(const double& p, const int& id) const {
-	double chi = getCoefficientForParticle(id);
-	return chi * pow(p * c_light / energy_planck, getOrder()) * pow_integer<2>(p * c_light);
-}
+// double MonochromaticLIV::computeEnergy2FromMomentum(const double& p, const int& id) const {
+// 	double m = particleMasses.at(id);
+// 	double ds = this->getSymmetryBreakingShift(p, id);
+// 	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
+// }
 
-double MonochromaticLIV::computeEnergy2FromMomentum(const double& p, const int& id) const {
-	double m = particleMasses.at(id);
-	double ds = this->getSymmetryBreakingShift(p, id);
-	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
-}
+// double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& id) const {
+// 	unsigned int n = getOrder();
+// 	unsigned int nCoeffs = n + 3;
+// 	double m = particleMasses.at(id);
+// 	double chi = getCoefficientForParticle(id);
 
-double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& id) const {
-	unsigned int n = getOrder();
-	unsigned int nCoeffs = n + 3;
-	double m = particleMasses.at(id);
-	double chi = getCoefficientForParticle(id);
+// 	vector<double> ps;
 
-	vector<double> ps;
-
-	if (n == 0) {
-		complex<double> sol = sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
-		double solRe = sol.real();
-		if (solRe < 0)
-			return -1;
-		return solRe;
+// 	if (n == 0) {
+// 		complex<double> sol = sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
+// 		double solRe = sol.real();
+// 		if (solRe < 0)
+// 			return -1;
+// 		return solRe;
 		
-	} else if (n == 1) {
+// 	} else if (n == 1) {
 
-		complex<double> a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
-		a = pow(a, 1. / 3.);
+// 		complex<double> a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
+// 		a = pow(a, 1. / 3.);
 		
-		complex<double> sol1 = - (energy_planck / (3 * chi)) * (1. + pow(2, 1. / 3.) / a) * energy_planck / a - a / 3. / pow(2, 1. / 3.) / chi;
-		complex<double> sol2 = - (energy_planck / (3 * chi)) * (1. - energy_planck / pow(2., 2. / 3.) / a) + a / 6. / pow(2., 1. / 3.) / chi;
+// 		complex<double> sol1 = - (energy_planck / (3 * chi)) * (1. + pow(2, 1. / 3.) / a) * energy_planck / a - a / 3. / pow(2, 1. / 3.) / chi;
+// 		complex<double> sol2 = - (energy_planck / (3 * chi)) * (1. - energy_planck / pow(2., 2. / 3.) / a) + a / 6. / pow(2., 1. / 3.) / chi;
 		
-		// third solution is equal to the second (differs in imaginary part), but is considered for averaging algorithm
-		complex<double> sol3 = sol2;
+// 		// third solution is equal to the second (differs in imaginary part), but is considered for averaging algorithm
+// 		complex<double> sol3 = sol2;
 
-		// convert units
-		sol1 /= c_light;
-		sol2 /= c_light;
-		sol3 /= c_light;
+// 		// convert units
+// 		sol1 /= c_light;
+// 		sol2 /= c_light;
+// 		sol3 /= c_light;
 
-		double sol1Re = sol1.real();
-		double sol2Re = sol2.real();
-		double sol3Re = sol3.real();
+// 		double sol1Re = sol1.real();
+// 		double sol2Re = sol2.real();
+// 		double sol3Re = sol3.real();
 
-		if (sol1Re > 0)
-			ps.push_back(sol1Re);
-		if (sol2Re > 0)
-			ps.push_back(sol2Re);
-		if (sol3Re > 0)
-			ps.push_back(sol3Re);
+// 		if (sol1Re > 0)
+// 			ps.push_back(sol1Re);
+// 		if (sol2Re > 0)
+// 			ps.push_back(sol2Re);
+// 		if (sol3Re > 0)
+// 			ps.push_back(sol3Re);
 
-	} else if (n == 2) {
-		complex<double> e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
+// 	} else if (n == 2) {
+// 		complex<double> e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
 		
-		// only two out of the fours solutions lead to positive momenta
-		complex<double> sol1 = sqrt((- pow_integer<2>(energy_planck) - energy_planck * e) / chi / 2.);
-		complex<double> sol2 = sqrt((- pow_integer<2>(energy_planck) + energy_planck * e) / chi / 2.);
+// 		// only two out of the fours solutions lead to positive momenta
+// 		complex<double> sol1 = sqrt((- pow_integer<2>(energy_planck) - energy_planck * e) / chi / 2.);
+// 		complex<double> sol2 = sqrt((- pow_integer<2>(energy_planck) + energy_planck * e) / chi / 2.);
 
-		double sol1Re = sol1.real();
-		double sol2Re = sol2.real();
+// 		double sol1Re = sol1.real();
+// 		double sol2Re = sol2.real();
 		
-		if (sol1Re > 0)
-			ps.push_back(sol1Re);
-		if (sol2Re > 0)
-			ps.push_back(sol2Re);
+// 		if (sol1Re > 0)
+// 			ps.push_back(sol1Re);
+// 		if (sol2Re > 0)
+// 			ps.push_back(sol2Re);
 
-	} else {
-		// get vector of coefficients
-		vector<double> coeffsVec;
-		coeffsVec.reserve(nCoeffs);
-		for (size_t i = 0; i < nCoeffs; i++) {
-			coeffsVec.push_back(0);
-		}
-		coeffsVec[0] = (- pow_integer<2>(E / c_light) + pow_integer<2>(m * c_light)) / c_squared;
-		coeffsVec[2] = c_squared;
-		coeffsVec[nCoeffs - 1] = chi / pow(c_light / energy_planck, n + 2) * c_squared;
+// 	} else {
+// 		// get vector of coefficients
+// 		vector<double> coeffsVec;
+// 		coeffsVec.reserve(nCoeffs);
+// 		for (size_t i = 0; i < nCoeffs; i++) {
+// 			coeffsVec.push_back(0);
+// 		}
+// 		coeffsVec[0] = (- pow_integer<2>(E / c_light) + pow_integer<2>(m * c_light)) / c_squared;
+// 		coeffsVec[2] = c_squared;
+// 		coeffsVec[nCoeffs - 1] = chi / pow(c_light / energy_planck, n + 2) * c_squared;
 
-		// convert vector to Eigen vector for root finding
-		Eigen::VectorXd coeffs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(coeffsVec.data(), coeffsVec.size());
+// 		// convert vector to Eigen vector for root finding
+// 		Eigen::VectorXd coeffs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(coeffsVec.data(), coeffsVec.size());
 
-		// declare solver and find roots
-		Eigen::PolynomialSolver<double, Eigen::Dynamic> solver;
-		solver.compute(coeffs);
-		const Eigen::PolynomialSolver<double, Eigen::Dynamic>::RootsType &roots = solver.roots();
+// 		// declare solver and find roots
+// 		Eigen::PolynomialSolver<double, Eigen::Dynamic> solver;
+// 		solver.compute(coeffs);
+// 		const Eigen::PolynomialSolver<double, Eigen::Dynamic>::RootsType &roots = solver.roots();
 
-		for (auto& root : roots) {
-			if (root.real() > 0.)
-				ps.push_back(root.real());
-		}
-	}
-	unsigned int nSolutions = ps.size();
-	if (nSolutions < 1)
-		return -1;
+// 		for (auto& root : roots) {
+// 			if (root.real() > 0.)
+// 				ps.push_back(root.real());
+// 		}
+// 	}
+// 	unsigned int nSolutions = ps.size();
+// 	if (nSolutions < 1)
+// 		return -1;
 
-	// strategies for treating multiple acceptable solutions
-	if (symmetryBreaking == SymmetryBreaking::Random) { 
-		if (nSolutions == 0) {
-			cerr << "No solutions found. Momentum cannot be computed from energy in this case." << endl;
-			return 0;
-		} else if (nSolutions == 1) {
-			return ps[0];
-		} else if (nSolutions == 2) {
-			crpropa::Random& random = crpropa::Random::instance();
-			if (random.rand() < 0.5)
-				return ps[0];
-			else
-				return ps[1];
-		} else {
-			crpropa::Random& random = crpropa::Random::instance();
+// 	// strategies for treating multiple acceptable solutions
+// 	if (symmetryBreaking == SymmetryBreaking::Random) { 
+// 		if (nSolutions == 0) {
+// 			cerr << "No solutions found. Momentum cannot be computed from energy in this case." << endl;
+// 			return 0;
+// 		} else if (nSolutions == 1) {
+// 			return ps[0];
+// 		} else if (nSolutions == 2) {
+// 			crpropa::Random& random = crpropa::Random::instance();
+// 			if (random.rand() < 0.5)
+// 				return ps[0];
+// 			else
+// 				return ps[1];
+// 		} else {
+// 			crpropa::Random& random = crpropa::Random::instance();
 
-			vector<double> edges;
-			for (size_t i = 0; i < nSolutions; i++) {
-				edges.push_back(1. / nSolutions);
-			}
-			vector<double>::iterator idxMin = std::lower_bound(edges.begin(), edges.end(), random.rand());
+// 			vector<double> edges;
+// 			for (size_t i = 0; i < nSolutions; i++) {
+// 				edges.push_back(1. / nSolutions);
+// 			}
+// 			vector<double>::iterator idxMin = std::lower_bound(edges.begin(), edges.end(), random.rand());
 			
-			return ps[*idxMin];
-		}
+// 			return ps[*idxMin];
+// 		}
 
-	} else if (symmetryBreaking == SymmetryBreaking::Smallest) {
-		std::sort(ps.begin(), ps.end()); 
-		return ps[0];
-	} else if (symmetryBreaking == SymmetryBreaking::Largest) {
-		std::sort(ps.begin(), ps.end()); 
-		return ps[nSolutions - 1];
-	} else if (symmetryBreaking == SymmetryBreaking::Average) {
-		double pTot = 0;
-		for (auto& p : ps)
-			pTot += p;
-		return pTot / nSolutions;
-	} else if (symmetryBreaking == SymmetryBreaking::Closest) {
-		SpecialRelativity* sr  = new SpecialRelativity();
-		double p0 = sr->computeMomentumFromEnergy(E, id);
+// 	} else if (symmetryBreaking == SymmetryBreaking::Smallest) {
+// 		std::sort(ps.begin(), ps.end()); 
+// 		return ps[0];
+// 	} else if (symmetryBreaking == SymmetryBreaking::Largest) {
+// 		std::sort(ps.begin(), ps.end()); 
+// 		return ps[nSolutions - 1];
+// 	} else if (symmetryBreaking == SymmetryBreaking::Average) {
+// 		double pTot = 0;
+// 		for (auto& p : ps)
+// 			pTot += p;
+// 		return pTot / nSolutions;
+// 	} else if (symmetryBreaking == SymmetryBreaking::Closest) {
+// 		SpecialRelativisticKinematics* sr  = new SpecialRelativisticKinematics();
+// 		double p0 = sr->computeMomentumFromEnergy(E, id);
 
-		vector<double> dps;
-		for (auto& p : ps) {
-			dps.push_back(p - p0);
-		}
-		vector<double>::iterator idx = std::min_element(dps.begin(), dps.end());
+// 		vector<double> dps;
+// 		for (auto& p : ps) {
+// 			dps.push_back(p - p0);
+// 		}
+// 		vector<double>::iterator idx = std::min_element(dps.begin(), dps.end());
 
-		return dps[*idx];
-	}
+// 		return dps[*idx];
+// 	}
 
 
-}
+// }
 
 
 
@@ -545,6 +572,7 @@ double MonochromaticLIV::computeMomentumFromEnergy(const double& E, const int& i
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Kinematics::Kinematics() {
+	 specialRelativity = new SpecialRelativisticKinematics();
 }
 
 Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
@@ -553,21 +581,114 @@ Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
 
 	for (size_t i = 0; i < p.size(); i++) 
 		add(p[i], kin[i]);
+
+	specialRelativity = new SpecialRelativisticKinematics();
 }
 
 Kinematics::Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin) {
 	for (size_t i = 0; i < p.size(); i++) 
 		add(p[i], kin);
+
+	specialRelativity = new SpecialRelativisticKinematics();
 }
 
 Kinematics::Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>> kin) {
 	for (size_t i = 0; i < kin.size(); i++) 
 		add(kin[i].first, kin[i].second);
+
+	specialRelativity = new SpecialRelativisticKinematics();
 }
 
-void Kinematics::add(int particle, ref_ptr<AbstractKinematics> kin) {
+void Kinematics::add(const int& particle, const ref_ptr<AbstractKinematics>& kin) {
 	kinematics[particle] = kin;
 }
+
+void Kinematics::remove(const int& particle) {
+	if (! exists(particle))
+		throw runtime_error("Cannot retrieve inexistent particle with id " + std::to_string(particle) + ".");
+
+	kinematics.erase(particle);
+}
+
+bool Kinematics::isLorentzInvariant() const {
+	for (auto& kin : kinematics) {
+		if (kin.second->getNameTag() != "SR")
+			return false;
+	}
+	return true;
+}
+
+bool Kinematics::isLorentzViolatingKinematics() const {
+	return ! isLorentzInvariant();
+}
+
+bool Kinematics::exists(const int& pId) const {
+	vector<int> particles = getParticles();
+	return std::find(particles.begin(), particles.end(), pId) != particles.end();
+}
+
+vector<int> Kinematics::getParticles() const {
+	vector<int> particles;
+	for (auto& kin : kinematics)
+		particles.push_back(kin.first);
+
+	return particles;
+}
+
+string Kinematics::getIdentifier(const std::vector<int>& particles) const {
+	char dir[1024] = "";
+
+	for (size_t i = 0; i < particles.size(); i++) {
+		int pId = particles[i];
+		const ref_ptr<AbstractKinematics>& kin = find(pId, false);
+		string name = kin->getNameTag();
+		string info = kin->getFilenamePart();
+		size_t s = 0;
+		s += sprintf(dir + s, "%+i_%s", pId, info.c_str());
+		if (i < particles.size() - 1)
+			s += sprintf(dir + s, "-");
+	}
+
+	return std::string(dir);;
+}
+
+Kinematics::ParticleKinematicsMap Kinematics::getParticleKinematicsMap() const {
+	return kinematics;
+}
+
+const ref_ptr<AbstractKinematics>& Kinematics::find(const int& id, bool showWarningInexistent) const {
+	bool declared = exists(id);
+
+	if (declared) {
+		ParticleKinematicsIterator it = kinematics.find(id);
+		return (*it).second;
+	} else {
+		if (showWarningInexistent) 
+			KISS_LOG_WARNING << "Cannot retrieve inexistent particle with id " << id << "." << "Returning special-relativistic kinematics." << endl;
+		return specialRelativity;
+	}		
+}
+
+const ref_ptr<AbstractKinematics>& Kinematics::operator[](const int& pId) {
+	return find(pId);
+}
+
+ref_ptr<AbstractKinematics> Kinematics::operator[](const int& pId) const {
+	return find(pId);
+}
+
+
+
+std::ostream& operator<<(std::ostream& os, const Kinematics& kin) {
+	os << "Kinematics: " << endl;
+
+	vector<int> particles = kin.getParticles();
+	for (auto& p : particles) 
+		os << "  . particle " << p << " ==> " << kin[p]->info() << endl;
+
+	return os;
+}
+
 
 
 
