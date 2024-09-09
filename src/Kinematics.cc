@@ -28,11 +28,6 @@ bool AbstractKinematics::isLorentzViolatingMonochromatic() const {
 	return false;
 }
 
-std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin) {
-	os << kin.info();
-	return os;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -481,6 +476,12 @@ ref_ptr<AbstractKinematics> Kinematics::operator[](const int& pId) const {
 }
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin) {
+	os << kin.info();
+	return os;
+}
 
 std::ostream& operator<<(std::ostream& os, const Kinematics& kin) {
 	os << "Kinematics: " << endl;
