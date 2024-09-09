@@ -96,13 +96,38 @@
 
 // // Define typemap for crpropa::ref_ptr<livpropa::AbstractKinematics>
 // %typemap(out) crpropa::ref_ptr<livpropa::AbstractKinematics> {
-//     $result = SWIG_NewPointerObj(SWIG_as_voidptr($1.get()), SWIGTYPE_p_livpropa__AbstractKinematics, 0 |  0);
+// 	$result = SWIG_NewPointerObj(SWIG_as_voidptr($1.get()), SWIGTYPE_p_livpropa__AbstractKinematics, 0 |  0);
 // }
 
 
-/* Fix bug with some SWIG versions */
-%feature("notabstract") livpropa::SpecialRelativity;
-%feature("notabstract") livpropa::LorentzViolatingMonochromatic;
+/* Print info for SpecialRelativisticKinematics */
+%define __STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics) 
+%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::SpecialRelativisticKinematics::_print();
+%extend livpropa::SpecialRelativisticKinematics {
+	std::string _print() {
+		std::ostringstream out;
+		out << *$self;
+		return out.str();
+	}
+}
+%enddef
+__STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics);
+
+/* Print info for LorentzViolatingKinematicsMonochromatic */
+%define __STR_LorentzViolatingKinematicsMonochromatic__(LorentzViolatingKinematicsMonochromatic) 
+%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::LorentzViolatingKinematicsMonochromatic::_print();
+%extend livpropa::LorentzViolatingKinematicsMonochromatic {
+	std::string _print() {
+		std::ostringstream out;
+		out << *$self;
+		return out.str();
+	}
+}
+%enddef
+__STR_LorentzViolatingKinematicsMonochromatic__(LorentzViolatingKinematicsMonochromatic);
+
+
+
 
 /* Prevent problems with homonymous functions in different namespace */
 %rename(vcMono0_computeMomentumThreshold) livpropa::vc::monoLIV0::computeThresholdMomentum;
@@ -110,24 +135,16 @@
 %rename(vcMono2_computeMomentumThreshold) livpropa::vc::monoLIV2::computeThresholdMomentum;
 
 
-/* implement subscript for particle Database */
-%feature("python:slot", "mp_subscript", functype = "binaryfunc") __getitem__;
-%feature("python:slot", "tp_iter", functype = "unaryfunc") __iter__;
-%feature("python:slot", "tp_iternext", functype = "iternextfunc") __next__;
-
-
-// /* make Kinematics subscriptable */
-// %extend livpropa::Kinematics {
-// 	// const crpropa::ref_ptr<livpropa::AbstractKinematics> __getitem__(int i) {
-// 	// 	return (*($self))[i];
-// 	// }
-
-// 	const crpropa::ref_ptr<livpropa::AbstractKinematics> __getitem__(int i) {
-// 		return (*($self))[i];
-// 	}
-
-// }
-
+/* make Kinematics subscriptable */
+// %feature("python:slot", "tp_str", functype = "reprfunc") bsmpropa::Vector4::_print();
+// %feature("python:slot", "sq_length", functype = "lenfunc") crpropa::Vector4::__len__;
+%feature("python:slot", "mp_subscript", functype = "binaryfunc") livpropa::Kinematics::__getitem__;
+%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") livpropa::Kinematics::__setitem__;
+%extend livpropa::Kinematics {
+	const crpropa::ref_ptr<livpropa::AbstractKinematics> __getitem__(int i) {
+		return (*($self))[i];
+	}
+}
 
 /* convert unordered_dict to Python dict */
 %typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>> (PyObject* obj) %{
@@ -137,7 +154,8 @@
 		PyObject* pId = PyLong_FromLong(n.first); // Convert int to Python integer
 
 		// convert crpropa::ref_ptr<livpropa::AbstractKinematics> to Python object
-		PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second), SWIGTYPE_p_crpropa__ref_ptrT_livpropa__AbstractKinematics_t, SWIG_POINTER_OWN);
+		// PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second), SWIGTYPE_p_crpropa__ref_ptrT_livpropa__AbstractKinematics_t, SWIG_POINTER_OWN);
+		PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second));
 
 		PyDict_SetItem(obj, pId, kin);
 		Py_XDECREF(pId);
@@ -150,7 +168,7 @@
 
 /* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
 %template(CoefficientsMap) std::unordered_map<int, double>;
-%template(ParticleKinematicsIterator) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
+%template(ParticleKinematicsMap) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
 // %template(EmissionSpectraTable) std::unordered_map<int, livpropa::EmissionSpectrum>;
 
 
@@ -176,6 +194,10 @@
 /*************************************************************************************************/
 /*************************************************************************************************/
 
+%template(VectorInt) std::vector<int>;
+%template(VectorFloat) std::vector<float>;
+%template(VectorDouble) std::vector<double>;
+%template(VectorString) std::vector<std::string>;
 
 /* Ignore list */
 %ignore operator<<;
