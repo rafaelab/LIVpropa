@@ -329,7 +329,8 @@ double VacuumCherenkov::computeInteractionRate(const double& p, const LorentzVio
 
 template<>
 double VacuumCherenkov::computeInteractionRate(const double& p, const LorentzViolatingKinematicsMonochromatic2& kinOt, const SpecialRelativisticKinematics& kinPh) {
-	LorentzViolatingKinematicsMonochromatic2* kinPhNew = new LorentzViolatingKinematicsMonochromatic2(0.);
+	LorentzViolatingKinematicsMonochromatic2* kinPhNew;
+	kinPhNew->setCoefficient(0);
 	return computeInteractionRate(p, &kinOt, &kinPhNew);
 }
 
