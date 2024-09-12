@@ -38,26 +38,13 @@ bool PhotonDecay::isImplemented() const {
 	std::string typePo = kinematics[-11]->getNameTag();
 	std::string typePh = kinematics[ 22]->getNameTag();
 
-	if (typeEl != typePo)
+	if ((typeEl != typePo) || (typeEl != typePh))
 		return false;
 
 	if (typePh != "SR" and (typePh != typeEl or typePh != typePo))
 		return false;
 
-	if (kinematics[11]->isLorentzViolatingMonochromatic() && kinematics[-11]->isLorentzViolatingMonochromatic()) {
-		auto kinEl = kinematics[ 11]->toLorentzViolatingKinematicsMonochromatic();
-		auto kinPo = kinematics[-11]->toLorentzViolatingKinematicsMonochromatic();
-		if (kinEl->getOrder() != kinPo->getOrder())
-			return false;
-
-		if (kinematics[22]->isLorentzViolatingMonochromatic()) {
-			auto kinPh = kinematics[ 22]->toLorentzViolatingKinematicsMonochromatic();
-			if (kinEl->getOrder() != kinPh->getOrder())
-				return true;
-		}
-	} 
-	
-	return false;
+	return true;
 }
 
 string PhotonDecay::getInteractionTag() const {
@@ -69,38 +56,41 @@ double PhotonDecay::computeThresholdMomentum() const {
 	if (! isImplemented())
 		return pThr;
 
-	double chiEl = 0;
-	double chiPo = 0;
-	double chiPh = 0;
+	// double chiEl = 0;
+	// double chiPo = 0;
+	// double chiPh = 0;
 
-	if (kinematics[22]->isLorentzViolatingMonochromatic())
-		chiPh = kinematics[22]->toLorentzViolatingKinematicsMonochromatic()->getCoefficient();
-	else if (kinematics[22]->isSpecialRelativistic())
-		chiPh = 0;
+	// if (kinematics[22]->isLorentzViolatingMonochromatic()) {
+	// 	chiPh = kinematics[22]->getCoefficient();
+	// } else if (kinematics[22]->isSpecialRelativistic()) {
+	// 	chiPh = 0;
+	// }
 
-	if (kinematics[11]->isLorentzViolatingMonochromatic())
-		chiEl = kinematics[11]->toLorentzViolatingKinematicsMonochromatic()->getCoefficient();
-	else if (kinematics[11]->isSpecialRelativistic())
-		chiEl = 0;
+	// if (kinematics[11]->isLorentzViolatingMonochromatic()) {
+	// 	int order = kinematics[22]->getOrder();
+	// 	chiEl = kinOt->getCoefficient();
+	// } else if (kinematics[11]->isSpecialRelativistic()) {
+	// 	chiEl = 0;
+	// }
 
-	// current limitation
-	chiPo = chiEl;
+	// // current limitation
+	// chiPo = chiEl;
 
-	double m = particleMasses.at(11);
-	unsigned int order = kinematics[22]->toLorentzViolatingKinematicsMonochromatic()->getOrder();
+	// double m = particleMasses.at(11);
+	// int order = toLorentzViolatingKinematicsMonochromaticBase(kinematics[11])->getOrder();
 
-	switch (order) {
-		case 0:
-			if (chiPh > chiEl) 
-				pThr = 2. * mass_electron * c_light / sqrt(chiPh - chiEl);
-			break;
-		case 1:
-			if (chiPh >= 0.) 
-				pThr = cbrt(8 * pow_integer<2>(mass_electron * c_squared) * energy_planck / (2 * chiPh - chiEl)) / c_light;
-			break;
-		default:	
-			throw std::runtime_error("PhotonDecay: only LIV of orders 0, 1 are implemented.");
-	}
+	// switch (order) {
+	// 	case 0:
+	// 		if (chiPh > chiEl) 
+	// 			pThr = 2. * mass_electron * c_light / sqrt(chiPh - chiEl);
+	// 		break;
+	// 	case 1:
+	// 		if (chiPh >= 0.) 
+	// 			pThr = cbrt(8 * pow_integer<2>(mass_electron * c_squared) * energy_planck / (2 * chiPh - chiEl)) / c_light;
+	// 		break;
+	// 	default:	
+	// 		throw std::runtime_error("PhotonDecay: only LIV of orders 0, 1 are implemented.");
+	// }
 
 	return pThr;
 }
