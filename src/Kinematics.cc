@@ -9,14 +9,6 @@ double AbstractKinematics::computeEnergyFromMomentum(const double& p, const int&
 	return sqrt(computeEnergy2FromMomentum(p, id));
 }
 
-const SpecialRelativisticKinematics* AbstractKinematics::toSpecialRelativisticKinematics() const {
-	return static_cast<const SpecialRelativisticKinematics*>(this);
-};
-
-const LorentzViolatingKinematicsMonochromatic* AbstractKinematics::toLorentzViolatingKinematicsMonochromatic() const {
-	return static_cast<const LorentzViolatingKinematicsMonochromatic*>(this);
-};
-
 bool AbstractKinematics::isSpecialRelativistic() const {
 	return getNameTag() == "SR";
 }
@@ -55,6 +47,10 @@ double SpecialRelativisticKinematics::computeMomentumFromEnergy(const double& E,
 	return sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light;
 }
 
+double SpecialRelativisticKinematics::getCoefficient() const {
+	return 0;
+}
+
 string SpecialRelativisticKinematics::getIdentifier() const {
 	return "SR";
 }
@@ -65,7 +61,6 @@ string SpecialRelativisticKinematics::info() const {
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 void LorentzViolatingKinematics::setSymmetryBreaking(SymmetryBreaking treatment) {
 	symmetryBreaking = treatment;
@@ -154,104 +149,103 @@ string LorentzViolatingKinematics::info() const {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-LorentzViolatingKinematicsMonochromatic::LorentzViolatingKinematicsMonochromatic(SymmetryBreaking symmetryBreaking) {
-	setSymmetryBreaking(symmetryBreaking);
-}
-
-LorentzViolatingKinematicsMonochromatic::LorentzViolatingKinematicsMonochromatic(unsigned int n, SymmetryBreaking symmetryBreaking) {
-	setOrder(n);
-	setSymmetryBreaking(symmetryBreaking);
-}
-
-LorentzViolatingKinematicsMonochromatic::LorentzViolatingKinematicsMonochromatic(unsigned int n, double chi, SymmetryBreaking symmetryBreaking) {
-	setOrder(n);
+template<typename LIV>
+LorentzViolatingKinematicsMonochromatic<LIV>::LorentzViolatingKinematicsMonochromatic(double chi, SymmetryBreaking symmetryBreaking) {
 	setCoefficient(chi);
 	setSymmetryBreaking(symmetryBreaking);
 }
 
-LorentzViolatingKinematicsMonochromatic::~LorentzViolatingKinematicsMonochromatic() {
+template<typename LIV>
+LorentzViolatingKinematicsMonochromatic<LIV>::~LorentzViolatingKinematicsMonochromatic() {
 }
 
-void LorentzViolatingKinematicsMonochromatic::setOrder(unsigned int n) {
+template<typename LIV>
+void LorentzViolatingKinematicsMonochromatic<LIV>::setOrder(int n) {
 	order = n;
 }
 
-void LorentzViolatingKinematicsMonochromatic::setCoefficient(double coeff) {
+template<typename LIV>
+void LorentzViolatingKinematicsMonochromatic<LIV>::setCoefficient(double coeff) {
 	coefficient = coeff;
 }
 
-unsigned int LorentzViolatingKinematicsMonochromatic::getOrder() const {
-	return order;
+template<typename LIV>
+int LorentzViolatingKinematicsMonochromatic<LIV>::getOrder() const {
+	return static_cast<const LIV*>(this)->getOrder();
 }
 
-double LorentzViolatingKinematicsMonochromatic::getCoefficient() const {
+template<typename LIV>
+double LorentzViolatingKinematicsMonochromatic<LIV>::getCoefficient() const {
 	return coefficient;
 }
 
-string LorentzViolatingKinematicsMonochromatic::getNameTag() const {
+template<typename LIV>
+string LorentzViolatingKinematicsMonochromatic<LIV>::getNameTag() const {
 	return "LIVmono" + std::to_string(order);
 }
 
-string LorentzViolatingKinematicsMonochromatic::getIdentifier() const {
+template<typename LIV>
+string LorentzViolatingKinematicsMonochromatic<LIV>::getIdentifier() const {
 	char s[64];
 	sprintf(s, "LIV%i_chi_%+2.1e", order, coefficient);
 	return string(s);
 }
 
-double LorentzViolatingKinematicsMonochromatic::getSymmetryBreakingShift(const double& p) const {
+template<typename LIV>
+double LorentzViolatingKinematicsMonochromatic<LIV>::getSymmetryBreakingShift(const double& p) const {
 	return coefficient * pow(p * c_light / energy_planck, order) * pow_integer<2>(p * c_light);
 }
 
-double LorentzViolatingKinematicsMonochromatic::computeEnergy2FromMomentum(const double& p, const int& id) const {
+template<typename LIV>
+string LorentzViolatingKinematicsMonochromatic<LIV>::info() const {
+	string s = "";
+	s += "LorentzViolatingKinematicsMonochromatic";
+	s += "(n = " + std::to_string(order) + "; chi = " + std::to_string(coefficient) + ")"; 
+	return s;
+}
+
+template<typename LIV>
+double LorentzViolatingKinematicsMonochromatic<LIV>::computeEnergy2FromMomentum(const double& p, const int& id) const {
 	double m = particleMasses.at(id);
 	double ds = this->getSymmetryBreakingShift(p);
 	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
 }
 
-double LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy(const double& E, const int& id) const {
-	unsigned int n = order;
-	double m = particleMasses.at(id);
-	double chi = coefficient;
-
-	// vector that will store the solutions for later selection
-	vector<double> ps;
-	switch (n) {
-		case 0:
-			ps = computeMomentumFromEnergy0(E, m, chi);
-			break;
-		case 1:
-			ps = computeMomentumFromEnergy1(E, m, chi);
-			break;
-		case 2:
-			ps = computeMomentumFromEnergy2(E, m, chi);
-			break;
-		default:
-			ps = computeMomentumFromEnergyN(E, m, chi, n);
-			break;
-	}
-
-	unsigned int nSolutions = ps.size();
-	if (nSolutions < 1) {
-		cerr << "No solutions could be found. Momentum cannot be computed from energy in this case." << endl;
-		return -1;
-	}
-	// select final momentum according to symmetry breaking treatment
-	double p = selectFinalMomentum(ps, E, id);
-
-	return p;
+template<typename LIV>
+double LorentzViolatingKinematicsMonochromatic<LIV>::computeMomentumFromEnergy(const double& E, const int& id) const {
+	auto kin = static_cast<const LIV*>(this);
+	return kin->computeMomentumFromEnergy(E, id);
 }
 
-vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy0(const double& E, const double& m, const double& chi) {
-	complex<double> sol = sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
+template<int N>
+int LIVKinematicsMonochromatic<N>::getOrder() const {
+	return N;
+}
+
+template<int N>
+LIVKinematicsMonochromatic<N>::LIVKinematicsMonochromatic(double chi, SymmetryBreaking symmetryBreaking) : LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N> >(0, chi, symmetryBreaking) {
+}
+
+template<>
+double LIVKinematicsMonochromatic<0>::_computeMomentumFromEnergy(const double& E, const int& id) const {
+	double m = particleMasses.at(id);
+	double chi = coefficient;
 	
+	complex<double> sol = sqrt(pow_integer<2>(E) - pow_integer<2>(m * c_squared)) / c_light / sqrt(1 + chi);
 	double solRe = sol.real();
 	if (solRe < 0)
 		solRe = -1;
 
-	vector<double>({solRe});
+	vector<double> ps = {solRe};
+
+	return selectFinalMomentum(ps, E, id);
 }
 
-vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy1(const double& E, const double& m, const double& chi) {
+template<>
+double LIVKinematicsMonochromatic<1>::_computeMomentumFromEnergy(const double& E, const int& id) const {
+	double m = particleMasses.at(id);
+	double chi = coefficient;
+
 	complex<double> a = -27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi) *  energy_planck * pow_integer<2>(m * c_squared) + sqrt(-4 * pow_integer<6>(energy_planck) + (-27 * pow_integer<2>(chi * E) * energy_planck + 2 * pow_integer<3>(energy_planck) + 27 * pow_integer<2>(chi * m * c_squared) * energy_planck));
 	a = pow(a, 1. / 3.);
 		
@@ -278,10 +272,13 @@ vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnerg
 	if (sol3Re > 0)
 		ps.push_back(sol3Re);
 		
-	return ps;
+	return selectFinalMomentum(ps, E, id);
 }
 
-vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergy2(const double& E, const double& m, const double& chi) {
+template<>
+double LIVKinematicsMonochromatic<2>::_computeMomentumFromEnergy(const double& E, const int& id) const {
+	double m = particleMasses.at(id);
+	double chi = coefficient;
 	complex<double> e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
 		
 	// only two out of the fours solutions lead to positive momenta
@@ -297,14 +294,22 @@ vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnerg
 	if (sol2Re > 0)
 		ps.push_back(sol2Re);
 
-	return ps;
+	return selectFinalMomentum(ps, E, id);
 }
 
-vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnergyN(const double& E, const double& m, const double& chi, const unsigned int& n) {
-	// UNTESTED!!!!
+template<int N>
+double LIVKinematicsMonochromatic<N>::_computeMomentumFromEnergy(const double& E, const int& id) const {
+	// LIV for N>2 is not really tested!
+
+	double m = particleMasses.at(id);
+	double chi = this->getCoefficient();
+	int order = N;
+
+	// vector that will store the solutions for later selection
+	vector<double> ps;
 
 	// get vector of coefficients
-	unsigned int nCoeffs = n + 3;
+	unsigned int nCoeffs = order + 3;
 	vector<double> coeffsVec;
 	coeffsVec.reserve(nCoeffs);
 	for (size_t i = 0; i < nCoeffs; i++) {
@@ -312,7 +317,7 @@ vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnerg
 	}
 	coeffsVec[0] = (- pow_integer<2>(E / c_light) + pow_integer<2>(m * c_light)) / c_squared;
 	coeffsVec[2] = c_squared;
-	coeffsVec[nCoeffs - 1] = chi / pow(c_light / energy_planck, n + 2) * c_squared;
+	coeffsVec[nCoeffs - 1] = chi / pow(c_light / energy_planck, order + 2) * c_squared;
 
 	// convert vector to Eigen vector for root finding
 	Eigen::VectorXd coeffs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(coeffsVec.data(), coeffsVec.size());
@@ -322,20 +327,12 @@ vector<double> LorentzViolatingKinematicsMonochromatic::computeMomentumFromEnerg
 	solver.compute(coeffs);
 	const Eigen::PolynomialSolver<double, Eigen::Dynamic>::RootsType &roots = solver.roots();
 
-	vector<double> ps;
 	for (auto& root : roots) {
 		if (root.real() > 0.)
 			ps.push_back(root.real());
 	}
 
-	return ps;
-}
-
-string LorentzViolatingKinematicsMonochromatic::info() const {
-	string s = "";
-	s += "LorentzViolatingKinematicsMonochromatic";
-	s += "(n = " + std::to_string(order) + "; chi = " + std::to_string(coefficient) + ")"; 
-	return s;
+	return this->selectFinalMomentum(ps, E, id);
 }
 
 
@@ -450,7 +447,7 @@ string Kinematics::getIdentifier(const std::vector<int>& particles, bool simplif
 	return identifier;
 }
 
-Kinematics::ParticleKinematicsMap Kinematics::getParticleKinematicsMap() const {
+ParticleKinematicsMap Kinematics::getParticleKinematicsMap() const {
 	return kinematics;
 }
 
@@ -478,6 +475,12 @@ ref_ptr<AbstractKinematics> Kinematics::operator[](const int& pId) const {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+template<int N>
+LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>> convertToLorentzViolatingKinematicsMonochromatic(const SpecialRelativisticKinematics& kin) {
+	LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>* k = new LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>(0.);
+	return *k;
+}
+
 std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin) {
 	os << kin.info();
 	return os;
@@ -494,6 +497,11 @@ std::ostream& operator<<(std::ostream& os, const Kinematics& kin) {
 }
 
 
+
+// explicit instantiations for required template parameters
+template class LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<0>>;
+template class LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<1>>;
+template class LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<2>>;
 
 
 } // namespace livpropa

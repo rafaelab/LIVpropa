@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 
 #include <Eigen/Core>
@@ -21,11 +22,6 @@
 
 
 namespace livpropa {
-
-
-// forward declaration
-class SpecialRelativisticKinematics;
-class LorentzViolatingKinematicsMonochromatic;
 
 
 /**
@@ -56,12 +52,16 @@ class AbstractKinematics: public crpropa::Referenced {
 			return "AbstractKinematics";
 		};
 		double computeEnergyFromMomentum(const double& p, const int& id) const;
-		const SpecialRelativisticKinematics* toSpecialRelativisticKinematics() const;
-		const LorentzViolatingKinematicsMonochromatic* toLorentzViolatingKinematicsMonochromatic() const;
 		bool isSpecialRelativistic() const;
 		bool isLorentzViolatingMonochromatic() const;
+		template<class LIV> auto castTo() {
+			return dynamic_cast<LIV*>(this);
+		};
+		// const SpecialRelativisticKinematics* toSpecialRelativisticKinematics() const;
+		// template<int N> const LorentzViolatingKinematicsMonochromatic<N>* toLorentzViolatingKinematicsMonochromatic() const;
 };
 
+using ParticleKinematicsMap = unordered_map<int, ref_ptr<AbstractKinematics>>;
 
 
 /**
@@ -76,8 +76,8 @@ class SpecialRelativisticKinematics : public AbstractKinematics {
 		~SpecialRelativisticKinematics();
 		string getNameTag() const;
 		string getIdentifier() const;
-		// double getCoefficient() const;
 		double getSymmetryBreakingShift(const double& p, const int& id) const;
+		double getCoefficient() const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		double computeMomentumFromEnergy(const double& E, const int& id) const;
 		string info() const;
@@ -135,31 +135,45 @@ class LorentzViolatingKinematics : public AbstractKinematics {
 	E^2 = m^2 + p^2 + chi (pc / E_pl)^n.
   The fact that only a single value of n is taken into account defines the naming choice "monochromatic".
  */
+template<typename LIV>
 class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematics {
+	public:
+		using LorentzViolatingKinematics::SymmetryBreaking;
+
 	protected:
-		unsigned int order; 
+		int order;
 		double coefficient;
-		static vector<double> computeMomentumFromEnergy0(const double& E, const double& m, const double& chi);
-		static vector<double> computeMomentumFromEnergy1(const double& E, const double& m, const double& chi);
-		static vector<double> computeMomentumFromEnergy2(const double& E, const double& m, const double& chi);
-		static vector<double> computeMomentumFromEnergyN(const double& E, const double& m, const double& chi, const unsigned int& n);
 
 	public:
-		LorentzViolatingKinematicsMonochromatic(SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
-		LorentzViolatingKinematicsMonochromatic(unsigned int n, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
-		LorentzViolatingKinematicsMonochromatic(unsigned int n, double chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
+		LorentzViolatingKinematicsMonochromatic(double chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
 		~LorentzViolatingKinematicsMonochromatic();
-		void setOrder(unsigned int n);
+		void setOrder(int order);
 		void setCoefficient(double coefficient);
-		unsigned int getOrder() const;
+		int getOrder() const;
 		double getCoefficient() const;
 		string getNameTag() const;
 		string getIdentifier() const;
 		double getSymmetryBreakingShift(const double& p) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
-		double computeMomentumFromEnergy(const double& E, const int& id) const;
 		string info() const;
+		double computeMomentumFromEnergy(const double& E, const int& id) const ;
 };
+
+
+template<int N>
+class LIVKinematicsMonochromatic : public LorentzViolatingKinematicsMonochromatic <LIVKinematicsMonochromatic<N>> {
+	public:
+		using LorentzViolatingKinematics::SymmetryBreaking;
+		// using LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>::getOrder;
+		using LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>::getCoefficient;
+
+	public:
+		 LIVKinematicsMonochromatic(SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
+		 LIVKinematicsMonochromatic(double chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
+		 int getOrder() const;
+		double _computeMomentumFromEnergy(const double& E, const int& id) const;
+};
+
 
 
 /**
@@ -168,9 +182,6 @@ class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematic
   This class is a container for the kinematics of different particles.
  */
 class Kinematics {
-	public:
-		typedef unordered_map<int, ref_ptr<AbstractKinematics>> ParticleKinematicsMap;
-
 	private:
 		using ParticleKinematicsIterator = typename ParticleKinematicsMap::const_iterator;
 		ref_ptr<AbstractKinematics> specialRelativity;
@@ -196,6 +207,19 @@ class Kinematics {
 		const ref_ptr<AbstractKinematics>& operator[](const int& pId);
 		ref_ptr<AbstractKinematics> operator[](const int& pId) const;
 };
+
+
+/**
+Provides tools for type casting and conversion
+ */
+// SpecialRelativisticKinematics convertToSpecialRelativisticKinematics(const AbstractKinematics& kin);
+
+
+
+using LorentzViolatingKinematicsMonochromatic0 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<0>>;
+using LorentzViolatingKinematicsMonochromatic1 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<1>>;
+using LorentzViolatingKinematicsMonochromatic2 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<2>>;
+using LorentzViolatingKinematicsMonochromatic3 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<3>>;
 
 
 /** 
