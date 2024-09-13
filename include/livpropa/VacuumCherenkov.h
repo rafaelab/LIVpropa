@@ -26,7 +26,8 @@ namespace livpropa {
 enum class VacuumCherenkovSpectrum {
 	Default,
 	Step,
-	Full
+	Full,
+	Absent
 };
 
 
@@ -70,26 +71,21 @@ class VacuumCherenkov: public Module {
 		string getInteractionTag() const;
 		double computeThresholdMomentum(const int& id) const;
 		double computeThresholdEnergy(const int& id) const;
+		double computeInteractionRate(const int& id, const double& p) const;
 		void process(Candidate* candidate) const;
+		static bool isTreatmentImplemented(const ref_ptr<AbstractKinematics>& kin, VacuumCherenkovSpectrum spec);
+		static VacuumCherenkovSpectrum getDefaultSpectrum(const ref_ptr<AbstractKinematics>& kin);
 		template<class KO, class KP> static double thresholdMomentum(const int& id, const KO& kinOt, const KP& kinPh);
-		template<class KP> static double thresholdMomentum(const int& id, const SpecialRelativisticKinematics& kinOt, const KP& kinPh);
-		template<> static double thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic0& kinOt, const LorentzViolatingKinematicsMonochromatic0& kinPh);
-		template<> static double thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic1& kinOt, const LorentzViolatingKinematicsMonochromatic1& kinPh);
-		template<> static double thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic2& kinOt,  const LorentzViolatingKinematicsMonochromatic2& kinPh);
-		// template<int N> static double thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>& kinOt,  const SpecialRelativisticKinematics& kinPh);
+		template<> static double thresholdMomentum(const int& id, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh);
+		template<> static double thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<0>& kinOt, const MonochromaticLorentzViolatingKinematics<0>& kinPh);
+		template<> static double thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<1>& kinOt, const MonochromaticLorentzViolatingKinematics<1>& kinPh);
+		template<> static double thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<2>& kinOt,  const MonochromaticLorentzViolatingKinematics<2>& kinPh);
 		template<class KO, class KP> Histogram1D buildSpectrum(const int& id, const KO& kinOt, const KP& kinPh);
-		template<class KP> Histogram1D buildSpectrum(const int& id, const LorentzViolatingKinematicsMonochromatic2& kinOt, const KP& kinPh);
-		template<class KO, class KP> static double computeInteractionRate(const double& p, const KO& kinOt, const KP& kinPh);
-		template<> static double computeInteractionRate(const double& p, const LorentzViolatingKinematicsMonochromatic2& kinOt, const LorentzViolatingKinematicsMonochromatic2& kinPh);
-		template<> static double computeInteractionRate(const double& p, const LorentzViolatingKinematicsMonochromatic2& kinOt, const SpecialRelativisticKinematics& kinPh);
-		template<class K> static bool isTreatmentImplemented(const K& kin, VacuumCherenkovSpectrum spec);
-		template<> static bool isTreatmentImplemented(const LorentzViolatingKinematicsMonochromatic0& kin, VacuumCherenkovSpectrum spec);
-		template<> static bool isTreatmentImplemented(const LorentzViolatingKinematicsMonochromatic1& kin, VacuumCherenkovSpectrum spec);
-		template<> static bool isTreatmentImplemented(const LorentzViolatingKinematicsMonochromatic2& kin, VacuumCherenkovSpectrum spec);
-		template<class K> static VacuumCherenkovSpectrum getDefaultSpectrum(const K& kin);
-		template<> static VacuumCherenkovSpectrum getDefaultSpectrum(const LorentzViolatingKinematicsMonochromatic0& kin);
-		template<> static VacuumCherenkovSpectrum getDefaultSpectrum(const LorentzViolatingKinematicsMonochromatic1& kin);
-		template<> static VacuumCherenkovSpectrum getDefaultSpectrum(const LorentzViolatingKinematicsMonochromatic2& kin);
+		template<class KP> Histogram1D buildSpectrum(const int& id, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
+		template<class KO, class KP> static double interactionRate(const double& p, const KO& kinOt, const KP& kinPh);
+		template<> static double interactionRate(const double& p, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh);
+		template<> static double interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
+		template<> static double interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
 };
 /** @}*/
 
