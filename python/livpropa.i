@@ -54,6 +54,18 @@
 	using namespace livpropa;
 %}
 
+/* Include plugin parts to generate wrappers  */
+%include "livpropa/Common.h"
+%include "livpropa/Data.h"
+%include "livpropa/UnitsAndConstants.h"
+%include "livpropa/Histogram.h"
+%include "livpropa/Sampler.h"
+%include "livpropa/Kinematics.h"
+%include "livpropa/InverseComptonScattering.h"
+%include "livpropa/PairProduction.h"
+%include "livpropa/PhotonDecay.h"
+%include "livpropa/VacuumCherenkov.h"
+
 
 /*************************************************************************************************/
 /**                                		Histograms                               				**/
@@ -87,12 +99,22 @@
 
 /* Ignore list */
 %ignore operator livpropa::AbstractKinematics*;
-%ignore operator livpropa::LorentzViolating*;
+// %ignore operator livpropa::LorentzViolatingKinematics*;
+// %ignore operator livpropa::AbstractMonochromaticLorentzViolatingKinematics*;
 
 /* To enable access to abstract base class Kinematics */
 %implicitconv crpropa::ref_ptr<livpropa::AbstractKinematics>;
 %template(AbstractKinematicsRefPtr) crpropa::ref_ptr<livpropa::AbstractKinematics>;
 %feature("director") livpropa::AbstractKinematics;
+
+
+
+%template(MonochromaticLorentzViolatingKinematics0) livpropa::MonochromaticLorentzViolatingKinematics<0>;
+%template(MonochromaticLorentzViolatingKinematics1) livpropa::MonochromaticLorentzViolatingKinematics<1>;
+%template(MonochromaticLorentzViolatingKinematics2) livpropa::MonochromaticLorentzViolatingKinematics<2>;
+// %template(MonochromaticLorentzViolatingKinematics0RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<0>>;
+// %template(MonochromaticLorentzViolatingKinematics1RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<1>>;
+// %template(MonochromaticLorentzViolatingKinematics2RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<2>>;
 
 // // Define typemap for crpropa::ref_ptr<livpropa::AbstractKinematics>
 // %typemap(out) crpropa::ref_ptr<livpropa::AbstractKinematics> {
@@ -114,9 +136,9 @@
 __STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics);
 
 /* Print info for LorentzViolatingKinematicsMonochromatic */
-%define __STR_LorentzViolatingKinematicsMonochromatic__(LorentzViolatingKinematicsMonochromatic) 
-%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::LorentzViolatingKinematicsMonochromatic::_print();
-%extend livpropa::LorentzViolatingKinematicsMonochromatic {
+%define __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLorentzViolatingKinematics) 
+%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::AbstractMonochromaticLorentzViolatingKinematics::_print();
+%extend livpropa::AbstractMonochromaticLorentzViolatingKinematics {
 	std::string _print() {
 		std::ostringstream out;
 		out << *$self;
@@ -124,15 +146,9 @@ __STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics);
 	}
 }
 %enddef
-__STR_LorentzViolatingKinematicsMonochromatic__(LorentzViolatingKinematicsMonochromatic);
+__STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLorentzViolatingKinematics);
 
 
-
-
-/* Prevent problems with homonymous functions in different namespace */
-%rename(vcMono0_computeMomentumThreshold) livpropa::vc::monoLIV0::computeThresholdMomentum;
-%rename(vcMono1_computeMomentumThreshold) livpropa::vc::monoLIV1::computeThresholdMomentum;
-%rename(vcMono2_computeMomentumThreshold) livpropa::vc::monoLIV2::computeThresholdMomentum;
 
 
 /* make Kinematics subscriptable */
@@ -165,29 +181,36 @@ __STR_LorentzViolatingKinematicsMonochromatic__(LorentzViolatingKinematicsMonoch
 %}
 
 
-
 /* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
 %template(CoefficientsMap) std::unordered_map<int, double>;
 %template(ParticleKinematicsMap) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
-// %template(EmissionSpectraTable) std::unordered_map<int, livpropa::EmissionSpectrum>;
+
+/*************************************************************************************************/
+/**	                                	Interactions  		                                    **/
+/*************************************************************************************************/
+
+/* Rename automatically generate enum class */
+%rename(VacuumCherenkovSpectrumDefault) VacuumCherenkovSpectrum_Default;
+%rename(VacuumCherenkovSpectrumFull) VacuumCherenkovSpectrum_Full;
+%rename(VacuumCherenkovSpectrumFlat) VacuumCherenkovSpectrum_Flat;
 
 
 /*************************************************************************************************/
-/**                                    LIVpropa headers                                        **/
+/**                                    LIVpropa headers                                         **/
 /*************************************************************************************************/
 
 
-/* Include plugin parts to generate wrappers  */
-%include "livpropa/Common.h"
-%include "livpropa/Data.h"
-%include "livpropa/UnitsAndConstants.h"
-%include "livpropa/Histogram.h"
-%include "livpropa/Sampler.h"
-%include "livpropa/Kinematics.h"
-%include "livpropa/InverseComptonScattering.h"
-%include "livpropa/PairProduction.h"
-%include "livpropa/PhotonDecay.h"
-%include "livpropa/VacuumCherenkov.h"
+// /* Include plugin parts to generate wrappers  */
+// %include "livpropa/Common.h"
+// %include "livpropa/Data.h"
+// %include "livpropa/UnitsAndConstants.h"
+// %include "livpropa/Histogram.h"
+// %include "livpropa/Sampler.h"
+// %include "livpropa/Kinematics.h"
+// %include "livpropa/InverseComptonScattering.h"
+// %include "livpropa/PairProduction.h"
+// %include "livpropa/PhotonDecay.h"
+// %include "livpropa/VacuumCherenkov.h"
 
 
 
@@ -206,4 +229,4 @@ __STR_LorentzViolatingKinematicsMonochromatic__(LorentzViolatingKinematicsMonoch
 
 
 /* Hide warnings */
-#pragma SWIG nowarn=312,325,361,389,401,508,509
+#pragma SWIG nowarn=302,312,325,361,389,401,508,509

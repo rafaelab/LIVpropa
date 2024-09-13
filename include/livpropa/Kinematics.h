@@ -54,9 +54,9 @@ class AbstractKinematics: public crpropa::Referenced {
 		double computeEnergyFromMomentum(const double& p, const int& id) const;
 		bool isSpecialRelativistic() const;
 		bool isLorentzViolatingMonochromatic() const;
-		template<class LIV> auto castTo() {
-			return dynamic_cast<LIV*>(this);
-		};
+		// template<class LIV> auto castTo() {
+		// 	return dynamic_cast<LIV*>(this);
+		// };
 		// const SpecialRelativisticKinematics* toSpecialRelativisticKinematics() const;
 		// template<int N> const LorentzViolatingKinematicsMonochromatic<N>* toLorentzViolatingKinematicsMonochromatic() const;
 };
@@ -91,11 +91,11 @@ class SpecialRelativisticKinematics : public AbstractKinematics {
 
   Sometimes we need to solve the equation for p and there are multiple real positive solutions.
   In this case, one of the following strategies can be adopted:
-    (1) randomly pick one of the possible values;
-	(2) compute the average;
-	(3) the closest to the usual special-relativistic result;
-	(4) the lowest among the values;
-	(5) the largest among the values.
+    (1) randomly pick one of the possible values; 
+	(2) compute the average; 
+	(3) the closest to the usual special-relativistic result; 
+	(4) the lowest among the values; 
+	(5) the largest among the values. 
   Note that 1 and 2 are the most "sensible" ones.
   The third is phenomenologically motivated.
  */
@@ -135,8 +135,7 @@ class LorentzViolatingKinematics : public AbstractKinematics {
 	E^2 = m^2 + p^2 + chi (pc / E_pl)^n.
   The fact that only a single value of n is taken into account defines the naming choice "monochromatic".
  */
-template<typename LIV>
-class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematics {
+class AbstractMonochromaticLorentzViolatingKinematics : public LorentzViolatingKinematics {
 	public:
 		using LorentzViolatingKinematics::SymmetryBreaking;
 
@@ -145,8 +144,7 @@ class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematic
 		double coefficient;
 
 	public:
-		LorentzViolatingKinematicsMonochromatic(double chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
-		~LorentzViolatingKinematicsMonochromatic();
+		virtual ~AbstractMonochromaticLorentzViolatingKinematics() = default;
 		void setOrder(int order);
 		void setCoefficient(double coefficient);
 		int getOrder() const;
@@ -156,22 +154,19 @@ class LorentzViolatingKinematicsMonochromatic : public LorentzViolatingKinematic
 		double getSymmetryBreakingShift(const double& p) const;
 		double computeEnergy2FromMomentum(const double& p, const int& id) const;
 		string info() const;
-		double computeMomentumFromEnergy(const double& E, const int& id) const ;
+		virtual double computeMomentumFromEnergy(const double& E, const int& id) const {
+			return 0;
+		};
 };
 
 
 template<int N>
-class LIVKinematicsMonochromatic : public LorentzViolatingKinematicsMonochromatic <LIVKinematicsMonochromatic<N>> {
+class MonochromaticLorentzViolatingKinematics : public AbstractMonochromaticLorentzViolatingKinematics {
 	public:
-		using LorentzViolatingKinematics::SymmetryBreaking;
-		// using LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>::getOrder;
-		using LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<N>>::getCoefficient;
-
-	public:
-		 LIVKinematicsMonochromatic(SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
-		 LIVKinematicsMonochromatic(double chi, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
-		 int getOrder() const;
-		double _computeMomentumFromEnergy(const double& E, const int& id) const;
+		MonochromaticLorentzViolatingKinematics(SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
+		MonochromaticLorentzViolatingKinematics(double coefficient, SymmetryBreaking symmetryBreaking = SymmetryBreaking::Closest);
+		~MonochromaticLorentzViolatingKinematics();
+		double computeMomentumFromEnergy(const double& E, const int& id) const;
 };
 
 
@@ -194,7 +189,7 @@ class Kinematics {
 		Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin);
 		Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>>);
 		Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin);
-		void add(const int& particle, const ref_ptr<AbstractKinematics>& kin);
+		void add(const int& particle, ref_ptr<AbstractKinematics> kin);
 		void remove(const int& id);
 		bool isLorentzInvariant() const;
 		bool isLorentzViolatingKinematics() const;
@@ -207,19 +202,6 @@ class Kinematics {
 		const ref_ptr<AbstractKinematics>& operator[](const int& pId);
 		ref_ptr<AbstractKinematics> operator[](const int& pId) const;
 };
-
-
-/**
-Provides tools for type casting and conversion
- */
-// SpecialRelativisticKinematics convertToSpecialRelativisticKinematics(const AbstractKinematics& kin);
-
-
-
-using LorentzViolatingKinematicsMonochromatic0 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<0>>;
-using LorentzViolatingKinematicsMonochromatic1 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<1>>;
-using LorentzViolatingKinematicsMonochromatic2 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<2>>;
-using LorentzViolatingKinematicsMonochromatic3 = LorentzViolatingKinematicsMonochromatic<LIVKinematicsMonochromatic<3>>;
 
 
 /** 
