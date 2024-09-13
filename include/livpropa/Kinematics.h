@@ -24,6 +24,12 @@
 namespace livpropa {
 
 
+// forward declarations
+class SpecialRelativisticKinematics;
+class LorentzViolatingKinematics;
+class AbstractMonochromaticLorentzViolatingKinematics;
+template<int N> class MonochromaticLorentzViolatingKinematics;
+
 /**
  @class Kinematics
  @brief Class holding information about the kinematics at play.
@@ -36,7 +42,7 @@ class AbstractKinematics: public crpropa::Referenced {
 		virtual string getNameTag() const {
 			return "AbstractKinematics";
 		};
-		virtual string getFilenamePart() const {
+		virtual string getIdentifier() const {
 			return "";
 		};
 		virtual double getSymmetryBreakingShift(const double& p, const int& id) const {
@@ -54,11 +60,10 @@ class AbstractKinematics: public crpropa::Referenced {
 		double computeEnergyFromMomentum(const double& p, const int& id) const;
 		bool isSpecialRelativistic() const;
 		bool isLorentzViolatingMonochromatic() const;
-		// template<class LIV> auto castTo() {
-		// 	return dynamic_cast<LIV*>(this);
-		// };
-		// const SpecialRelativisticKinematics* toSpecialRelativisticKinematics() const;
-		// template<int N> const LorentzViolatingKinematicsMonochromatic<N>* toLorentzViolatingKinematicsMonochromatic() const;
+		const SpecialRelativisticKinematics* toSpecialRelativisticKinematics() const;
+		const MonochromaticLorentzViolatingKinematics<0>* toMonochromaticLorentzViolatingKinematics0() const;
+		const MonochromaticLorentzViolatingKinematics<1>* toMonochromaticLorentzViolatingKinematics1() const;
+		const MonochromaticLorentzViolatingKinematics<2>* toMonochromaticLorentzViolatingKinematics2() const;
 };
 
 using ParticleKinematicsMap = unordered_map<int, ref_ptr<AbstractKinematics>>;
@@ -119,10 +124,15 @@ class LorentzViolatingKinematics : public AbstractKinematics {
 
 	public:
 		virtual ~LorentzViolatingKinematics() = default;
+		virtual string getIdentifier() const {
+			return "";
+		};
+		virtual string info() const {
+			return "LorentzViolatingKinematics";
+		};
 		void setSymmetryBreaking(SymmetryBreaking treatment);
 		SymmetryBreaking getSymmetryBreaking() const;
 		double selectFinalMomentum(const vector<double>& ps, const double& E, const int& id) const;
-		string info() const;
 };
 
 
@@ -173,16 +183,16 @@ class MonochromaticLorentzViolatingKinematics : public AbstractMonochromaticLore
 
 /**
  @class Kinematics
- @brief Class holding information about the kinematics at play.
+ @brief Class holding information about the kinematics at play for each type of particle.
   This class is a container for the kinematics of different particles.
+  Particles whose kinematics are not specified will be treated as special relativistic.
  */
 class Kinematics {
 	private:
 		using ParticleKinematicsIterator = typename ParticleKinematicsMap::const_iterator;
-		ref_ptr<AbstractKinematics> specialRelativity;
 
 	protected:
-		ParticleKinematicsMap kinematics;
+		 ParticleKinematicsMap kinematics;
 
 	public:
 		Kinematics();
@@ -192,16 +202,18 @@ class Kinematics {
 		void add(const int& particle, ref_ptr<AbstractKinematics> kin);
 		void remove(const int& id);
 		bool isLorentzInvariant() const;
-		bool isLorentzViolatingKinematics() const;
+		bool isLorentzViolating() const;
 		bool exists(const int& pId) const;
 		vector<int> getParticles() const;
 		string getIdentifierForParticle(const int& pId, bool showParticleId = true) const; 
 		string getIdentifier(const std::vector<int>& particles, bool simplify = false) const;
+		string info() const;
 		ParticleKinematicsMap getParticleKinematicsMap() const;
 		const ref_ptr<AbstractKinematics>& find(const int& id, bool showWarningInexistent = true) const;
 		const ref_ptr<AbstractKinematics>& operator[](const int& pId);
 		ref_ptr<AbstractKinematics> operator[](const int& pId) const;
 };
+
 
 
 /** 

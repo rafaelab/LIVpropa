@@ -20,6 +20,22 @@ bool AbstractKinematics::isLorentzViolatingMonochromatic() const {
 	return false;
 }
 
+const SpecialRelativisticKinematics* AbstractKinematics::toSpecialRelativisticKinematics() const {
+	return static_cast<const SpecialRelativisticKinematics*>(this);
+}
+
+const MonochromaticLorentzViolatingKinematics<0>* AbstractKinematics::toMonochromaticLorentzViolatingKinematics0() const {
+	return static_cast<const MonochromaticLorentzViolatingKinematics<0>*>(this);
+}
+
+const MonochromaticLorentzViolatingKinematics<1>* AbstractKinematics::toMonochromaticLorentzViolatingKinematics1() const {
+	return static_cast<const MonochromaticLorentzViolatingKinematics<1>*>(this);
+}
+
+const MonochromaticLorentzViolatingKinematics<2>* AbstractKinematics::toMonochromaticLorentzViolatingKinematics2() const {
+	return static_cast<const MonochromaticLorentzViolatingKinematics<2>*>(this);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -140,10 +156,6 @@ double LorentzViolatingKinematics::selectFinalMomentumClosest(const vector<doubl
 	vector<double>::iterator idx = std::min_element(dps.begin(), dps.end());
 
 	return dps[*idx];
-}
-
-string LorentzViolatingKinematics::info() const {
-	return "LorentzViolatingKinematics";
 }
 
 
@@ -327,7 +339,6 @@ double MonochromaticLorentzViolatingKinematics<2>::computeMomentumFromEnergy(con
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Kinematics::Kinematics() {
-	 specialRelativity = new SpecialRelativisticKinematics();
 }
 
 Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
@@ -336,22 +347,16 @@ Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
 
 	for (size_t i = 0; i < p.size(); i++) 
 		add(p[i], kin[i]);
-
-	specialRelativity = new SpecialRelativisticKinematics();
 }
 
 Kinematics::Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin) {
 	for (size_t i = 0; i < p.size(); i++) 
 		add(p[i], kin);
-
-	specialRelativity = new SpecialRelativisticKinematics();
 }
 
 Kinematics::Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>> kin) {
 	for (size_t i = 0; i < kin.size(); i++) 
 		add(kin[i].first, kin[i].second);
-
-	specialRelativity = new SpecialRelativisticKinematics();
 }
 
 void Kinematics::add(const int& particle, ref_ptr<AbstractKinematics> kin) {
@@ -373,7 +378,7 @@ bool Kinematics::isLorentzInvariant() const {
 	return true;
 }
 
-bool Kinematics::isLorentzViolatingKinematics() const {
+bool Kinematics::isLorentzViolating() const {
 	return ! isLorentzInvariant();
 }
 
@@ -392,13 +397,15 @@ vector<int> Kinematics::getParticles() const {
 
 string Kinematics::getIdentifierForParticle(const int& pId, bool showParticleId) const {
 	char identifier[128] = "";
-	string info = find(pId, false)->getFilenamePart().c_str();
+
+	const auto& kin = (kinematics.find(pId))->second;
+	string kStr = kin->getIdentifier();
 
 	size_t s = 0;
 	if (showParticleId)
-		s += sprintf(identifier + s, "Id_%+i-%s", pId, info.c_str());
+		s += sprintf(identifier + s, "Id_%+i-%s", pId, kStr.c_str());
 	else
-		s += sprintf(identifier + s, "%s", info.c_str());
+		s += sprintf(identifier + s, "%s", kStr.c_str());
 
 	return std::string(identifier);
 }
@@ -424,7 +431,6 @@ string Kinematics::getIdentifier(const std::vector<int>& particles, bool simplif
 			return getIdentifierForParticle(particles[0], false);
 	}
 
-
 	for (size_t i = 0; i < particles.size(); i++) {
 		int pId = particles[i];
 		identifier += getIdentifierForParticle(pId);
@@ -433,6 +439,14 @@ string Kinematics::getIdentifier(const std::vector<int>& particles, bool simplif
 	}
 
 	return identifier;
+}
+
+string Kinematics::info() const {
+	string s = "Kinematics: \n";
+	for (auto& kin : kinematics) {
+		s += "  . particle " + std::to_string(kin.first) + " ==> " + kin.second->info() + "\n";
+	}
+	return s;
 }
 
 ParticleKinematicsMap Kinematics::getParticleKinematicsMap() const {
@@ -448,6 +462,7 @@ const ref_ptr<AbstractKinematics>& Kinematics::find(const int& id, bool showWarn
 	} else {
 		if (showWarningInexistent) 
 			KISS_LOG_WARNING << "Cannot retrieve inexistent particle with id " << id << "." << "Returning special-relativistic kinematics." << endl;
+		ref_ptr<AbstractKinematics> specialRelativity = new SpecialRelativisticKinematics();
 		return specialRelativity;
 	}		
 }

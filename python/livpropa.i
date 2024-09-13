@@ -108,18 +108,15 @@
 %feature("director") livpropa::AbstractKinematics;
 
 
-
 %template(MonochromaticLorentzViolatingKinematics0) livpropa::MonochromaticLorentzViolatingKinematics<0>;
 %template(MonochromaticLorentzViolatingKinematics1) livpropa::MonochromaticLorentzViolatingKinematics<1>;
 %template(MonochromaticLorentzViolatingKinematics2) livpropa::MonochromaticLorentzViolatingKinematics<2>;
+
+// %template(SpecialRelativisticKinematicsRefPtr) crpropa::ref_ptr<livpropa::SpecialRelativisticKinematics>;
 // %template(MonochromaticLorentzViolatingKinematics0RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<0>>;
 // %template(MonochromaticLorentzViolatingKinematics1RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<1>>;
 // %template(MonochromaticLorentzViolatingKinematics2RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<2>>;
 
-// // Define typemap for crpropa::ref_ptr<livpropa::AbstractKinematics>
-// %typemap(out) crpropa::ref_ptr<livpropa::AbstractKinematics> {
-// 	$result = SWIG_NewPointerObj(SWIG_as_voidptr($1.get()), SWIGTYPE_p_livpropa__AbstractKinematics, 0 |  0);
-// }
 
 
 /* Print info for SpecialRelativisticKinematics */
@@ -183,7 +180,7 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 
 /* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
 %template(CoefficientsMap) std::unordered_map<int, double>;
-%template(ParticleKinematicsMap) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
+// %template(ParticleKinematicsMap) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
 
 /*************************************************************************************************/
 /**	                                	Interactions  		                                    **/
@@ -193,25 +190,6 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 %rename(VacuumCherenkovSpectrumDefault) VacuumCherenkovSpectrum_Default;
 %rename(VacuumCherenkovSpectrumFull) VacuumCherenkovSpectrum_Full;
 %rename(VacuumCherenkovSpectrumFlat) VacuumCherenkovSpectrum_Flat;
-
-
-/*************************************************************************************************/
-/**                                    LIVpropa headers                                         **/
-/*************************************************************************************************/
-
-
-// /* Include plugin parts to generate wrappers  */
-// %include "livpropa/Common.h"
-// %include "livpropa/Data.h"
-// %include "livpropa/UnitsAndConstants.h"
-// %include "livpropa/Histogram.h"
-// %include "livpropa/Sampler.h"
-// %include "livpropa/Kinematics.h"
-// %include "livpropa/InverseComptonScattering.h"
-// %include "livpropa/PairProduction.h"
-// %include "livpropa/PhotonDecay.h"
-// %include "livpropa/VacuumCherenkov.h"
-
 
 
 /*************************************************************************************************/
@@ -229,4 +207,4 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 
 
 /* Hide warnings */
-#pragma SWIG nowarn=302,312,325,361,389,401,508,509
+#pragma SWIG nowarn=302,312,315,325,361,389,401,508,509

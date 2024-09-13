@@ -37,7 +37,7 @@ void VacuumCherenkov::setSpectrumTypeForParticle(int id, VacuumCherenkovSpectrum
 		throw runtime_error("VacuumCherenkov treatment for this particular combination of kinematics of photon + other particle is not implemented.");
 
 	if (spec == VacuumCherenkovSpectrum::Default)
-		spectra[id] = getDefaultSpectrum(*kinematics[id]);
+		spectra[id] = getDefaultSpectrum(kinematics[id]);
 	else
 		spectra[id] = spec;
 }
@@ -81,13 +81,22 @@ std::string VacuumCherenkov::getInteractionTag() const {
 }
 
 double VacuumCherenkov::computeThresholdMomentum(const int& id) const {
-	return thresholdMomentum(id, *kinematics[id], *kinematics[22]);
+	auto kinOt = kinematics[id];
+	auto kinPh = kinematics[22];
+	return thresholdMomentum(id, kinOt, kinPh);
 }
 
 double VacuumCherenkov::computeThresholdEnergy(const int& id) const {
-	// double p = thresholdMomentum(id, kinematics[id]->get(), kinematics[22]->get());
-	double p = thresholdMomentum(id, *kinematics[id], *kinematics[22]);
+	auto kinOt = kinematics[id];
+	auto kinPh = kinematics[22];
+	double p = thresholdMomentum(id, kinOt, kinPh);
 	return kinematics[id]->computeEnergyFromMomentum(p, id);
+}
+
+double VacuumCherenkov::computeInteractionRate(const int& id, const double& p) const {
+	auto kinOt = kinematics[id];
+	auto kinPh = kinematics[22];
+	return interactionRate(p, kinOt, kinPh);
 }
 
 void VacuumCherenkov::process(Candidate* candidate) const {
@@ -97,16 +106,18 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 		return;
 
 	// do not perform any calculations for the special-relativistic case
-	std::string kin = kinematics[id]->getNameTag();
-	if (kin == "SR")
+	std::string k = kinematics[id]->getNameTag();
+	if (k == "SR")
 		return;
-
-	// get the emission spectrum
-	VacuumCherenkovSpectrum spectrum;
-	try {
+		
+	else if (! kinematics[id]->isLorentzViolatingMonochromatic())
+		throw runtime_error("VacuumCherenkov treatment for this particular combination of kinematics of photon + other particle is not implemented.");
+	
+	VacuumCherenkovSpectrum spectrum = VacuumCherenkovSpectrum::Default;
+	if (spectra.find(id) == spectra.end()) {
+		spectrum = getDefaultSpectrum(kinematics[id]);
+	} else {
 		spectrum = spectra.at(id);
-	} catch (const int& id) {
-		throw runtime_error("No emission spectrum defined for particle with id " + std::to_string(id) + ". Using default behaviour.\n");
 	}
 
 	// get and scale the particle energy
@@ -161,19 +172,83 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 	return;
 }
 
-template<class KO, class KP>
-double VacuumCherenkov::thresholdMomentum(const int& id, const KO& kinOt, const KP& kinPh) {
-	cout << "---------- ERROR " << endl;
-	throw runtime_error("VacuumCherenkov treatment for this particular combination of kinematics of photon + other particle is not implemented.");
+bool VacuumCherenkov::isTreatmentImplemented(const ref_ptr<AbstractKinematics>& kin, VacuumCherenkovSpectrum spec) {
+	string k = kin.get()->getNameTag();
+	if (k == "SR") {
+		return true;
+	} else if (k == "LIVmono0") {
+		return (spec == VacuumCherenkovSpectrum::Step) ? true : false;
+	} else if (k == "LIVmono1") {
+		return (spec == VacuumCherenkovSpectrum::Step) ? true : false;
+	} else if (k == "LIVmono2") {
+		return (spec == VacuumCherenkovSpectrum::Step or spec == VacuumCherenkovSpectrum::Full) ? true : false;
+	} 
+	throw runtime_error("VacuumCherenkov: treatment for this particular combination of kinematics of photon + other particle is not implemented.");	
 }
 
-template<class KP>
-double VacuumCherenkov::thresholdMomentum(const int& id, const SpecialRelativisticKinematics& kinOt, const KP& kinPh) {
-	return std::numeric_limits<double>::max(); 
+VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const ref_ptr<AbstractKinematics>& kin) {
+	string kinType = kin.get()->getNameTag();
+	
+	if (kinType == "SR") {
+		return VacuumCherenkovSpectrum::Absent;
+	} else if (kinType == "LIVmono0") {
+		return VacuumCherenkovSpectrum::Step;
+	} else if (kinType == "LIVmono1") {
+		return VacuumCherenkovSpectrum::Step;
+	} else if (kinType == "LIVmono2") {
+		return VacuumCherenkovSpectrum::Full;
+	} 
+	
+	throw runtime_error("VacuumCherenkov: default spectrum can be retrieved only for monochromatic LIV with n=0,1, and 2.");	
+}
+
+template<class KO, class KP>
+double VacuumCherenkov::thresholdMomentum(const int& id, const KO& kinOt, const KP& kinPh) {
+	// throw runtime_error("VacuumCherenkov treatment for this particular combination of kinematics of photon + other particle is not implemented.");
+	return std::numeric_limits<double>::max();
 }
 
 template<>
-double VacuumCherenkov::thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic0& kinOt, const LorentzViolatingKinematicsMonochromatic0& kinPh) {
+double VacuumCherenkov::thresholdMomentum(const int& id, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh) {
+	double pThr = std::numeric_limits<double>::max();
+
+	string kOt = kinOt->getNameTag();
+	string kPh = kinPh->getNameTag();
+
+	if (kOt == "LIVmono0") {
+		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics0();
+		if (kPh == "SR") {
+			const auto& kinPhNew = kinPh->toSpecialRelativisticKinematics();
+			return thresholdMomentum(id, kinOtNew, kinPhNew);		
+		} else if (kPh == "LIVmono0") {
+			const auto& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics0();
+			return thresholdMomentum(id, kinOtNew, kinPhNew);	
+		}
+	} else if (kOt == "LIVmono1") {
+		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics1();
+		if (kPh == "SR") {
+			const auto& kinPhNew = kinPh->toSpecialRelativisticKinematics();
+			return thresholdMomentum(id, kinOtNew, kinPhNew);		
+		} else if (kPh == "LIVmono1") {
+			const auto& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics1();
+			return thresholdMomentum(id, kinOtNew, kinPhNew);	
+		}
+	} else if (kOt == "LIVmono2") {
+		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics2();
+		if (kPh == "SR") {
+			const auto& kinPhNew = kinPh->toSpecialRelativisticKinematics();
+			return thresholdMomentum(id, kinOtNew, kinPhNew);		
+		} else if (kPh == "LIVmono2") {
+			const auto& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics2();
+			return thresholdMomentum(id, kinOtNew, kinPhNew);	
+		}
+	}
+
+	return pThr;
+}
+
+template<>
+double VacuumCherenkov::thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<0>& kinOt, const MonochromaticLorentzViolatingKinematics<0>& kinPh) {
 	double pThr = std::numeric_limits<double>::max();
 
 	double mass = particleMasses.at(id);
@@ -188,7 +263,7 @@ double VacuumCherenkov::thresholdMomentum(const int& id, const LorentzViolatingK
 }
 
 template<>
-double VacuumCherenkov::thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic1& kinOt, const LorentzViolatingKinematicsMonochromatic1& kinPh) {
+double VacuumCherenkov::thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<1>& kinOt, const MonochromaticLorentzViolatingKinematics<1>& kinPh) {
 	double pThr = std::numeric_limits<double>::max();
 
 	double chiOt = kinOt.getCoefficient();
@@ -207,7 +282,7 @@ double VacuumCherenkov::thresholdMomentum(const int& id, const LorentzViolatingK
 }
 
 template<>
-double VacuumCherenkov::thresholdMomentum(const int& id, const LorentzViolatingKinematicsMonochromatic2& kinOt,  const LorentzViolatingKinematicsMonochromatic2& kinPh) {
+double VacuumCherenkov::thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<2>& kinOt,  const MonochromaticLorentzViolatingKinematics<2>& kinPh) {
 	double pThr = std::numeric_limits<double>::max();
 
 	double chiOt = kinOt.getCoefficient();
@@ -237,7 +312,7 @@ Histogram1D VacuumCherenkov::buildSpectrum(const int& id, const KO& kinOt, const
 }
 
 template<class KP>
-Histogram1D VacuumCherenkov::buildSpectrum(const int& id, const LorentzViolatingKinematicsMonochromatic2& kinOt, const KP& kinPh) {
+Histogram1D VacuumCherenkov::buildSpectrum(const int& id, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
 	Histogram1D distribution(100, 0., 1.);
 
 	double chiOt = kinOt.getCoefficient();
@@ -287,12 +362,28 @@ Histogram1D VacuumCherenkov::buildSpectrum(const int& id, const LorentzViolating
 }
 
 template<class KO, class KP>
-double VacuumCherenkov::computeInteractionRate(const double& p, const KO& kinOt, const KP& kinPh) {
+double VacuumCherenkov::interactionRate(const double& p, const KO& kinOt, const KP& kinPh) {
 	return 0;
 }
 
 template<>
-double VacuumCherenkov::computeInteractionRate(const double& p, const LorentzViolatingKinematicsMonochromatic2& kinOt, const LorentzViolatingKinematicsMonochromatic2& kinPh) {
+double VacuumCherenkov::interactionRate(const double& p, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh) {
+	string kOt = kinOt.get()->getNameTag();
+	string kPh = kinPh.get()->getNameTag();
+
+	if (kOt == "SR")
+		return 0;
+
+	if (kOt == "LIVmono2") {
+		auto kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics2();
+		return interactionRate(p, kinOtNew, kinPh);
+	}
+
+	return 0;
+}
+
+template<>
+double VacuumCherenkov::interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh) {
 	double chiOt = kinOt.getCoefficient();
 	double chiPh = kinPh.getCoefficient();
 
@@ -328,219 +419,10 @@ double VacuumCherenkov::computeInteractionRate(const double& p, const LorentzVio
 }
 
 template<>
-double VacuumCherenkov::computeInteractionRate(const double& p, const LorentzViolatingKinematicsMonochromatic2& kinOt, const SpecialRelativisticKinematics& kinPh) {
-	LorentzViolatingKinematicsMonochromatic2* kinPhNew;
-	kinPhNew->setCoefficient(0);
-	return computeInteractionRate(p, &kinOt, &kinPhNew);
+double VacuumCherenkov::interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh) {
+	const MonochromaticLorentzViolatingKinematics<2> kinPhNew(0.);
+	return interactionRate(p, kinOt, kinPhNew);
 }
-
-template<class K>
-bool VacuumCherenkov::isTreatmentImplemented(const K& kin, VacuumCherenkovSpectrum spec) {
-	return false;
-}
-
-template<>
-bool VacuumCherenkov::isTreatmentImplemented(const LorentzViolatingKinematicsMonochromatic0& kin, VacuumCherenkovSpectrum spec) {
-	if (spec == VacuumCherenkovSpectrum::Default or spec == VacuumCherenkovSpectrum::Step)
-		return true;
-	return false;
-}
-
-template<>
-bool VacuumCherenkov::isTreatmentImplemented(const LorentzViolatingKinematicsMonochromatic1& kin, VacuumCherenkovSpectrum spec) {
-	if (spec == VacuumCherenkovSpectrum::Default or spec == VacuumCherenkovSpectrum::Step)
-		return true;
-	return false;
-}
-
-template<>
-bool VacuumCherenkov::isTreatmentImplemented(const LorentzViolatingKinematicsMonochromatic2& kin, VacuumCherenkovSpectrum spec) {
-	if (spec == VacuumCherenkovSpectrum::Default or spec == VacuumCherenkovSpectrum::Full)
-		return true;
-	return false;
-}
-
-
-template<class K>
-VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const K& kin) {
-	throw runtime_error("VacuumCherenkov: default spectrum can be retrieved only for monochromatic LIV with n=0,1, and 2.");
-}
-
-template<>
-VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const LorentzViolatingKinematicsMonochromatic0& kin) {
-	return VacuumCherenkovSpectrum::Step;
-}
-
-template<>
-VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const LorentzViolatingKinematicsMonochromatic1& kin) {
-	return VacuumCherenkovSpectrum::Step;
-}
-
-template<>
-VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const LorentzViolatingKinematicsMonochromatic2& kin) {
-	return VacuumCherenkovSpectrum::Full;
-}
-
-
-// namespace vc::monoLIV0 {
-
-// 	double computeThresholdMomentum(const double& chiOt, const double& chiPh, const double& mass) {
-// 		double pThr = std::numeric_limits<double>::max();
-
-// 		if (chiOt > chiPh) 
-// 			pThr = mass * c_light / sqrt(chiOt - chiPh);
-
-// 		return pThr;
-// 	}
-
-// }
-
-// namespace vc::monoLIV1 {
-
-// 	double computeThresholdMomentum(const double& chiOt, const double& chiPh, const double& mass) {
-// 		double pThr = std::numeric_limits<double>::max();
-// 		double m2 = pow_integer<2>(mass * c_squared);
-
-// 		if (chiOt > 0. and chiPh >= -3. * chiOt) {
-// 			pThr = cbrt(m2 * energy_planck / (2 * chiOt)) / c_light;
-// 		} else if (chiOt <= 0 and chiOt > chiPh and chiPh <= -3. * chiOt) {
-// 			pThr = cbrt(- 4. * m2 * energy_planck * (chiOt + chiPh) / pow_integer<2>(chiOt - chiPh)) / c_light;
-// 		}
-
-// 		return pThr;
-// 	}
-
-// }
-
-// namespace vc::monoLIV2 {
-
-// 	double _S(const double& chiOt, const double& chiPh) {
-// 		return sqrt(3. * chiOt * (4 * chiPh - chiOt));
-// 	}
-
-// 	double _tau(const double& chiOt, const double& chiPh) {
-// 		return (chiOt + 2 * chiPh) / (chiPh - chiOt);
-// 	}
-
-// 	double _F(const double& chiOt, const double& chiPh) {
-// 		double t = _tau(chiOt, chiPh);
-// 		double l = chiOt - chiPh;
-// 		return 2. / 27. * l * (t * t * t + pow_integer<3>(sqrt(t * t - 3)) - 4.5 * t);
-// 	}
-
-// 	double _G(const double& chiOt, const double& chiPh, const double& sign) {
-// 		double chiOt2 = chiOt * chiOt;
-// 		double chiOt3 = chiOt2 * chiOt;
-// 		double chiPh2 = chiPh * chiPh;
-// 		double dChi = chiPh - chiOt;
-// 		double S = sign * _S(chiOt, chiPh);
-
-// 		double f0 = chiOt * (S - 3 * chiOt) / 160. / pow_integer<4>(dChi);
-// 		double f1 = 37. * (S - 6 * chiPh) * chiPh * chiOt - 64. * chiOt3;
-// 		double f2 = - chiOt2 * (14 * S - 207. * chiPh) - 10 * (5 * S - 16 * chiPh) * chiPh2;
-
-// 		return f0 * (f1 + f2);
-// 	}
-
-// 	double _x(const double& chiOt, const double& chiPh, const double& sign) {
-// 		if (chiOt == chiPh && chiOt != 0) {
-// 			return 1;
-// 		} else {
-// 			double dChi = chiPh - chiOt;
-// 			double f1 = - 1.5 * chiOt / dChi;
-// 			double f2 = sqrt(3 * chiOt * (4 * chiPh - chiOt)) / abs(dChi);
-// 			return f1 + sign * f2;
-// 		}
-// 	}
-
-// 	double _rateQ(const double& p) {
-// 		double q = pow_integer<3>(p * c_light) / pow_integer<2>(energy_planck);
-// 		return alpha_finestructure * q;
-// 	}
-
-// 	double _rate1(const double& p, const double& chiOt, const double& chiPh) {
-// 		return (157. * chiOt - 22. * chiPh) / 120. * _rateQ(p);
-// 	}
-
-// 	double _rate2(const double& p, const double& chiOt, const double& chiPh) {
-// 		return _rateQ(p) * _G(chiOt, chiPh, +1.);
-// 	}
-
-// 	double _rate3(const double& p, const double& chiOt, const double& chiPh) {
-// 		return _rateQ(p) * ((157. * chiOt - 22. * chiPh) / 120. - _G(chiOt, chiPh, -1.));
-// 	}
-
-// 	double computeSpectrum(const double& x, const double& chiOt, const double& chiPh) {
-// 		double S = sqrt(3. * chiOt * (4 * chiPh - chiOt));
-// 		double Gp = _G(chiOt, chiPh, +1.);
-// 		double Gm = _G(chiOt, chiPh, -1.);
-
-// 		double x2 = x * x;
-// 		double x3 = x2 * x;
-
-// 		double y = x3 - 3. * x2 + 3. * x;
-// 		double a =  (2. / x - 2. + x);
-// 		double b1 = - chiPh * x3 / 2.;
-// 		double b2 = chiOt * y / 2.;
-// 		double b = b1 + b2;
-// 		double c = (157. * chiOt - 22. * chiPh) / 120.;
-
-// 		if (chiOt >= std::max(0., chiPh)) 
-// 			return a * b / c;
-// 		else if (chiOt > 0 &&  chiOt < chiPh)
-// 			return std::max(0., a * b / (c - Gm));
-// 		else if (chiOt < chiPh && chiPh < 0.)
-// 			return std::max(0., a * b / Gp);
-		
-// 		return 0.;
-// 	}
-
-// 	void loadSpectrumDistribution(Histogram1D& distribution, const double& chiOt, const double& chiPh) {
-// 		for (size_t i = 0; i < distribution.getNumberOfBins(); i++) {
-// 			double x = distribution.getBinCentre(i);
-// 			double p = computeSpectrum(x, chiOt, chiPh);
-// 			distribution.setBinContent(i, p);
-// 		}
-
-// 		distribution.normalise(distribution.integrate());
-// 		distribution.transformToPDF();
-// 		distribution.transformToCDF();
-// 	}
-
-// 	double computeThresholdMomentum(const double& chiOt, const double& chiPh, const double& mass) {
-// 		double pThr = std::numeric_limits<double>::max();
-// 		double a = - 8 - 6 * sqrt(2);
-// 		double m2 = pow_integer<2>(mass * c_squared);
-// 		double Epl2 = pow_integer<2>(energy_planck);
-
-// 		if (chiOt > 0. && chiPh >= a * chiOt) {
-// 			double chiOt2 = chiOt * chiOt;
-// 			pThr = pow(m2 * Epl2 / 3. / chiOt2, 0.25);
-// 		} else if ((a * chiOt <= 0 && chiPh < a * chiOt) || (chiOt <= 0 && chiPh < chiOt)) {
-// 			double F = _F(chiOt, chiPh);
-// 			pThr = pow(pow_integer<2>(m2 * energy_planck) / F, 0.25);
-// 		}
-
-// 		return pThr;
-// 	}
-
-// 	double computeInteractionRate(const double& p, const double& chiOt, const double& chiPh) {
-// 		if (chiOt == 0) {
-// 			if (chiOt > chiPh)
-// 				return _rate1(p, chiOt, chiPh);
-// 		} else if (chiOt > 0) {
-// 			return (chiOt < chiPh) ? _rate2(p, chiOt, chiPh) : _rate1(p, chiOt, chiPh);
-// 		} else {
-// 			if (chiOt > chiPh)
-// 				return _rate3(p, chiOt, chiPh);
-// 		}
-		
-
-// 		return 0;
-// 	}
-
-// } // namespace vc::monoLIV2
-
 
 
 } // namespace livpropa
