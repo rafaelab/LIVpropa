@@ -219,6 +219,7 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 
 	double dE0 = E - Ethr; 
 
+
 	if (samplerDistribution == nullptr) {
 		double dE = dE0;
 		while (dE > 0) {
@@ -240,8 +241,22 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		}
 
 	} else {
-		samplerDistribution->transformToPDF();
+		double dE = dE0;
+		while (dE > 0) {
+			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
+			double x = distribution->drawRandomInRange(range.first, range.second);
+			double Ephoton = x * E;
+
+			// if the energy drops below the threshold, then there is no emission
+			Ephoton = std::min(Ephoton, E - Ethr);
+
+			samplerDistribution->push(Ephoton);
+
+			dE -= Ephoton;
+		}
 		samplerDistribution->transformToCDF();
+
 		std::vector<double> sampled = samplerDistribution->getSample(maximumSamples);
 		double dEs = std::accumulate(sampled.begin(), sampled.end(), decltype(sampled)::value_type(0));
 		if (samplerDistribution->getSize() > 0) {

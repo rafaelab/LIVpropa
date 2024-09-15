@@ -65,9 +65,9 @@ class VacuumCherenkov: public Module {
 		
 
 	public:
-		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
+		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 10, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 10, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 10, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<AbstractKinematics> kin);
 		void setKinematicsPhoton(ref_ptr<AbstractKinematics> kin);
