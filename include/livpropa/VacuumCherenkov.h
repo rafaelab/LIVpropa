@@ -46,10 +46,8 @@ enum class VacuumCherenkovSpectrum {
 */
 class VacuumCherenkov: public Module {
 	private:
-		// inline static unordered_map<int, VacuumCherenkovSpectrum> _defaultSpectra = {std::make_pair(-11, VacuumCherenkovSpectrum::Default), std::make_pair( 11, VacuumCherenkovSpectrum::Default)};
 		static constexpr double _defaultInteractionRate = 0;//std::numeric_limits<double>::infinity();
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
-		// static constexpr Histogram1D _defaultDistribution = Histogram1D(100, 0., 1.);
 
 	protected:
 		int particleId;
@@ -67,9 +65,9 @@ class VacuumCherenkov: public Module {
 		
 
 	public:
-		// VacuumCherenkov(ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, bool havePhotons = true, SpectrumMap spec = _defaultSpectra, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, bool havePhotons = true, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, bool havePhotons = true, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
+		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 0, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<AbstractKinematics> kin);
 		void setKinematicsPhoton(ref_ptr<AbstractKinematics> kin);
@@ -104,8 +102,9 @@ class VacuumCherenkov: public Module {
 		template<> static double interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
 		// // template<class KO, class KP> double differentialInteractionRate(const double& p, const KO& kinOt, const KP& kinPh);
 		// // template<> double differentialInteractionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
-		// template<class KO, class KP> static std::pair<double, double> xRange(const KO& kinOt, const KP& kinPh); 
-		// template<> static std::pair<double, double> xRange(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
+		template<class KO, class KP> static std::pair<double, double> xRange(const KO& kinOt, const KP& kinPh); 
+		template<> std::pair<double, double> xRange(const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh);
+		template<> static std::pair<double, double> xRange(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
 		// template<class KO, class KP> static double differentialProbability(const double& x, const KO& kinOt, const KP& kinPh);
 		// template<> static double differentialProbability(const double& x, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
 		// template<> static double differentialProbability(const double& x, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
