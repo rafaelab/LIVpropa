@@ -63,24 +63,22 @@ class Histogram1D : public Referenced {
 		}
 
 		void initBins(double vmin, double vmax, int nBins) {
+			// clear previous data
+			edges.clear();
+			centres.clear();
+			widths.clear();
+			contents.clear();
+
+			// reserve memory to avoid multiple reallocations
+			edges.reserve(nBins + 1);
+			centres.reserve(nBins);
+			widths.reserve(nBins);
+			contents.reserve(nBins);
+
 			if (scale == "log10") {
-				vmin = log10(vmin);
-				vmax = log10(vmax);
-				for (size_t i = 0; i < nBins + 1; i++) {
-					double v = vmin + i * (vmax - vmin) / (nBins);
-					edges.push_back(pow(10, v));
-				}
-				for (size_t i = 0; i < nBins; i++) {
-					centres.push_back(pow(10, (log10(edges[i + 1]) + log10(edges[i])) / 2.));
-				}
+				initBinsLog10(vmin, vmax, nBins);
 			} else {
-				for (size_t i = 0; i < nBins + 1; i++) {
-					double v = vmin + i * (vmax - vmin) / (nBins);
-					edges.push_back(v);
-				}
-				for (size_t i = 0; i < nBins; i++) {
-					centres.push_back((edges[i + 1] + edges[i]) / 2.);
-				}
+				initBinsLinear(vmin, vmax, nBins);
 			}
 
 			// bins start with no content
@@ -129,41 +127,36 @@ class Histogram1D : public Referenced {
 			return contents.size();
 		}
 
-		double getSample() const {
-			Random &random = Random::instance();
-			size_t bin = random.randBin(contents); // should be a CDF
-			if (scale == "log10") {
-				return pow(10, log10(edges[bin]) + random.rand() * log10(widths[bin]));
-			} else {
-				return edges[bin] + random.rand() * widths[bin];
-			}
+		double drawRandom() const {
+			return getRandomValue(centres, contents, widths, scale);
 		}
 
-		double getSampleInRange(const double& xMin, const double& xMax) const {
+		double drawRandomInRange(const double& xMin, const double& xMax) const {
 			BinIterator binL = whichBin(xMin, true);
 			BinIterator binU = whichBin(xMax, false);
 
-			vector<double> edgesInRange; 
+			vector<double> edgesInRange;
+			vector<double> centresInRange; 
 			vector<double> contentsInRange;
 			vector<double> widthsInRange;
 			for (auto i = binL; i != binU; ++i) {
 				edgesInRange.push_back(*i);
+				centresInRange.push_back(centres[i - edges.begin()]);
 				contentsInRange.push_back(contents[i - edges.begin()]);
 				widthsInRange.push_back(widths[i - edges.begin()]);
 			}
 
-			Random &random = Random::instance();
-			size_t bin = random.randBin(contentsInRange);
-			if (scale == "log10") {
-				return pow(10, log10(edgesInRange[bin]) + random.rand() * log10(widthsInRange[bin]));
-			} else {
-				return edgesInRange[bin] + random.rand() * widthsInRange[bin];
-			}
-
+			return getRandomValue(centresInRange, contentsInRange, widthsInRange, scale);
 		}
 
-		double getSampleInRange(const std::pair<double, double>& range) const {
-			return getSampleInRange(range.first, range.second);
+		double getSample() const {
+			double v = drawRandom();
+			return interpolate(v, centres, contents);
+		}
+
+		double getSampleInRange(const double& xMin, const double& xMax) const {
+			double v = drawRandomInRange(xMin, xMax);
+			return interpolate(v, centres, contents);
 		}
 
 		void push(double v, double w = 1) {
@@ -194,12 +187,11 @@ class Histogram1D : public Referenced {
 			double integral = 0;
 			if (scale == "log") {
 				for (size_t i = 0; i < getNumberOfBins(); i++) {
-					integral +=  (contents[i] / (edges[i + 1] - edges[i]) * log(10) * centres[i]);
+					integral += contents[i] * (log10(edges[i + 1]) - log10(edges[i]));
 				}
 			} else {
 				for (size_t i = 0; i < getNumberOfBins(); i++) {
-					// integral += contents[i] / (edges[i] - edges[i - 1]);
-					integral += contents[i];
+					integral += contents[i] * widths[i];
 				}
 			}
 
@@ -207,14 +199,17 @@ class Histogram1D : public Referenced {
 		}
 
 		void transformToPDF() {
-			double integral = integrate();
-			for (size_t i = 1; i < getNumberOfBins(); i++) {
-				// contents[i] /= (edges[i] - edges[i - 1]);
-				contents[i] /= integral;
+			double totalSum = sum();
+			if (totalSum == 0) 
+				throw runtime_error("Cannot transform to PDF: total sum of bin contents is zero.");
+			
+			for (size_t i = 0; i < getNumberOfBins(); i++) {
+				contents[i] /= totalSum;
 			}
 		}
 
 		void transformToCDF() {
+			transformToPDF();
 			for (size_t i = 1; i < getNumberOfBins(); i++) {
 				contents[i] += contents[i - 1];
 			}
@@ -270,7 +265,43 @@ class Histogram1D : public Referenced {
 			return *this;
 		}
 
+		static vector<double> computeBinCentres(const vector<double>& binEdges, const string& scale) {
+			vector<double> binCentres;
+			for (size_t i = 0; i < binEdges.size() - 1; i++) {
+				if (scale == "log10") {
+					binCentres.push_back(pow(10, (log10(binEdges[i]) + log10(binEdges[i + 1])) / 2.));
+				} else {
+					binCentres.push_back((binEdges[i] + binEdges[i + 1]) / 2.);
+				}
+			}
+			return binCentres;
+		}
+
 	private:
+		void initBinsLinear(double vmin, double vmax, int nBins) {
+			for (size_t i = 0; i <= nBins; i++) {
+				double v = vmin + i * (vmax - vmin) / nBins;
+				edges.push_back(v);
+			}
+			for (size_t i = 0; i < nBins; i++) {
+				centres.push_back((edges[i + 1] + edges[i]) / 2.0);
+				widths.push_back(edges[i + 1] - edges[i]);
+			}
+		}
+
+		void initBinsLog10(double vmin, double vmax, int nBins) {
+			vmin = log10(vmin);
+			vmax = log10(vmax);
+			for (size_t i = 0; i <= nBins; i++) {
+				double v = vmin + i * (vmax - vmin) / nBins;
+				edges.push_back(pow(10, v));
+			}
+			for (size_t i = 0; i < nBins; i++) {
+				centres.push_back(pow(10, (log10(edges[i + 1]) + log10(edges[i])) / 2.0));
+				widths.push_back(edges[i + 1] - edges[i]);
+			}
+		}
+
 		BinIterator whichBin(double v, bool lowerEdge = true) const {
 			BinIterator it;
 			if (lowerEdge) 
@@ -278,7 +309,11 @@ class Histogram1D : public Referenced {
 			else
 				return std::upper_bound(edges.begin(), edges.end(), v);
 		}
-
+		
+		static double getRandomValue(const vector<double>& binCentres, const vector<double>& binContents, const vector<double>& binWidths, const string& scale) {	
+			Random& random = Random::instance();
+			return interpolate(random.rand(), binContents, binCentres);
+		}
 };
 
 
