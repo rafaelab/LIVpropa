@@ -5,6 +5,30 @@ namespace livpropa {
 
 
 
+VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, bool havePhotons, VacuumCherenkovSpectrum spec, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
+	setInteractionTag("VC");
+	setParticle(id);
+	setHavePhotons(havePhotons);
+	setLimit(limit);
+	setSpectrum(spec);
+	setSamplerEvents(samplerEvents);
+	setSamplerDistribution(samplerDistribution);
+	setMaximumSamples(maxSamples);
+
+	if (not kin.exists(id)) 
+		throw runtime_error("VacuumCherenkov: kinematics for the desired particle is not specified in `Kinematics`.");
+
+	setKinematicsParticle(kinOt);
+
+	if (not kin.exists(22)) {
+		KISS_LOG_WARNING << "`VacuumCherenkov` is being iniatialised from `Kinematics` without specifying the photon kinematics. It will be set to the same as the desired particle kinematics, by default." << endl;
+		setKinematicsPhoton(kin[id]);
+	} else {
+		setKinematicsPhoton(kin[22]);
+	}
+}
+
+
 VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, bool havePhotons, VacuumCherenkovSpectrum spec, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
@@ -14,7 +38,7 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_
 	setKinematicsParticle(kinOt);
 	setSpectrum(spec);
 	setSamplerEvents(samplerEvents);
-	setSamplerDistribution(samplerDistribution);;
+	setSamplerDistribution(samplerDistribution);
 	setMaximumSamples(maxSamples);
 }
 
@@ -32,6 +56,9 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, bool h
 }
 
 void VacuumCherenkov::setParticle(int id) {
+	if (id == 22) {
+		throw runtime_error("VacuumCherenkov: cannot set photon as the particle.");
+	}
 	particleId = id;
 }
 
