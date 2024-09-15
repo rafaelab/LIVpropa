@@ -11,12 +11,18 @@
 
 namespace livpropa {
 
+
+
+
 /**
  @class Histogram1D
  @brief Builds a one-dimensional histogram
  @todo Use templates for the bin and content type
  */
 class Histogram1D : public Referenced {
+	private:
+		using BinIterator = typename vector<double>::const_iterator;
+
 	protected:
 		vector<double> edges;
 		vector<double> centres;
@@ -34,11 +40,29 @@ class Histogram1D : public Referenced {
 			initBins(vmin, vmax, nBins);
 		}
 
+		Histogram1D(const Histogram1D& h) {
+			if (getNumberOfBins() != h.getNumberOfBins())
+				throw std::runtime_error("Histograms have different number of bins.");
+			
+			edges.clear();
+			centres.clear();
+			widths.clear();
+			contents.clear();
+			
+			for (size_t i = 0; i < h.getNumberOfBins(); i++) {
+				edges.push_back(h.getBinEdges()[i]);
+				centres.push_back(h.getBinCentres()[i]);
+				widths.push_back(h.getBinWidths()[i]);
+				contents.push_back(h.getBinContents()[i]);
+			}
+			edges.push_back(h.getBinEdges().back());
+
+		}
+
 		~Histogram1D() {
 		}
 
 		void initBins(double vmin, double vmax, int nBins) {
-			// create empty histogram
 			if (scale == "log10") {
 				vmin = log10(vmin);
 				vmax = log10(vmax);
@@ -96,13 +120,18 @@ class Histogram1D : public Referenced {
 			return contents;
 		}
 
+		size_t getBinIndex(const double& v) const {
+			BinIterator bin = whichBin(v);
+			return std::distance(edges.begin(), bin);
+		}
+
 		int getNumberOfBins() const {
 			return contents.size();
 		}
 
 		double getSample() const {
 			Random &random = Random::instance();
-			size_t bin = random.randBin(contents);
+			size_t bin = random.randBin(contents); // should be a CDF
 			if (scale == "log10") {
 				return pow(10, log10(edges[bin]) + random.rand() * log10(widths[bin]));
 			} else {
@@ -110,8 +139,35 @@ class Histogram1D : public Referenced {
 			}
 		}
 
+		double getSampleInRange(const double& xMin, const double& xMax) const {
+			BinIterator binL = whichBin(xMin, true);
+			BinIterator binU = whichBin(xMax, false);
+
+			vector<double> edgesInRange; 
+			vector<double> contentsInRange;
+			vector<double> widthsInRange;
+			for (auto i = binL; i != binU; ++i) {
+				edgesInRange.push_back(*i);
+				contentsInRange.push_back(contents[i - edges.begin()]);
+				widthsInRange.push_back(widths[i - edges.begin()]);
+			}
+
+			Random &random = Random::instance();
+			size_t bin = random.randBin(contentsInRange);
+			if (scale == "log10") {
+				return pow(10, log10(edgesInRange[bin]) + random.rand() * log10(widthsInRange[bin]));
+			} else {
+				return edgesInRange[bin] + random.rand() * widthsInRange[bin];
+			}
+
+		}
+
+		double getSampleInRange(const std::pair<double, double>& range) const {
+			return getSampleInRange(range.first, range.second);
+		}
+
 		void push(double v, double w = 1) {
-			vector<double>::const_iterator it = std::lower_bound(edges.begin(), edges.end(), v);
+			BinIterator it = whichBin(v);
 			if (it == edges.begin() || it == edges.end())
 				return;
 
@@ -174,7 +230,7 @@ class Histogram1D : public Referenced {
 			contents[i] = v;
 		}
 
-		std::pair<double, double> getBin(const size_t& i) const {
+		std::pair<double, double> getEdgesOfBin(const size_t& i) const {
 			return std::make_pair(edges[i], edges[i + 1]);
 		}
 
@@ -193,7 +249,49 @@ class Histogram1D : public Referenced {
 		double operator[](const size_t& i) const {
 			return getBinContent(i);
 		}
+
+		Histogram1D& operator=(const Histogram1D& h) {
+			if (this == &h)
+				return *this;
+
+			edges.clear();
+			centres.clear();
+			widths.clear();
+			contents.clear();
+			
+			for (size_t i = 0; i < h.getNumberOfBins(); i++) {
+				edges.push_back(h.getBinEdges()[i]);
+				centres.push_back(h.getBinCentres()[i]);
+				widths.push_back(h.getBinWidths()[i]);
+				contents.push_back(h.getBinContents()[i]);
+			}
+			edges.push_back(h.getBinEdges().back());
+		
+			return *this;
+		}
+
+	private:
+		BinIterator whichBin(double v, bool lowerEdge = true) const {
+			BinIterator it;
+			if (lowerEdge) 
+				return std::lower_bound(edges.begin(), edges.end(), v);
+			else
+				return std::upper_bound(edges.begin(), edges.end(), v);
+		}
+
 };
+
+
+// /** 
+// This function prints Histogram-type objects in a nice way
+// */
+// std::ostream& operator<<(std::ostream& os, const Histogram1D& h) {
+// 	os << "Histogram1D: " << endl;
+// 	os << "  . scale: " << h.getScale() << endl;
+// 	os << "  . number of bins: " << h.getNumberOfBins() << endl;
+// 	os << "  . bin edges: " << h.getBinEdges().front() << ", " << h.getBinEdges().back() << endl;
+// 	return os;
+// }
 
 
 } // namespace livpropa
