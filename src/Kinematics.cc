@@ -9,6 +9,27 @@ double AbstractKinematics::computeEnergyFromMomentum(const double& p, const int&
 	return sqrt(computeEnergy2FromMomentum(p, id));
 }
 
+bool AbstractKinematics::isLorentzInvariant() const {
+	if (getNameTag() == "SR") {
+		return true;
+	} else if (getNameTag() == "LIVmono0") {
+		if (static_cast<const MonochromaticLorentzViolatingKinematics<0>*>(this)->getCoefficient() == 0)
+			return true;
+	} else if (getNameTag() == "LIVmono1") {
+		if (static_cast<const MonochromaticLorentzViolatingKinematics<1>*>(this)->getCoefficient() == 0)
+			return true;
+	} else if (getNameTag() == "LIVmono2") {
+		if (static_cast<const MonochromaticLorentzViolatingKinematics<2>*>(this)->getCoefficient() == 0)
+			return true;
+	}
+
+	return false;
+}
+
+bool AbstractKinematics::isLorentzViolating() const {
+	return ! isLorentzInvariant();
+}
+
 bool AbstractKinematics::isSpecialRelativistic() const {
 	return getNameTag() == "SR";
 }
@@ -20,20 +41,20 @@ bool AbstractKinematics::isLorentzViolatingMonochromatic() const {
 	return false;
 }
 
-const SpecialRelativisticKinematics* AbstractKinematics::toSpecialRelativisticKinematics() const {
-	return static_cast<const SpecialRelativisticKinematics*>(this);
+const SpecialRelativisticKinematics& AbstractKinematics::toSpecialRelativisticKinematics() const {
+	return *static_cast<const SpecialRelativisticKinematics*>(this);
 }
 
-const MonochromaticLorentzViolatingKinematics<0>* AbstractKinematics::toMonochromaticLorentzViolatingKinematics0() const {
-	return static_cast<const MonochromaticLorentzViolatingKinematics<0>*>(this);
+const MonochromaticLorentzViolatingKinematics<0>& AbstractKinematics::toMonochromaticLorentzViolatingKinematics0() const {
+	return *static_cast<const MonochromaticLorentzViolatingKinematics<0>*>(this);
 }
 
-const MonochromaticLorentzViolatingKinematics<1>* AbstractKinematics::toMonochromaticLorentzViolatingKinematics1() const {
-	return static_cast<const MonochromaticLorentzViolatingKinematics<1>*>(this);
+const MonochromaticLorentzViolatingKinematics<1>& AbstractKinematics::toMonochromaticLorentzViolatingKinematics1() const {
+	return *static_cast<const MonochromaticLorentzViolatingKinematics<1>*>(this);
 }
 
-const MonochromaticLorentzViolatingKinematics<2>* AbstractKinematics::toMonochromaticLorentzViolatingKinematics2() const {
-	return static_cast<const MonochromaticLorentzViolatingKinematics<2>*>(this);
+const MonochromaticLorentzViolatingKinematics<2>& AbstractKinematics::toMonochromaticLorentzViolatingKinematics2() const {
+	return *static_cast<const MonochromaticLorentzViolatingKinematics<2>*>(this);
 }
 
 
@@ -114,19 +135,17 @@ double LorentzViolatingKinematics::selectFinalMomentumRandom(const vector<double
 
 	if (nSolutions == 1) {
 		return ps[0];
-
 	} else if (nSolutions == 2) {
 		crpropa::Random& random = crpropa::Random::instance();
 		return (random.rand() < 0.5) ? ps[0] : ps[1];
-
 	} else {
 		crpropa::Random& random = crpropa::Random::instance();
 		vector<double> edges(nSolutions, (double) 1. / nSolutions);
 		vector<double>::iterator idxMin = std::lower_bound(edges.begin(), edges.end(), random.rand());
 		return ps[*idxMin];
-
 	}
 
+	return -1;
 }
 
 double LorentzViolatingKinematics::selectFinalMomentumSmallest(const vector<double>& ps) {
@@ -139,8 +158,10 @@ double LorentzViolatingKinematics::selectFinalMomentumLargest(const vector<doubl
 
 double LorentzViolatingKinematics::selectFinalMomentumAverage(const vector<double>& ps) {
 	double pTot = 0;
-	for (auto& p : ps)
-		pTot += p;
+	for (auto& p : ps) {
+		if (p > 0)
+			pTot += p;
+	}
 
 	return pTot / ps.size();
 }
@@ -150,8 +171,10 @@ double LorentzViolatingKinematics::selectFinalMomentumClosest(const vector<doubl
 	double p0 = sr->computeMomentumFromEnergy(E, id);
 	
 	vector<double> dps;
-	for (auto& p : ps)
-		dps.push_back(p - p0);
+	for (auto& p : ps) {
+		if (p > 0)
+			dps.push_back(p - p0);
+	}
 
 	vector<double>::iterator idx = std::min_element(dps.begin(), dps.end());
 
@@ -199,8 +222,15 @@ string AbstractMonochromaticLorentzViolatingKinematics::info() const {
 }
 
 double AbstractMonochromaticLorentzViolatingKinematics::computeEnergy2FromMomentum(const double& p, const int& id) const {
-	double m = particleMasses.at(id);
+	auto it = particleMasses.find(id);
+	if (it == particleMasses.end()) {
+		KISS_LOG_ERROR << "Cannot retrieve particle with id " << id << ". Cannot compute energy from momentum." << endl;
+		return 0;
+	} 
+
+	double m = (*it).second;
 	double ds = getSymmetryBreakingShift(p);
+
 	return pow_integer<2>(p * c_light) + pow_integer<2>(m * c_squared) + ds;
 }
 
@@ -457,14 +487,18 @@ const ref_ptr<AbstractKinematics>& Kinematics::find(const int& id, bool showWarn
 	bool declared = exists(id);
 
 	if (declared) {
-		ParticleKinematicsIterator it = kinematics.find(id);
-		return (*it).second;
-	} else {
-		if (showWarningInexistent) 
-			KISS_LOG_WARNING << "Cannot retrieve inexistent particle with id " << id << "." << "Returning special-relativistic kinematics." << endl;
-		ref_ptr<AbstractKinematics> specialRelativity = new SpecialRelativisticKinematics();
-		return specialRelativity;
-	}		
+		ParticleKinematicsMapIterator kinIt = kinematics.find(id);
+		if (kinIt != kinematics.end()) {
+			const ref_ptr<AbstractKinematics>& kin = kinIt->second;
+			return kin;
+		}
+	}
+
+	if (showWarningInexistent) 
+		KISS_LOG_WARNING << "Cannot retrieve inexistent particle with id " << id << "." << "Returning special-relativistic kinematics." << endl;
+
+	ref_ptr<AbstractKinematics> specialRelativity = new SpecialRelativisticKinematics();
+	return specialRelativity;	
 }
 
 const ref_ptr<AbstractKinematics>& Kinematics::operator[](const int& pId) {
