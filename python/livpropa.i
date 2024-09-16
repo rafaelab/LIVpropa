@@ -23,6 +23,7 @@
 %include "stl.i"
 %include "typemaps.i"
 
+
 /* SWIG exceptions */
 %inline %{
 	class RangeError {
@@ -30,7 +31,6 @@
 	class StopIterator {
 	};
 %}
-
 
 
 /*************************************************************************************************/
@@ -189,18 +189,18 @@
 /* To enable access to abstract base class Histogram1D */
 %template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
 
-// /* Print info for Histogram1D */
-// %define __STR_Histogram1D__(Histogram1D) 
-// %feature("python:slot", "tp_str", functype = "reprfunc") livpropa::Histogram1D::_print();
-// %extend livpropa::Histogram1D {
-// 	std::string _print() {
-// 		std::ostringstream out;
-// 		out << *$self;
-// 		return out.str();
-// 	}
-// }
-// %enddef
-// __STR_Histogram1D__(Histogram1D);
+/* Print info for Histogram1D */
+%define __STR_Histogram1D__(Histogram1D) 
+%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::Histogram1D::_print();
+%extend livpropa::Histogram1D {
+	std::string _print() {
+		std::ostringstream out;
+		out << *$self;
+		return out.str();
+	}
+}
+%enddef
+__STR_Histogram1D__(Histogram1D);
 
 
 
@@ -268,8 +268,6 @@ __STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics);
 __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLorentzViolatingKinematics);
 
 
-
-
 /* make Kinematics subscriptable */
 // %feature("python:slot", "tp_str", functype = "reprfunc") bsmpropa::Vector4::_print();
 // %feature("python:slot", "sq_length", functype = "lenfunc") crpropa::Vector4::__len__;
@@ -280,6 +278,20 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 		return (*($self))[i];
 	}
 }
+
+/* print info Kinematics */
+%define __STR_Kinematics__(AbstractMonochromaticLorentzViolatingKinematics) 
+%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::Kinematics::_print();
+%extend livpropa::Kinematics {
+	std::string _print() {
+		std::ostringstream out;
+		out << (*$self).info();
+		return out.str();
+	}
+}
+%enddef
+__STR_Kinematics__(Kinematics);
+
 
 /* convert unordered_dict to Python dict */
 %typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>> (PyObject* obj) %{
@@ -300,9 +312,6 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 %}
 
 
-/* Instantiate template to ensure that maps of particles-LIV_coefficients are properly handled */
-%template(CoefficientsMap) std::unordered_map<int, double>;
-// %template(ParticleKinematicsMap) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>;
 
 /*************************************************************************************************/
 /**	                                	Interactions  		                                    **/
