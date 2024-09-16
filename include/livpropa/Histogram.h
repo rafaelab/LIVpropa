@@ -35,7 +35,7 @@ class Histogram1D : public Referenced {
 			setScale(scale);
 		}
 
-		Histogram1D(double vmin, double vmax, int nBins, string scale = "lin") {
+		Histogram1D(double vmin, double vmax, unsigned int nBins, string scale = "lin") {
 			setScale(scale);
 			initBins(vmin, vmax, nBins);
 		}
@@ -43,7 +43,7 @@ class Histogram1D : public Referenced {
 		Histogram1D(const Histogram1D& h) {
 			reset();
 
-			int n = h.getNumberOfBins();
+			unsigned int n = h.getNumberOfBins();
 
 			for (size_t i = 0; i < n; i++) {
 				edges.push_back(h.getBinEdges()[i]);
@@ -62,7 +62,7 @@ class Histogram1D : public Referenced {
 		~Histogram1D() {
 		}
 
-		void initBins(double vmin, double vmax, int nBins) {
+		void initBins(double vmin, double vmax, unsigned int nBins) {
 			if (nBins <= 0)
 				throw std::runtime_error("Number of bins must be greater than zero.");
 
@@ -126,7 +126,7 @@ class Histogram1D : public Referenced {
 			return std::distance(edges.begin(), bin);
 		}
 
-		int getNumberOfBins() const {
+		unsigned int getNumberOfBins() const {
 			return contents.size();
 		}
 
@@ -286,18 +286,16 @@ class Histogram1D : public Referenced {
 			if (this == &h)
 				return *this;
 
-			edges.clear();
-			centres.clear();
-			widths.clear();
-			contents.clear();
+			reset();
 			
-			for (size_t i = 0; i < h.getNumberOfBins(); i++) {
+			unsigned int n = h.getNumberOfBins();
+			for (size_t i = 0; i < n; i++) {
 				edges.push_back(h.getBinEdges()[i]);
 				centres.push_back(h.getBinCentres()[i]);
 				widths.push_back(h.getBinWidths()[i]);
 				contents.push_back(h.getBinContents()[i]);
 			}
-			edges.push_back(h.getBinEdges().back());
+			edges.push_back(h.getBinEdges()[n]);
 		
 			return *this;
 		}
@@ -315,7 +313,7 @@ class Histogram1D : public Referenced {
 		}
 
 	private:
-		void initBinsLinear(double vmin, double vmax, int nBins) {
+		void initBinsLinear(double vmin, double vmax, unsigned int nBins) {
 			for (size_t i = 0; i <= nBins; i++) {
 				double v = vmin + i * (vmax - vmin) / nBins;
 				edges.push_back(v);
@@ -326,7 +324,7 @@ class Histogram1D : public Referenced {
 			}
 		}
 
-		void initBinsLog10(double vmin, double vmax, int nBins) {
+		void initBinsLog10(double vmin, double vmax, unsigned int nBins) {
 			vmin = log10(vmin);
 			vmax = log10(vmax);
 			for (size_t i = 0; i <= nBins; i++) {

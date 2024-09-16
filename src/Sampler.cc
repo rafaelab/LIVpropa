@@ -27,7 +27,7 @@ int SamplerEventsEnergy::getParticleId() const {
 	return particleId;
 }
 
-double  SamplerEventsEnergy::computeWeight(int id, double E, double f, int counter) const {
+double  SamplerEventsEnergy::computeWeight(int id, double E, double f, unsigned int counter) const {
 	if (id != particleId)
 		return 0;
 
@@ -70,20 +70,18 @@ int SamplerEventsUniform::getParticleId() const {
 	return particleId;
 }
 
-double SamplerEventsUniform::computeWeight(int id, double E, double f, int counter) const {
+double SamplerEventsUniform::computeWeight(int id, double E, double f, unsigned int counter) const {
 	if (id != particleId)
 		return 0;
 
 	if (sampling >= 1.) {
-		return 1;
+		return 1.;
 	} else if (sampling <= 0) {
-		return 0;
+		return 0.;
 	} else {
+		// acceptance-rejection method
 		Random& random = Random::instance();
-		if (random.rand() < sampling) // accept and return weight
-			return 1 / sampling;
-		else // reject
-			return 0;
+		return random.rand() < sampling ? 1. / sampling : 0.;
 	}
 }
 
@@ -102,7 +100,7 @@ double SamplerEventsEnergyFractionPowerLaw::getIndex() const {
 	return index;
 }
 
-double SamplerEventsEnergyFractionPowerLaw::weightFunction(int id, double E, double f, int counter) const {
+double SamplerEventsEnergyFractionPowerLaw::weightFunction(int id, double E, double f, unsigned int counter) const {
 	return pow(f, (1 - sampling) * index);
 }
 
@@ -171,7 +169,7 @@ double SamplerEventsEnergyFractionPowerLaw::weightFunction(int id, double E, dou
 SamplerEventsNull::SamplerEventsNull() {
 }
 
-double SamplerEventsNull::computeWeight(int id, double E, double f, int counter) const {
+double SamplerEventsNull::computeWeight(int id, double E, double f, unsigned int counter) const {
 	return 1.;
 }
 
@@ -190,7 +188,7 @@ void SamplerEventsList::add(SamplerEvents *SamplerEvents) {
 	samplers.push_back(SamplerEvents);
 }
 
-double SamplerEventsList::computeWeight(int id, double E, double f, int counter) const {
+double SamplerEventsList::computeWeight(int id, double E, double f, unsigned int counter) const {
 	if (samplers.size() == 0)
 		return 1.;
 
@@ -213,12 +211,11 @@ double SamplerEventsList::computeWeight(int id, double E, double f, int counter)
 
 /****************************************************************************/
 
-SamplerDistributionUniform::SamplerDistributionUniform(double vmin, double vmax, int nBins, std::string scale) {
+SamplerDistributionUniform::SamplerDistributionUniform(double vmin, double vmax, unsigned int nBins, std::string scale) {
 	ref_ptr<Histogram1D> h = new Histogram1D(vmin, vmax, nBins, scale);	
 	setSize(0);
 	setDistribution(h);
 }
-
 
 void SamplerDistributionUniform::setDistribution(ref_ptr<Histogram1D> dist) {
 	distribution = dist;
@@ -228,18 +225,18 @@ void SamplerDistributionUniform::setSize(int n) {
 	datasetSize = n;
 }
 
-
 ref_ptr<Histogram1D> SamplerDistributionUniform::getDistribution() const {
 	return distribution;
 }
 
-int SamplerDistributionUniform::getSize() const {
+unsigned int SamplerDistributionUniform::getSize() const {
 	return datasetSize;
 }
 
-std::vector<double> SamplerDistributionUniform::getSample(int nSamples) const {
+std::vector<double> SamplerDistributionUniform::getSample(unsigned int nSamples) const {
 	std::vector<double> sample;
-	for (size_t i = 0; i < std::min(nSamples, distribution->getNumberOfBins()); i++) {
+	unsigned int nBins = distribution->getNumberOfBins();
+	for (size_t i = 0; i < std::min(nSamples, nBins); i++) {
 		sample.push_back(distribution->getSample());
 	}
 
@@ -249,7 +246,6 @@ std::vector<double> SamplerDistributionUniform::getSample(int nSamples) const {
 void SamplerDistributionUniform::transformToPDF() {
 	distribution->transformToPDF();
 }
-
 
 void SamplerDistributionUniform::transformToCDF() {
 	distribution->transformToCDF();

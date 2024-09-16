@@ -17,7 +17,7 @@ namespace livpropa {
  */
 class SamplerEvents: public Referenced {
 	public:
-		virtual double computeWeight(int id, double energy = 0, double energyFraction = 0, int counter = 0) const = 0;
+		virtual double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const = 0;
 };
 
 
@@ -40,7 +40,7 @@ class SamplerEventsUniform: public SamplerEvents {
 		void setParticleId(int particleId);
 		double getSampling() const;
 		int getParticleId() const;
-		double computeWeight(int id, double energy = 0, double energyFraction = 0, int counter = 0) const;
+		double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const;
 };
 
 
@@ -63,8 +63,8 @@ class SamplerEventsEnergy : public SamplerEvents {
 		void setParticleId(int particleId);
 		double getSampling() const;
 		int getParticleId() const;
-		double computeWeight(int id, double energy = 0, double energyFraction = 0, int counter = 0) const;
-		virtual double weightFunction(int id, double energy = 0, double energyFraction = 0, int counter = 0) const = 0;
+		double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const;
+		virtual double weightFunction(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const = 0;
 };
 
 
@@ -86,7 +86,7 @@ class SamplerEventsEnergyFractionPowerLaw: public SamplerEventsEnergy {
 		SamplerEventsEnergyFractionPowerLaw(double index, int particleId, double sampling);
 		void setIndex(double index);
 		double getIndex() const;
-		double weightFunction(int id, double energy = 0, double energyFraction = 0, int counter = 0) const;
+		double weightFunction(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const;
 };
 
 
@@ -110,7 +110,7 @@ class SamplerEventsEnergyFraction: public SamplerEventsEnergyFractionPowerLaw {
 class SamplerEventsNull : public SamplerEvents {
 	public:
 		SamplerEventsNull();
-		double computeWeight(int id, double energy = 0, double energyFraction = 0, int counter = 0) const;
+		double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const;
 };
 
 
@@ -126,10 +126,10 @@ class SamplerEventsList : public SamplerEvents {
 		SamplerEventsList();
 		SamplerEventsList(vector<ref_ptr<SamplerEvents>> samplers);
 		void add(SamplerEvents* samplers);
-		// inline void add(ref_ptr<SamplerEvents> SamplerEvents) {
-		// 	add(SamplerEvents.get());
-		// }
-		double computeWeight(int id, double energy = 0, double energyFraction = 0, int counter = 0) const;
+		inline void add(ref_ptr<SamplerEvents> SamplerEvents) {
+			add(SamplerEvents.get());
+		}
+		double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const;
 };
 
 
@@ -139,9 +139,10 @@ class SamplerEventsList : public SamplerEvents {
  */
 class SamplerDistribution : public Referenced {
 	public:
-		virtual vector<double> getSample(int nSamples) const = 0;
-		virtual int getSize() const = 0;
+		virtual vector<double> getSample(unsigned int nSamples) const = 0;
+		virtual unsigned int getSize() const = 0;
 		virtual ref_ptr<Histogram1D> getDistribution() const = 0;
+		virtual double interpolateAt(const double &v) const = 0;
 		virtual void transformToPDF() = 0;
 		virtual void transformToCDF() = 0;
 		virtual void append(const vector<double>& v) = 0;
@@ -149,18 +150,23 @@ class SamplerDistribution : public Referenced {
 		virtual void clear() = 0; 
 };
 
+
+/**
+ @class SamplerDistributionUniform
+ @brief Samples uniformly from a given distribution.
+ */
 class SamplerDistributionUniform : public SamplerDistribution {
 	protected:
 		ref_ptr<Histogram1D> distribution;
 		int datasetSize;
 
 	public:
-		SamplerDistributionUniform(double vmin, double vmax, int nBins, string scale = "lin");
+		SamplerDistributionUniform(double vmin, double vmax, unsigned int nBins, string scale = "lin");
 		void setSize(int size);
-		int getSize() const;
+		unsigned int getSize() const;
 		void setDistribution(ref_ptr<Histogram1D> dist);
 		ref_ptr<Histogram1D> getDistribution() const;
-		vector<double> getSample(int nSamples) const;
+		vector<double> getSample(unsigned int nSamples) const;
 		void transformToPDF();
 		void transformToCDF();
 		void append(const vector<double>& v);
