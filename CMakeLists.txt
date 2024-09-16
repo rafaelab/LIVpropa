@@ -67,7 +67,7 @@ message(STATUS "Build Python bindings via SWIG: ${ENABLE_PYTHON}")
 # compile with Python support
 if(ENABLE_PYTHON)
 	# find Python
-	find_package(Python COMPONENTS Interpreter Development)
+	find_package(Python COMPONENTS Interpreter Development NumPy)
 
 	if(Python_FOUND)
 		message(STATUS "Python version: ${Python_VERSION}")
@@ -76,11 +76,21 @@ if(ENABLE_PYTHON)
 		message(STATUS "Python library: ${Python_LIBRARY}")
 		message(STATUS "Python site-packges: ${Python_SITE_PACKAGES}")
 	else(Python_FOUND)
-		set(Python_HELPER_EXECUTABLE ". Python_EXECUTABLE (path to python executable)")
-		set(Python_HELPER_INCLUDE_DIRS ". Python_INCLUDE_DIRS (directory where Python.h is located)")
-		set(Python_HELPER_LIBRARY ". Python_LIBRARY (path to file libpython.so or libpython.dylib [in OSX]; sometimes contains version before extension)")
+		set(Python_HELPER_EXECUTABLE "Python_EXECUTABLE (path to python executable)")
+		set(Python_HELPER_INCLUDE_DIRS "Python_INCLUDE_DIRS (directory where Python.h is located)")
+		set(Python_HELPER_LIBRARY "Python_LIBRARY (path to file libpython.so or libpython.dylib [in OSX]; sometimes contains version before extension)")
 		message(STATUS 	"Python: NOT FOUND. Try setting the relevant flags manually: \n\t${Python_HELPER_EXECUTABLE} \n\t${Python_HELPER_LIBRARY} \n\t${Python_HELPER_INCLUDE_DIRS}")
 	endif(Python_FOUND)
+
+
+	if(Python_NumPy_FOUND)
+		set(CMAKE_SWIG_FLAGS -DWITHNUMPY ${CRP})
+		list(APPEND CRPROPA_SWIG_DEFINES -DWITHNUMPY)
+		include_directories(${Python_NumPy_INCLUDE_DIRS})
+		message(STATUS "NumPy headers: ${Python_NumPy_INCLUDE_DIRS} (version ${Python_NumPy_VERSION})")
+	elseif(Python_NumPy_FOUND)
+		message(STATUS "NumPy: NOT FOUND. The code might work just fine without NumPy, but some features in Python might not be straightfoward to use.")
+	endif(Python_NumPy_FOUND)
 
 	# find SWIG
 	find_package(SWIG REQUIRED)
