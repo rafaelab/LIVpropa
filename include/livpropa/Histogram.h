@@ -131,7 +131,7 @@ class Histogram1D : public Referenced {
 
 		size_t getBinIndex(const double& v) const {
 			BinIterator bin = whichBin(v);
-			return std::distance(edges.begin(), bin);
+			return bin - edges.begin() - 1;
 		}
 
 		unsigned int getNumberOfBins() const {
@@ -163,8 +163,8 @@ class Histogram1D : public Referenced {
 			if (it == edges.begin() or it == edges.end())
 				return;
 
-			size_t idx = it - edges.begin() - 1;
-			contents[idx] += w; 
+			size_t idx = getBinIndex(v);
+			contents[idx] += w; 			
 		}
 
 		void fill(const vector<double>& v, const vector<double>& w = {}) {
@@ -236,14 +236,32 @@ class Histogram1D : public Referenced {
 		}
 
 		double getSample(const double& xMin, const double& xMax) const {
-			Random& random = Random::instance();
-			
-			BinIterator itL = whichBin(xMin, true);
-			BinIterator itU = whichBin(xMax, false);
-			size_t binL = itL - edges.begin();
-			size_t binU = itU - edges.begin();
+			double vMin = (xMin < edges.front()) ? edges.front() : xMin;
+			double vMax = (xMax > edges.back()) ? edges.back() : xMax;
 
-			return random.randUniform(edges[binL], edges[binU]);
+			size_t idxL = getBinIndex(vMin);
+			size_t idxU = getBinIndex(vMax) + 1;
+			unsigned int nBins = idxU - idxL;
+
+			crpropa::Random& random = crpropa::Random::instance();
+
+
+			Histogram1D* h = new Histogram1D(edges[idxL], edges[idxU], nBins, scale);
+			for (size_t i = idxL + 1; i < idxU; ++i)
+				h->setBinContent(i - idxL, contents[i]);
+
+			double r = h->getSample();
+
+			if (idxL == 0 or idxU == getNumberOfBins()) {
+				if (r < vMin or r > edges[idxL]) 
+					return random.randUniform(edges[idxL], vMin);
+				if (r > vMax or r < edges[idxU])
+					return random.randUniform(vMax, edges[idxU]);
+			}
+
+			delete h;
+
+			return r;
 		}
 
 		void clear() {
@@ -336,7 +354,6 @@ class Histogram1D : public Referenced {
 		}
 
 		BinIterator whichBin(double v, bool lowerEdge = true) const {
-			BinIterator it;
 			if (lowerEdge) 
 				return std::lower_bound(edges.begin(), edges.end(), v);
 			else
