@@ -33,23 +33,62 @@
 
 
 
-
 /*************************************************************************************************/
 /**	                        			 NumPy interface  		                                **/
 /*************************************************************************************************/
 
+%template(VectorInt) std::vector<int>;
+%template(VectorFloat) std::vector<float>;
+%template(VectorDouble) std::vector<double>;
+%template(VectorString) std::vector<std::string>;
+
+%feature("director:except") {
+	if ($error != NULL) {
+		PyObject* ptype;
+		PyObject* pvalue; 
+		PyObject* ptraceback;
+		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+		PyErr_Restore(ptype, pvalue, ptraceback);
+		PyErr_Print();
+		Py_Exit(1);
+	}
+}
+
+/* Exceptions for Python lists and iterators */
+%exception __next__ {
+	try {
+		$action
+	} catch (StopIterator) {
+		PyErr_SetString(PyExc_StopIteration, "End of iterator");
+		return NULL;
+	}
+}
+
+%exception __getitem__ {
+	try {
+		$action
+	} catch (RangeError) {
+		SWIG_exception(SWIG_IndexError, "Index out of bounds");
+		return NULL;
+	}
+};
 
 %{
 	#define SWIG_FILE_WITH_INIT
+	#include <vector>
+	#include <numpy/arrayobject.h>
+	#include "numpy/ufuncobject.h"
 %}
 %include "numpy.i"
 %init %{
 	import_array();
+	import_ufunc();
 %}
 
 // typemap for converting std::vector<double> to numpy array
-%typemap(out) std::vector<double> {
+%typemap(out) const std::vector<double>& {
 	npy_intp size = $1.size();
+
 	PyObject* obj = PyArray_SimpleNew(1, &size, NPY_DOUBLE);
 	if (! obj) {
 		SWIG_exception_fail(SWIG_RuntimeError, "Unable to create numpy array");
@@ -59,22 +98,54 @@
 	for (npy_intp i = 0; i < size; ++i) {
 		data[i] = $1[i];
 	}
+
 	$result = obj;
 }
 
 // typemap for converting numpy array to std::vector<double>
-%typemap(in) (std::vector<double> &vec) {
+%typemap(in) (std::vector<double>& vec) {
 	PyArrayObject* array = (PyArrayObject*) PyArray_FROM_OTF($input, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
 	if (! array) {
 		SWIG_exception_fail(SWIG_TypeError, "Expected a numpy array of type float64");
 	}
+
 	npy_intp size = PyArray_SIZE(array);
 	double* data = static_cast<double*>(PyArray_DATA(array));
-	vec = std::vector<double>(data, data + size);
+	vec.assign(data, data + size)
 	Py_DECREF(array);
+
 	$1 = vec;
 }
 
+%apply(double* INPLACE_ARRAY1, int DIM1) { 
+	(double *c, int len_c) 
+};
+
+%apply(double* ARGOUT_ARRAY1, int DIM1) {
+	(double* rangevec, int n)
+};
+
+
+/* Python slots */
+%feature("python:slot", "sq_length", functype = "lenfunc") __len__;
+%feature("python:slot", "mp_subscript", functype = "binaryfunc") __getitem__;
+%feature("python:slot", "tp_iter", functype = "unaryfunc") __iter__;
+%feature("python:slot", "tp_iternext", functype = "iternextfunc") __next__;
+
+%typemap(directorin, numinputs = 1) (const double* v) {
+	npy_intp dim = v.size();
+	$input = PyArray_SimpleNewFromData(1, &dim, NPY_DOUBLE, (void*) $1);
+}
+
+%typemap(directorin, numinputs = 1) (const std::vector<double>& v) {
+	npy_intp dim = v.size();
+	$input = PyArray_SimpleNewFromData(1, &dim, NPY_DOUBLE, (void*) $1);
+}
+
+%fragment("NumPy_Fragments");
+%fragment("NumPy_Macros");
+%numpy_typemaps(double, NPY_DOUBLE, size_t)
+%numpy_typemaps(int, NPY_INT, size_t)
 
 /*************************************************************************************************/
 /**                                   	CRPropa			                                        **/
@@ -248,10 +319,9 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 /*************************************************************************************************/
 /*************************************************************************************************/
 
-%template(VectorInt) std::vector<int>;
-%template(VectorFloat) std::vector<float>;
-%template(VectorDouble) std::vector<double>;
-%template(VectorString) std::vector<std::string>;
+
+%clear(double* vector, int length);
+
 
 /* Ignore list */
 %ignore operator<<;
