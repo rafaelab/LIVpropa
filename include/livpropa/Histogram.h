@@ -41,33 +41,32 @@ class Histogram1D : public Referenced {
 		}
 
 		Histogram1D(const Histogram1D& h) {
-			if (getNumberOfBins() != h.getNumberOfBins())
-				throw std::runtime_error("Histograms have different number of bins.");
-			
-			edges.clear();
-			centres.clear();
-			widths.clear();
-			contents.clear();
-			
-			for (size_t i = 0; i < h.getNumberOfBins(); i++) {
+			reset();
+
+			int n = h.getNumberOfBins();
+
+			for (size_t i = 0; i < n; i++) {
 				edges.push_back(h.getBinEdges()[i]);
 				centres.push_back(h.getBinCentres()[i]);
 				widths.push_back(h.getBinWidths()[i]);
 				contents.push_back(h.getBinContents()[i]);
 			}
-			edges.push_back(h.getBinEdges().back());
+			edges.push_back(h.getBinEdges()[n]);
 
+			edges.resize(n + 1);
+			centres.resize(n);
+			widths.resize(n);
+			contents.resize(n);
 		}
 
 		~Histogram1D() {
 		}
 
 		void initBins(double vmin, double vmax, int nBins) {
-			// clear previous data
-			edges.clear();
-			centres.clear();
-			widths.clear();
-			contents.clear();
+			if (nBins <= 0)
+				throw std::runtime_error("Number of bins must be greater than zero.");
+
+			reset();
 
 			// reserve memory to avoid multiple reallocations
 			edges.reserve(nBins + 1);
@@ -81,11 +80,15 @@ class Histogram1D : public Referenced {
 				initBinsLinear(vmin, vmax, nBins);
 			}
 
-			// bins start with no content
+			// bins starts with no content
 			for (size_t i = 0; i < nBins; i++) {
-				widths.push_back(edges[i + 1] - edges[i]);
-				contents.push_back(0);
+				contents.push_back(0.);
 			}
+
+			edges.resize(nBins + 1);
+			centres.resize(nBins);
+			widths.resize(nBins);
+			contents.resize(nBins);
 		}
 
 		void setScale(string s) {
@@ -168,6 +171,19 @@ class Histogram1D : public Referenced {
 			contents[idx] += w; 
 		}
 
+		void fill(const vector<double>& v, const vector<double>& w = {}) {
+			if (w.size() != 0) {
+				if (w.size() != v.size()) {
+					throw runtime_error("Cannot fill histogram: number of weights does not match number of values.");
+				}
+			} 
+			
+			for (size_t i = 0; i < v.size(); i++) {
+				push(v[i], w.size() == 0 ? 1 : w[i]);
+			}
+			
+		}
+
 		void normalise(double norm) {
 			for (size_t i = 0; i < getNumberOfBins(); i++) {
 				contents[i] /= norm;
@@ -198,6 +214,20 @@ class Histogram1D : public Referenced {
 			return integral;
 		}
 
+		double interpolateAt(const double& v) const {
+			if (scale == "log10") {
+				vector<double> x;
+				vector<double> y;
+				for (size_t i = 0; i < getNumberOfBins(); i++) {
+					x.push_back(log10(centres[i]));
+					y.push_back(contents[i]);
+				}
+				return interpolate(log10(v), x, y);
+			} else {
+				return interpolate(v, centres, contents);
+			}
+		}
+
 		void transformToPDF() {
 			double totalSum = sum();
 			if (totalSum == 0) 
@@ -219,6 +249,13 @@ class Histogram1D : public Referenced {
 			for (size_t i = 0; i < getNumberOfBins(); i++) {
 				contents[i] = 0;
 			}
+		}
+
+		void reset() {
+			contents.clear();
+			edges.clear();
+			centres.clear();
+			widths.clear();	
 		}
 
 		void setBinContent(size_t i, double v) {
@@ -284,7 +321,7 @@ class Histogram1D : public Referenced {
 				edges.push_back(v);
 			}
 			for (size_t i = 0; i < nBins; i++) {
-				centres.push_back((edges[i + 1] + edges[i]) / 2.0);
+				centres.push_back((edges[i + 1] + edges[i]) / 2.);
 				widths.push_back(edges[i + 1] - edges[i]);
 			}
 		}
@@ -297,7 +334,7 @@ class Histogram1D : public Referenced {
 				edges.push_back(pow(10, v));
 			}
 			for (size_t i = 0; i < nBins; i++) {
-				centres.push_back(pow(10, (log10(edges[i + 1]) + log10(edges[i])) / 2.0));
+				centres.push_back(pow(10, (log10(edges[i + 1]) + log10(edges[i])) / 2.));
 				widths.push_back(edges[i + 1] - edges[i]);
 			}
 		}
