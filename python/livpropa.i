@@ -32,6 +32,50 @@
 %}
 
 
+
+
+/*************************************************************************************************/
+/**	                        			 NumPy interface  		                                **/
+/*************************************************************************************************/
+
+
+%{
+	#define SWIG_FILE_WITH_INIT
+%}
+%include "numpy.i"
+%init %{
+	import_array();
+%}
+
+// typemap for converting std::vector<double> to numpy array
+%typemap(out) std::vector<double> {
+	npy_intp size = $1.size();
+	PyObject* obj = PyArray_SimpleNew(1, &size, NPY_DOUBLE);
+	if (! obj) {
+		SWIG_exception_fail(SWIG_RuntimeError, "Unable to create numpy array");
+	}
+
+	double* data = static_cast<double*>(PyArray_DATA((PyArrayObject*) obj));
+	for (npy_intp i = 0; i < size; ++i) {
+		data[i] = $1[i];
+	}
+	$result = obj;
+}
+
+// typemap for converting numpy array to std::vector<double>
+%typemap(in) (std::vector<double> &vec) {
+	PyArrayObject* array = (PyArrayObject*) PyArray_FROM_OTF($input, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+	if (! array) {
+		SWIG_exception_fail(SWIG_TypeError, "Expected a numpy array of type float64");
+	}
+	npy_intp size = PyArray_SIZE(array);
+	double* data = static_cast<double*>(PyArray_DATA(array));
+	vec = std::vector<double>(data, data + size);
+	Py_DECREF(array);
+	$1 = vec;
+}
+
+
 /*************************************************************************************************/
 /**                                   	CRPropa			                                        **/
 /*************************************************************************************************/
@@ -74,6 +118,20 @@
 /* To enable access to abstract base class Histogram1D */
 %template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
 
+// /* Print info for Histogram1D */
+// %define __STR_Histogram1D__(Histogram1D) 
+// %feature("python:slot", "tp_str", functype = "reprfunc") livpropa::Histogram1D::_print();
+// %extend livpropa::Histogram1D {
+// 	std::string _print() {
+// 		std::ostringstream out;
+// 		out << *$self;
+// 		return out.str();
+// 	}
+// }
+// %enddef
+// __STR_Histogram1D__(Histogram1D);
+
+
 
 /*************************************************************************************************/
 /**                                		Samplers	                               				**/
@@ -111,13 +169,6 @@
 %template(MonochromaticLorentzViolatingKinematics0) livpropa::MonochromaticLorentzViolatingKinematics<0>;
 %template(MonochromaticLorentzViolatingKinematics1) livpropa::MonochromaticLorentzViolatingKinematics<1>;
 %template(MonochromaticLorentzViolatingKinematics2) livpropa::MonochromaticLorentzViolatingKinematics<2>;
-
-// %template(SpecialRelativisticKinematicsRefPtr) crpropa::ref_ptr<livpropa::SpecialRelativisticKinematics>;
-// %template(MonochromaticLorentzViolatingKinematics0RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<0>>;
-// %template(MonochromaticLorentzViolatingKinematics1RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<1>>;
-// %template(MonochromaticLorentzViolatingKinematics2RefPtr) crpropa::ref_ptr<livpropa::MonochromaticLorentzViolatingKinematics<2>>;
-
-
 
 /* Print info for SpecialRelativisticKinematics */
 %define __STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics) 
@@ -189,7 +240,9 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 /* Rename automatically generate enum class */
 %rename(VacuumCherenkovSpectrumDefault) VacuumCherenkovSpectrum_Default;
 %rename(VacuumCherenkovSpectrumFull) VacuumCherenkovSpectrum_Full;
-%rename(VacuumCherenkovSpectrumFlat) VacuumCherenkovSpectrum_Flat;
+%rename(VacuumCherenkovSpectrumStep) VacuumCherenkovSpectrum_Step;
+%rename(VacuumCherenkovSpectrumAbsent) VacuumCherenkovSpectrum_Absent;
+
 
 
 /*************************************************************************************************/
