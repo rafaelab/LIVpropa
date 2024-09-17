@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -21,13 +22,9 @@ namespace livpropa {
  @todo Use templates for the bin and content type
  */
 class Histogram1D : public Referenced {
-	private:
-		using BinIterator = typename vector<double>::iterator;
-
 	protected:
 		vector<double> edges;
 		vector<double> centres;
-		vector<double> widths;
 		vector<double> contents;
 		vector<double> cdf;
 		unsigned int nBins;
@@ -52,14 +49,12 @@ class Histogram1D : public Referenced {
 			for (size_t i = 0; i < nBins; i++) {
 				edges.push_back(h.getBinEdges()[i]);
 				centres.push_back(h.getBinCentres()[i]);
-				widths.push_back(h.getBinWidths()[i]);
 				contents.push_back(h.getBinContents()[i]);
 			}
 			edges.push_back(h.getBinEdges()[nBins]);
 
 			edges.resize(nBins + 1);
 			centres.resize(nBins);
-			widths.resize(nBins);
 			contents.resize(nBins);
 		}
 
@@ -77,23 +72,17 @@ class Histogram1D : public Referenced {
 
 			reset();
 
-			// reserve memory to avoid multiple reallocations
-			edges.reserve(n + 1);
-			centres.reserve(n);
-			widths.reserve(n);
-			contents.reserve(n);
-
 			if (scale == "log10") {
-				initBinsLog10(vmin, vmax, nBins);
+				edges = computeBinEdgesLog10(vmin, vmax, n);
+				centres = computeBinCentresLog10(edges, scale); 
 			} else {
-				initBinsLinear(vmin, vmax, nBins);
+				edges = computeBinEdgesLinear(vmin, vmax, n);
+				centres = computeBinCentresLinear(edges, scale);
 			}
 
-
-			edges.resize(nBins + 1);
-			centres.resize(nBins);
-			widths.resize(nBins);
-			contents.resize(nBins, 0.);
+			edges.resize(n + 1);
+			centres.resize(n);
+			contents.resize(n, 0.);
 		}
 
 		void prepareCDF() {
@@ -151,7 +140,11 @@ class Histogram1D : public Referenced {
 		}
 
 		vector<double> getBinWidths() const {
-			return widths;
+			vector<double> binWidths;
+			for (size_t i = 0; i < edges.size() - 1; i++) {
+				binWidths.push_back(edges[i + 1] - edges[i]);
+			}
+			return binWidths;
 		}
 
 		vector<double> getBinCentres() const {
@@ -181,10 +174,6 @@ class Histogram1D : public Referenced {
 			return nBins;
 		}
 
-		void setBinContent(size_t i, double v) {
-			contents[i] = v;
-		}
-
 		std::pair<double, double> getEdgesOfBin(const size_t& i) const {
 			return std::make_pair(edges[i], edges[i + 1]);
 		}
@@ -199,6 +188,10 @@ class Histogram1D : public Referenced {
 
 		double getBinContent(const size_t& i) const {
 			return contents[i];
+		}
+
+		void setBinContent(size_t i, double v) {
+			contents[i] = v;
 		}
 
 		void push(double v, double w = 1) {
@@ -223,15 +216,11 @@ class Histogram1D : public Referenced {
 		}
 
 		double sum() const {
-			double sum = 0;
-			for (size_t i = 0; i < getNumberOfBins(); i++) {
-				sum += contents[i];
-			}
-
-			return sum;
+			return std::accumulate(contents.begin(), contents.end(), 0.);
 		}
 
 		double integrate() const {
+			vector<double> widths = getBinWidths();
 			return getIntegral(contents, widths);
 		}
 
@@ -272,7 +261,7 @@ class Histogram1D : public Referenced {
 			size_t idxL = getBinIndex(vMin);
 			size_t idxU = getBinIndex(vMax) + 1;
 
-			
+			// possible bugs in first/last bins!
 
 			Histogram1D* h = new Histogram1D(edges[idxL], edges[idxU], idxU - idxL, scale);
 			for (size_t i = idxL; i < idxU; ++i) {
@@ -303,7 +292,7 @@ class Histogram1D : public Referenced {
 			contents.clear();
 			edges.clear();
 			centres.clear();
-			widths.clear();	
+			cdf.clear();
 		}
 
 		double operator[](const size_t& i) const {
@@ -320,35 +309,23 @@ class Histogram1D : public Referenced {
 			for (size_t i = 0; i < n; i++) {
 				edges.push_back(h.getBinEdges()[i]);
 				centres.push_back(h.getBinCentres()[i]);
-				widths.push_back(h.getBinWidths()[i]);
 				contents.push_back(h.getBinContents()[i]);
 			}
 			edges.push_back(h.getBinEdges()[n]);
 
-			// edges = std::move(h.edges);
-			// centres = std::move(h.centres);
-			// widths = std::move(h.widths);
-			// contents = std::move(h.contents);
-			// scale = std::move(h.scale);
-
 			edges.resize(n + 1);
 			centres.resize(n);
-			widths.resize(n);
 			contents.resize(n);
 		
 			return *this;
 		}
 
 		static vector<double> computeBinCentres(const vector<double>& binEdges, const string& scale) {
-			vector<double> binCentres;
-			for (size_t i = 0; i < binEdges.size() - 1; i++) {
-				if (scale == "log10") {
-					binCentres.push_back(pow(10, (log10(binEdges[i]) + log10(binEdges[i + 1])) / 2.));
-				} else {
-					binCentres.push_back((binEdges[i] + binEdges[i + 1]) / 2.);
-				}
+			if (scale == "log10") {
+				return computeBinCentresLog10(binEdges, scale);
+			} else {
+				return computeBinCentresLinear(binEdges, scale);
 			}
-			return binCentres;
 		}
 
 		friend std::ostream& operator<<(std::ostream& os, const Histogram1D& h) {
@@ -360,30 +337,45 @@ class Histogram1D : public Referenced {
 		}
 
 	private:
-		void initBinsLinear(double vmin, double vmax, unsigned int n) {
+		static vector<double> computeBinEdgesLinear(double vmin, double vmax, unsigned int n) {
+			vector<double> bins;
 			for (size_t i = 0; i <= n; i++) {
 				double v = vmin + i * (vmax - vmin) / n;
-				edges.push_back(v);
+				bins.push_back(v);
 			}
-			for (size_t i = 0; i < n; i++) {
-				centres.push_back((edges[i + 1] + edges[i]) / 2.);
-				widths.push_back(edges[i + 1] - edges[i]);
-			}
+
+			return bins;
+			// for (size_t i = 0; i < n; i++) {
+			// 	centres.push_back((edges[i + 1] + edges[i]) / 2.);
+			// 	widths.push_back(edges[i + 1] - edges[i]);
+			// }
 		}
 
-		void initBinsLog10(double vmin, double vmax, unsigned int n) {
-			vmin = log10(vmin);
-			vmax = log10(vmax);
+		static vector<double> computeBinEdgesLog10(double vmin, double vmax, unsigned int n) {
+			vector<double> bins = computeBinEdgesLinear(log10(vmin), log10(vmax), n);
 			for (size_t i = 0; i <= n; i++) {
-				double v = vmin + i * (vmax - vmin) / n;
-				edges.push_back(pow(10, v));
+				bins[i] = pow(10, bins[i]);
 			}
-			for (size_t i = 0; i < n; i++) {
-				centres.push_back(pow(10, (log10(edges[i + 1]) + log10(edges[i])) / 2.));
-				widths.push_back(edges[i + 1] - edges[i]);
-			}
+
+			return bins;
 		}
-		
+
+		static vector<double> computeBinCentresLinear(const vector<double>& binEdges, const string& scale) {
+			vector<double> binCentres;
+			for (size_t i = 0; i < binEdges.size() - 1; i++) {
+				binCentres.push_back((binEdges[i] + binEdges[i + 1]) / 2.);
+			}
+			return binCentres;
+		}
+
+		static vector<double> computeBinCentresLog10(const vector<double>& binEdges, const string& scale) {
+			vector<double> binCentres;
+			for (size_t i = 0; i < binEdges.size() - 1; i++) {
+				binCentres.push_back(pow(10, (log10(binEdges[i]) + log10(binEdges[i + 1])) / 2.));
+			}
+			return binCentres;
+		}
+
 		static double getIntegral(const vector<double>& y, const vector<double>& dx) {
 			if (y.size() != dx.size())
 				throw runtime_error("Cannot compute integral: number of y-values does not match number of bin widths.");
@@ -395,34 +387,6 @@ class Histogram1D : public Referenced {
 
 			return integral;
 		}
-
-		// static vector<double> getCDF(const vector<double>& y, const vector<double>& dx) {		
-		// 	vector<double> cdf;
-			
-		// 	double cum = 0;
-		// 	for (size_t i = 1; i < y.size(); i++) {
-		// 		// cum += y[i] * dx[i];
-		// 		cum += y[i - 1];
-		// 		cdf.push_back(cum);
-		// 	}
-
-		// 	for (size_t i = 0; i < cdf.size(); i++) {
-		// 		cdf[i] /= cdf.back();
-		// 	}
-
-		// 	return cdf;
-		// }
-
-		// static vector<double> getPDF(const vector<double>& y, const vector<double>& dx) {
-		// 	double integral = getIntegral(y, dx);
-			
-		// 	vector<double> pdf;
-		// 	for (size_t i = 0; i < y.size(); i++) {
-		// 		pdf.push_back(y[i] / dx[i] / integral);
-		// 	}
-
-		// 	return pdf;
-		// }
 
 };
 
