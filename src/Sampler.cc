@@ -208,12 +208,16 @@ double SamplerEventsList::computeWeight(int id, double E, double f, unsigned int
 }
 
 
-
 /****************************************************************************/
 
 SamplerDistributionUniform::SamplerDistributionUniform(double vmin, double vmax, unsigned int nBins, std::string scale) {
 	ref_ptr<Histogram1D> h = new Histogram1D(vmin, vmax, nBins, scale);	
 	setSize(0);
+	setDistribution(h);
+}
+
+void SamplerDistributionUniform::initDistribution(double vmin, double vmax, unsigned int nBins, std::string scale) {
+	ref_ptr<Histogram1D> h = new Histogram1D(vmin, vmax, nBins, scale);	
 	setDistribution(h);
 }
 
@@ -233,22 +237,16 @@ unsigned int SamplerDistributionUniform::getSize() const {
 	return datasetSize;
 }
 
-std::vector<double> SamplerDistributionUniform::getSample(unsigned int nSamples) const {
-	std::vector<double> sample;
-	unsigned int nBins = distribution->getNumberOfBins();
-	for (size_t i = 0; i < std::min(nSamples, nBins); i++) {
-		sample.push_back(distribution->getSample());
-	}
-
-	return sample;
+double SamplerDistributionUniform::getSample() const {
+	return distribution->getSample();
 }
 
-void SamplerDistributionUniform::transformToPDF() {
-	distribution->transformToPDF();
+double SamplerDistributionUniform::interpolateAt(const double &v) const {
+	return distribution->interpolateAt(v);
 }
 
-void SamplerDistributionUniform::transformToCDF() {
-	distribution->transformToCDF();
+void SamplerDistributionUniform::prepareCDF() {
+	distribution->prepareCDF();
 }
 
 void SamplerDistributionUniform::append(const std::vector<double>& v) {
@@ -267,6 +265,7 @@ void SamplerDistributionUniform::clear() {
 	distribution->clear();
 	datasetSize = 0;
 }
+
 
 // /****************************************************************************/
 

@@ -139,15 +139,38 @@ class SamplerEventsList : public SamplerEvents {
  */
 class SamplerDistribution : public Referenced {
 	public:
-		virtual vector<double> getSample(unsigned int nSamples) const = 0;
-		virtual unsigned int getSize() const = 0;
-		virtual ref_ptr<Histogram1D> getDistribution() const = 0;
-		virtual double interpolateAt(const double &v) const = 0;
-		virtual void transformToPDF() = 0;
-		virtual void transformToCDF() = 0;
-		virtual void append(const vector<double>& v) = 0;
-		virtual void push(const double& v) = 0;
-		virtual void clear() = 0; 
+		virtual ~SamplerDistribution() = default;
+		virtual vector<double> getSample(unsigned int nSamples) const {
+			return vector<double>();
+		}
+		virtual unsigned int getSize() const {
+			return 0;
+		}
+		virtual double getSample() const {
+			return 0;
+		}
+		virtual ref_ptr<Histogram1D> getDistribution() const {
+			return nullptr;
+		}
+		virtual double interpolateAt(const double &v) const {
+			return 0;
+		}
+		virtual void prepareCDF() {
+		}
+		virtual void append(const vector<double>& v) {
+		}
+		virtual void push(const double& v) {
+		}
+		virtual void clear() {
+		}
+		vector<double> getSamples(unsigned int nSamples) const {
+			vector<double> v;
+			for (size_t i = 0; i < nSamples; i++) {
+				double u = getSample();
+				v.push_back(u);
+			}
+			return v;
+		}
 };
 
 
@@ -162,13 +185,15 @@ class SamplerDistributionUniform : public SamplerDistribution {
 
 	public:
 		SamplerDistributionUniform(double vmin, double vmax, unsigned int nBins, string scale = "lin");
+		void initDistribution(double vmin, double vmax, unsigned int nBins, string scale = "lin");
 		void setSize(int size);
 		unsigned int getSize() const;
 		void setDistribution(ref_ptr<Histogram1D> dist);
+		double getSample() const;
 		ref_ptr<Histogram1D> getDistribution() const;
-		vector<double> getSample(unsigned int nSamples) const;
-		void transformToPDF();
-		void transformToCDF();
+		// vector<double> getSamples(unsigned int nSamples) const;
+		double interpolateAt(const double &v) const;
+		void prepareCDF();
 		void append(const vector<double>& v);
 		void push(const double& v);
 		void clear();
