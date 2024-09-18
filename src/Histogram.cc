@@ -206,50 +206,92 @@ double Histogram1D::interpolateAt(const double& v) const {
 	}
 }
 
-double Histogram1D::getSample() const {
+double Histogram1D::getSample(bool binned) const {
 	if (cdf.empty())
 		throw runtime_error("Cannot get sample: CDF is empty. Call prepareCDF() first.");
 
 	Random& random = Random::instance();
-	double r = random.rand();
 
-	auto it = std::lower_bound(cdf.begin(), cdf.end(), r);
-	size_t bin = std::distance(cdf.begin(), it) - 1;
+	if (binned) {
+		double r = random.rand();
 
-	size_t binL = bin;
-	size_t binU = bin + 1;
+		auto it = std::lower_bound(cdf.begin(), cdf.end(), r);
+		size_t bin = std::distance(cdf.begin(), it) - 1;
 
-	return random.randUniform(edges[binL], edges[binU]);
+		size_t binL = bin;
+		size_t binU = bin + 1;
+
+		return random.randUniform(edges[binL], edges[binU]);
+	} else {
+		double r = random.rand();
+		return interpolate(r, cdf, edges);
+	}
 }
 
-double Histogram1D::getSample(const double& xMin, const double& xMax) const {
-	double vMin = (xMin < edges.front()) ? edges.front() : xMin;
-	double vMax = (xMax > edges.back()) ? edges.back() : xMax;
-
-	size_t idxL = getBinIndex(vMin);
-	size_t idxU = getBinIndex(vMax) + 1;
-
-	// possible bugs in first/last bins!
-
-	Histogram1D* h = new Histogram1D(edges[idxL], edges[idxU], idxU - idxL, scale);
-	for (size_t i = idxL; i < idxU; ++i) {
-		size_t idx = i - idxL;
-		h->setBinContent(idx, contents[i]);
-	}
-	h->prepareCDF();
-
-	double r = h->getSample();
-	
+double Histogram1D::getSample(const double& xMin, const double& xMax, bool binned) const {
 	Random& random = crpropa::Random::instance();
-	if (idxL == 0 or idxU == getNumberOfBins()) {
-		if (r < vMin or r > edges[idxL]) 
-			return random.randUniform(edges[idxL], vMin);
-		if (r > vMax or r < edges[idxU])
-			return random.randUniform(vMax, edges[idxU]);
-	}
-	delete h;
 
-	return r;
+	if (binned) {
+		double vMin = (xMin < edges.front()) ? edges.front() : xMin;
+		double vMax = (xMax > edges.back()) ? edges.back() : xMax;
+
+		size_t idxL = getBinIndex(vMin);
+		size_t idxU = getBinIndex(vMax) + 1;
+
+		// possible bugs in first/last bins!
+
+		Histogram1D* h = new Histogram1D(edges[idxL], edges[idxU], idxU - idxL, scale);
+		for (size_t i = idxL; i < idxU; ++i) {
+			size_t idx = i - idxL;
+			h->setBinContent(idx, contents[i]);
+		}
+		h->prepareCDF();
+
+		double r = h->getSample();
+		
+		if (idxL == 0 or idxU == getNumberOfBins()) {
+			if (r < vMin or r > edges[idxL]) 
+				return random.randUniform(edges[idxL], vMin);
+			if (r > vMax or r < edges[idxU])
+				return random.randUniform(vMax, edges[idxU]);
+		}
+		delete h;
+
+		return r;
+	} else {
+		vector<double> x;
+		vector<double> y;
+
+		if (xMin < centres.front() or xMax > centres.back())
+			throw runtime_error("Cannot get sample via inversion. Range is out of bounds (considering the bin centres).");
+
+		x.push_back(xMin);
+		y.push_back(interpolate(xMin, centres, cdf));
+		for (size_t i = 0; i < getNumberOfBins(); i++) {
+			if (centres[i] > xMin and centres[i] < xMax) {
+				x.push_back(centres[i]);
+				y.push_back(cdf[i]);
+			}
+		}
+		x.push_back(xMax);
+		y.push_back(interpolate(xMax, centres, cdf));
+
+		double r = random.rand();
+
+		return interpolate(r, y, x);
+	}
+}
+
+double Histogram1D::getSample(const std::pair<double, double>& range, bool binned) const {
+	return getSample(range.first, range.second, binned);
+}
+
+double Histogram1D::leftEdge() const {
+	return edges.front();
+}
+
+double Histogram1D::rightEdge() const {
+	return edges.back();
 }
 
 void Histogram1D::clear() {

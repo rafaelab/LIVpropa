@@ -49,8 +49,11 @@ class Histogram1D : public Referenced {
 		double sum() const;
 		double integrate() const;
 		double interpolateAt(const double& v) const;
-		double getSample() const;
-		double getSample(const double& xMin, const double& xMax) const;
+		double getSample(bool binned = true) const;
+		double getSample(const double& xMin, const double& xMax, bool binned = true) const;
+		double getSample(const std::pair<double, double>& range, bool binned = true) const;
+		double leftEdge() const;
+		double rightEdge() const;
 		void clear();
 		void reset();
 		double operator[](const size_t& i) const;
