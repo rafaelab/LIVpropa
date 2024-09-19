@@ -30,6 +30,8 @@ class LorentzViolatingKinematics;
 class AbstractMonochromaticLorentzViolatingKinematics;
 template<int N> class MonochromaticLorentzViolatingKinematics;
 
+
+
 /**
  @class Kinematics
  @brief Class holding information about the kinematics at play.
@@ -58,15 +60,19 @@ class AbstractKinematics: public crpropa::Referenced {
 			return "AbstractKinematics";
 		};
 		double computeEnergyFromMomentum(const double& p, const int& id) const;
+		bool isLorentzInvariant() const;
+		bool isLorentzViolating() const;
 		bool isSpecialRelativistic() const;
 		bool isLorentzViolatingMonochromatic() const;
-		const SpecialRelativisticKinematics* toSpecialRelativisticKinematics() const;
-		const MonochromaticLorentzViolatingKinematics<0>* toMonochromaticLorentzViolatingKinematics0() const;
-		const MonochromaticLorentzViolatingKinematics<1>* toMonochromaticLorentzViolatingKinematics1() const;
-		const MonochromaticLorentzViolatingKinematics<2>* toMonochromaticLorentzViolatingKinematics2() const;
+		const SpecialRelativisticKinematics& toSpecialRelativisticKinematics() const;
+		const MonochromaticLorentzViolatingKinematics<0>& toMonochromaticLorentzViolatingKinematics0() const;
+		const MonochromaticLorentzViolatingKinematics<1>& toMonochromaticLorentzViolatingKinematics1() const;
+		const MonochromaticLorentzViolatingKinematics<2>& toMonochromaticLorentzViolatingKinematics2() const;
+		friend std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin);
 };
 
 using ParticleKinematicsMap = unordered_map<int, ref_ptr<AbstractKinematics>>;
+using ParticleKinematicsMapIterator = typename ParticleKinematicsMap::const_iterator;
 
 
 /**
@@ -124,6 +130,9 @@ class LorentzViolatingKinematics : public AbstractKinematics {
 
 	public:
 		virtual ~LorentzViolatingKinematics() = default;
+		virtual string getNameTag() const {
+			return "LorentzViolatingKinematics";
+		};
 		virtual string getIdentifier() const {
 			return "";
 		};
@@ -188,9 +197,6 @@ class MonochromaticLorentzViolatingKinematics : public AbstractMonochromaticLore
   Particles whose kinematics are not specified will be treated as special relativistic.
  */
 class Kinematics {
-	private:
-		using ParticleKinematicsIterator = typename ParticleKinematicsMap::const_iterator;
-
 	protected:
 		 ParticleKinematicsMap kinematics;
 
@@ -212,15 +218,8 @@ class Kinematics {
 		const ref_ptr<AbstractKinematics>& find(const int& id, bool showWarningInexistent = true) const;
 		const ref_ptr<AbstractKinematics>& operator[](const int& pId);
 		ref_ptr<AbstractKinematics> operator[](const int& pId) const;
+		friend std::ostream& operator<<(std::ostream& os, const Kinematics& kin);
 };
-
-
-
-/** 
-This function prints Kinematics-type objects in a nice way
-*/
-std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin);
-std::ostream& operator<<(std::ostream& os, const Kinematics& kin);
 
 
 
