@@ -226,48 +226,32 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	if (samplerDistribution == nullptr) {
 		double dE = dE0;
 		while (dE > 0) {
-			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
-
 			if (range.first < 0. or range.second < 0.) 
 				return;
 
-			// double x = random.randUniform(range.first, range.second);
-			double x = distribution->getSample(range, false);
-
-			// if (range.first == 0.)
-			// 	range.first = distribution->getEdgesOfBin(0).second;
-			// if (range.second == 1.)
-			// 	range.second = distribution->getEdgesOfBin(distribution->getNumberOfBins()).first;
-
-			// double x = distribution->getSample(range.first, range.second);
-			// if (x <= 0 or x >= 1) {
-			// 	return;
-			// 	// throw runtime_error("VacuumCherenkov: cannot compute the distribution of secondary photons (out of range).");
-			// }
-
-			// // correct approach? x as a fraction of the momentum?
-			// double pPhoton = x * p;
-			// double Ephoton = kinematicsPhoton->computeEnergyFromMomentum(pPhoton, 22);
-
+			double x = distribution->getSample(range);
 			double Ephoton = x * E;
-			// if (x < 1)
-			// cout << "Ephoton: " << Ephoton / eV << "  " << x << endl;
 
 			// if the energy drops below the threshold, then there is no emission
 			Ephoton = std::min(Ephoton, E - Ethr);
+
+
+			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 
 			candidate->addSecondary(22, Ephoton / (1 + z), pos);
 			dE -= Ephoton;
 		}
 
 	} else {
+		samplerDistribution->clear();
 		double dE = dE0;
 		while (dE > 0) {
-			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
+			if (range.first < 0. or range.second < 0.) 
+				return;
+
 			double x = distribution->getSample(range);
-			// double x = random.randUniform(range.first, range.second);
 			double Ephoton = x * E;
 
 			// if the energy drops below the threshold, then there is no emission
@@ -280,18 +264,20 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		samplerDistribution->prepareCDF();
 
 		std::vector<double> sampled = samplerDistribution->getSamples(maximumSamples);
-		double dEs = std::accumulate(sampled.begin(), sampled.end(), decltype(sampled)::value_type(0));
+		double dEs = std::accumulate(sampled.begin(), sampled.end(), 0.);
+
 		if (samplerDistribution->getSize() > 0) {
 			double w0 = dE0 / dEs;
 			for (size_t i = 0; i < sampled.size(); i++) {
 				Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 				double Es = sampled[i];
-				double wEvt = samplerEvents->computeWeight(id, Es, Es / E, i);
-				double wDis = samplerDistribution->interpolateAt(Es);
-				double w = w0 * wEvt * wDis;
+				double w = w0;
+				w *= samplerEvents->computeWeight(id, Es, Es / E, i);
+				w *= samplerDistribution->interpolateAt(Es);
 				candidate->addSecondary(22, Es, pos, w);
 			}
 		}
+
 		samplerDistribution->clear();
 	}
 }
@@ -488,7 +474,6 @@ ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const MonochromaticLorentzVi
 	for (size_t i = 0; i < dist->getNumberOfBins(); i++) {
 		double x = dist->getBinCentre(i);
 		P = 0;
-		// cout << chiOt << "  " << chiPh << "  " << x << "  " << P << " " << range.first << "  " << range.second << endl;
 		if (x >= range.first and x <= range.second) {
 			double x2 = x * x;
 			double x3 = x2 * x;
