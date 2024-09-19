@@ -125,6 +125,9 @@
 	(double* rangevec, int n)
 };
 
+%apply unsigned int &OUTPUT {
+	unsigned int&
+}; 
 
 /* Python slots */
 %feature("python:slot", "sq_length", functype = "lenfunc") __len__;
@@ -210,16 +213,17 @@ __STR_Histogram1D__(Histogram1D);
 
 %ignore operator livpropa::Sampler*;
 %ignore operator livpropa::SamplerList*;
+%ignore operator livpropa::SamplerDistribution*;
 
 /* To enable access to abstract base class Sampler */
-
 %implicitconv crpropa::ref_ptr<crpropa::SamplerEvents>;
-%feature("director") livpropa::SamplerEvents;
 %template(SamplerEventsRefPtr) crpropa::ref_ptr<livpropa::SamplerEvents>;
+%feature("director") livpropa::SamplerEvents;
 
 %implicitconv crpropa::ref_ptr<livpropa::SamplerDistribution>;
 %template(SamplerDistributionRefPtr) crpropa::ref_ptr<livpropa::SamplerDistribution>;
 %feature("director") livpropa::SamplerDistribution;
+
 
 
 /*************************************************************************************************/
@@ -235,7 +239,6 @@ __STR_Histogram1D__(Histogram1D);
 %implicitconv crpropa::ref_ptr<livpropa::AbstractKinematics>;
 %template(AbstractKinematicsRefPtr) crpropa::ref_ptr<livpropa::AbstractKinematics>;
 %feature("director") livpropa::AbstractKinematics;
-
 
 %template(MonochromaticLorentzViolatingKinematics0) livpropa::MonochromaticLorentzViolatingKinematics<0>;
 %template(MonochromaticLorentzViolatingKinematics1) livpropa::MonochromaticLorentzViolatingKinematics<1>;
@@ -294,14 +297,13 @@ __STR_Kinematics__(Kinematics);
 
 
 /* convert unordered_dict to Python dict */
-%typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>> (PyObject* obj) %{
+%typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>(PyObject* obj) %{
 	obj = PyDict_New();
 	for (const auto& n : $1) {
 		// convert int to Python integer
 		PyObject* pId = PyLong_FromLong(n.first); // Convert int to Python integer
 
 		// convert crpropa::ref_ptr<livpropa::AbstractKinematics> to Python object
-		// PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second), SWIGTYPE_p_crpropa__ref_ptrT_livpropa__AbstractKinematics_t, SWIG_POINTER_OWN);
 		PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second));
 
 		PyDict_SetItem(obj, pId, kin);
@@ -322,7 +324,6 @@ __STR_Kinematics__(Kinematics);
 %rename(VacuumCherenkovSpectrumFull) VacuumCherenkovSpectrum_Full;
 %rename(VacuumCherenkovSpectrumStep) VacuumCherenkovSpectrum_Step;
 %rename(VacuumCherenkovSpectrumAbsent) VacuumCherenkovSpectrum_Absent;
-
 
 
 /*************************************************************************************************/
