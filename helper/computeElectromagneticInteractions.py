@@ -144,16 +144,18 @@ if __name__ == "__main__":
 	pp = PairProduction()
 	ics = InverseComptonScattering()
 
-	interactions = [pp]
+	interactions = [ics]
 	fields = [
 		photonField.CMB(),
 		photonField.EBL_Gilmore12(),
 		# photonField.URB_Protheroe96() # breaking down (why?)
 	]
 	orders = [1, 2]
+	orders = [1]
 	chis = np.logspace(-10., 10., 21, endpoint = True)
 	chis = [1e-10, 1e-5, 1., 1e5]
-	
+	chis = [1e-1, -1e-1]
+
 	chisMix = [1e-3, 1e-2, 1e-1, 1., 1e1]
 
 	# define the range within which chi values for photons and electrons will be allowed to differ
@@ -219,5 +221,5 @@ if __name__ == "__main__":
 
 			## SR (for cross checks with CRPropa)
 			sr = SpecialRelativity()
-			print('  ===> SR')
+			print('   ===> SR')
 			process(interaction, field, sr)
