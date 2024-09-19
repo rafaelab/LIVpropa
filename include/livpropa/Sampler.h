@@ -110,7 +110,7 @@ class SamplerEventsEnergyFraction: public SamplerEventsEnergyFractionPowerLaw {
 class SamplerEventsNull : public SamplerEvents {
 	public:
 		SamplerEventsNull();
-		double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const;
+		double computeWeight(int id, double energy = 0, double energyFraction = 0, unsigned int counter = 0) const override;
 };
 
 
@@ -191,7 +191,6 @@ class SamplerDistributionUniform : public SamplerDistribution {
 		void setDistribution(ref_ptr<Histogram1D> dist);
 		double getSample() const;
 		ref_ptr<Histogram1D> getDistribution() const;
-		// vector<double> getSamples(unsigned int nSamples) const;
 		double interpolateAt(const double &v) const;
 		void prepareCDF();
 		void append(const vector<double>& v);
