@@ -3,6 +3,8 @@
 
 #include <cstring>
 #include <fstream>
+#include <iostream>
+#include <string>
 
 #include <kiss/path.h>
 #include <kiss/logger.h>

@@ -2,7 +2,13 @@
 #define LIVPROPA_COMMON_H
 
 #include <complex>
+#include <cstring>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <crpropa/Candidate.h>
 #include <crpropa/Common.h>
