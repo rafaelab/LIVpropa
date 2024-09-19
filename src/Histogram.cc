@@ -389,7 +389,7 @@ std::ostream& operator<<(std::ostream& os, const Histogram1D& h) {
 	os << "Histogram1D: " << endl;
 	os << "  . scale: " << h.getScale() << endl;
 	os << "  . number of bins: " << h.getNumberOfBins() << endl;
-	os << "  . bin edges: " << h.getBinEdges().front() << ", " << h.getBinEdges().back() << endl;
+	os << "  . bin edges: " << h.leftEdge() << ", " << h.rightEdge() << endl;
 	return os;
 }
 
