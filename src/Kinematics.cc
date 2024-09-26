@@ -169,16 +169,15 @@ double LorentzViolatingKinematics::selectFinalMomentumAverage(const vector<doubl
 double LorentzViolatingKinematics::selectFinalMomentumClosest(const vector<double>& ps, const double& E, const int& id) {
 	SpecialRelativisticKinematics* sr = new SpecialRelativisticKinematics();
 	double p0 = sr->computeMomentumFromEnergy(E, id);
-	
+	delete sr;
+
 	vector<double> dps;
 	for (auto& p : ps) {
 		if (p > 0)
 			dps.push_back(p - p0);
 	}
 
-	vector<double>::iterator idx = std::min_element(dps.begin(), dps.end());
-
-	return dps[*idx];
+	return *std::min_element(dps.begin(), dps.end());
 }
 
 
@@ -347,15 +346,16 @@ template<>
 double MonochromaticLorentzViolatingKinematics<2>::computeMomentumFromEnergy(const double& E, const int& id) const {
 	double m = particleMasses.at(id);
 	double chi = coefficient;
-	complex<double> e = energy_planck * sqrt(4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck)));
-		
+	complex<double> delta = 4 * chi * (E * E - pow_integer<2>(m * c_squared) + pow_integer<2>(energy_planck));
+	complex<double> e = energy_planck * sqrt(delta);
+
 	// only two out of the fours solutions lead to positive momenta
 	complex<double> sol1 = sqrt((- pow_integer<2>(energy_planck) - energy_planck * e) / chi / 2.);
 	complex<double> sol2 = sqrt((- pow_integer<2>(energy_planck) + energy_planck * e) / chi / 2.);
 
 	double sol1Re = sol1.real();
 	double sol2Re = sol2.real();
-	
+
 	vector<double> ps;
 	if (sol1Re > 0)
 		ps.push_back(sol1Re);
