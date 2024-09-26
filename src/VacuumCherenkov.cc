@@ -212,16 +212,21 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	Random &random = Random::instance();
 	int id = candidate->current.getId();
 	double z = candidate->getRedshift();
-	double E = candidate->current.getEnergy() * (1 + z);
-	double p = kinematicsParticle->computeMomentumFromEnergy(E, id);
 	double step = candidate->getCurrentStep() / (1 + z);
+	double E = candidate->current.getEnergy() * (1 + z);
+
+	double p = kinematicsParticle->computeMomentumFromEnergy(E, id);
+	if (p <= 0)
+		return;
+
+
 
 	double rate = computeInteractionRate(E);
 	if (rate <= 0)
 		return;
 
 	double dE0 = E - Ethr; 
-
+	candidate->current.setEnergy((E - dE0) / (1 + z));
 
 	if (samplerDistribution == nullptr) {
 		double dE = dE0;
@@ -231,35 +236,50 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 				return;
 
 			double x = distribution->getSample(range);
+			if (x <= 0 or x >= 1)
+				return;
 			double Ephoton = x * E;
 
 			// if the energy drops below the threshold, then there is no emission
-			Ephoton = std::min(Ephoton, E - Ethr);
+			if (Ephoton > dE0)
+				Ephoton = E - Ethr;
 
 
 			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 
 			candidate->addSecondary(22, Ephoton / (1 + z), pos);
+
+			if (Ephoton > dE0)
+				return;
+
 			dE -= Ephoton;
 		}
 
 	} else {
 		samplerDistribution->clear();
-		double dE = dE0;
-		while (dE > 0) {
+		int j = 0;
+		double Esampled = 0;
+		while (j < maximumSamples) {
 			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
 			if (range.first < 0. or range.second < 0.) 
 				return;
 
 			double x = distribution->getSample(range);
+			if (x <= 0 or x >= 1)
+				return;
 			double Ephoton = x * E;
 
 			// if the energy drops below the threshold, then there is no emission
-			Ephoton = std::min(Ephoton, E - Ethr);
+			if (Ephoton < dE0) 
+				Ephoton = E - Ethr;
 
 			samplerDistribution->push(Ephoton);
+			Esampled += Ephoton;
 
-			dE -= Ephoton;
+			if (Ephoton > dE0)
+				return;
+
+			j++;
 		}
 		samplerDistribution->prepareCDF();
 
