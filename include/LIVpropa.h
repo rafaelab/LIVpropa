@@ -5,7 +5,6 @@
 #include "livpropa/Common.h"
 #include "livpropa/UnitsAndConstants.h"
 #include "livpropa/Histogram.h"
-#include "livpropa/Sampler.h"
 #include "livpropa/Data.h"
 #include "livpropa/Kinematics.h"
 #include "livpropa/InverseComptonScattering.h"

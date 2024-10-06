@@ -177,7 +177,6 @@
 %include "livpropa/Data.h"
 %include "livpropa/UnitsAndConstants.h"
 %include "livpropa/Histogram.h"
-%include "livpropa/Sampler.h"
 %include "livpropa/Kinematics.h"
 %include "livpropa/InverseComptonScattering.h"
 %include "livpropa/PairProduction.h"
@@ -204,25 +203,6 @@
 }
 %enddef
 __STR_Histogram1D__(Histogram1D);
-
-
-
-/*************************************************************************************************/
-/**                                		Samplers	                               				**/
-/*************************************************************************************************/
-
-%ignore operator livpropa::Sampler*;
-%ignore operator livpropa::SamplerList*;
-%ignore operator livpropa::SamplerDistribution*;
-
-/* To enable access to abstract base class Sampler */
-%implicitconv crpropa::ref_ptr<crpropa::SamplerEvents>;
-%template(SamplerEventsRefPtr) crpropa::ref_ptr<livpropa::SamplerEvents>;
-%feature("director") livpropa::SamplerEvents;
-
-%implicitconv crpropa::ref_ptr<livpropa::SamplerDistribution>;
-%template(SamplerDistributionRefPtr) crpropa::ref_ptr<livpropa::SamplerDistribution>;
-%feature("director") livpropa::SamplerDistribution;
 
 
 
