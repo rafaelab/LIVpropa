@@ -12,7 +12,6 @@
 #include "livpropa/Data.h"
 #include "livpropa/Histogram.h"
 #include "livpropa/Kinematics.h"
-#include "livpropa/Sampler.h"
 #include "livpropa/UnitsAndConstants.h"
 
 
@@ -58,16 +57,12 @@ class VacuumCherenkov: public Module {
 		VacuumCherenkovSpectrum spectrum;
 		ref_ptr<AbstractKinematics> kinematicsPhoton;
 		ref_ptr<AbstractKinematics> kinematicsParticle;
-		ref_ptr<SamplerEvents> samplerEvents;
-		ref_ptr<SamplerDistribution> samplerDistribution;
 		ref_ptr<Histogram1D> distribution;
-		int maximumSamples;
-		
 
 	public:
-		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 10, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 10, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, ref_ptr<SamplerEvents> samplerEvents = nullptr, ref_ptr<SamplerDistribution> samplerDistribution = nullptr, int maximumSamples = 10, double limit = 0.1);
+		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<AbstractKinematics> kin);
 		void setKinematicsPhoton(ref_ptr<AbstractKinematics> kin);
@@ -75,9 +70,6 @@ class VacuumCherenkov: public Module {
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
 		void setSpectrum(VacuumCherenkovSpectrum spec);
-		void setSamplerEvents(ref_ptr<SamplerEvents> sampler);
-		void setSamplerDistribution(ref_ptr<SamplerDistribution> sampler);
-		void setMaximumSamples(int nSamples);
 		int getParticle() const;
 		string getInteractionTag() const;
 		ref_ptr<Histogram1D> getDistribution() const;

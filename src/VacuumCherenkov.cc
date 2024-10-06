@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec, bool havePhotons, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec, bool havePhotons, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -24,14 +24,9 @@ VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum
 	}
 
 	setSpectrum(spec);
-
-	setSamplerEvents(samplerEvents);
-	setSamplerDistribution(samplerDistribution);
-	setMaximumSamples(maxSamples);
-
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -39,12 +34,9 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_
 	setKinematicsPhoton(kinPh);
 	setKinematicsParticle(kinOt);
 	setSpectrum(spec);
-	setSamplerEvents(samplerEvents);
-	setSamplerDistribution(samplerDistribution);
-	setMaximumSamples(maxSamples);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, ref_ptr<SamplerEvents> samplerEvents, ref_ptr<SamplerDistribution> samplerDistribution, int maxSamples, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -52,9 +44,6 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, Vacuum
 	setKinematicsPhoton(kin);
 	setKinematicsParticle(kin);
 	setSpectrum(spec);
-	setSamplerEvents(samplerEvents);
-	setSamplerDistribution(samplerDistribution);
-	setMaximumSamples(maxSamples);
 }
 
 void VacuumCherenkov::setParticle(int id) {
@@ -111,21 +100,6 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec) {
 	}
 }
 
-void VacuumCherenkov::setSamplerEvents(ref_ptr<SamplerEvents> s) {
-	if (s == nullptr)
-		samplerEvents = new SamplerEventsNull();
-	else
-		samplerEvents = s;
-}
-
-void VacuumCherenkov::setSamplerDistribution(ref_ptr<SamplerDistribution> s) {
-	samplerDistribution = s;
-}
-
-void VacuumCherenkov::setMaximumSamples(int nSamples) {
-	maximumSamples = nSamples;
-}
-
 int VacuumCherenkov::getParticle() const {
 	return particleId;
 }
@@ -171,7 +145,7 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 
 	// compute threshold energy; emit photon only if E > Ethr
 	double Ethr = computeThresholdEnergy() * (1 + z);
-	if (E < Ethr)
+	if (E < Ethr or isnan(Ethr) or isinf(Ethr))
 		return;
 		
 	if (havePhotons) {
@@ -219,87 +193,29 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	if (p <= 0)
 		return;
 
-
-
 	double rate = computeInteractionRate(E);
 	if (rate <= 0)
 		return;
 
-	double dE0 = E - Ethr; 
-	candidate->current.setEnergy((E - dE0) / (1 + z));
+	double Ee = E;
+	do {
+		std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
+		if (range.first < 0. or range.second < 0.) 
+			return;
 
-	if (samplerDistribution == nullptr) {
-		double dE = dE0;
-		while (dE > 0) {
-			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
-			if (range.first < 0. or range.second < 0.) 
-				return;
+		double x = distribution->getSample(range);
+		if (x <= 0 or x >= 1)
+			return;
+		double Ephoton = x * Ee;
 
-			double x = distribution->getSample(range);
-			if (x <= 0 or x >= 1)
-				return;
-			double Ephoton = x * E;
+		Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 
-			// if the energy drops below the threshold, then there is no emission
-			if (Ephoton > dE0)
-				Ephoton = E - Ethr;
+		candidate->addSecondary(22, Ephoton / (1 + z), pos);
 
+		Ee -= Ephoton;
+	} while (Ee > Ethr);
 
-			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-
-			candidate->addSecondary(22, Ephoton / (1 + z), pos);
-
-			if (Ephoton > dE0)
-				return;
-
-			dE -= Ephoton;
-		}
-
-	} else {
-		samplerDistribution->clear();
-		int j = 0;
-		double Esampled = 0;
-		while (j < maximumSamples) {
-			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
-			if (range.first < 0. or range.second < 0.) 
-				return;
-
-			double x = distribution->getSample(range);
-			if (x <= 0 or x >= 1)
-				return;
-			double Ephoton = x * E;
-
-			// if the energy drops below the threshold, then there is no emission
-			if (Ephoton < dE0) 
-				Ephoton = E - Ethr;
-
-			samplerDistribution->push(Ephoton);
-			Esampled += Ephoton;
-
-			if (Ephoton > dE0)
-				return;
-
-			j++;
-		}
-		samplerDistribution->prepareCDF();
-
-		std::vector<double> sampled = samplerDistribution->getSamples(maximumSamples);
-		double dEs = std::accumulate(sampled.begin(), sampled.end(), 0.);
-
-		if (samplerDistribution->getSize() > 0) {
-			double w0 = dE0 / dEs;
-			for (size_t i = 0; i < sampled.size(); i++) {
-				Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-				double Es = sampled[i];
-				double w = w0;
-				w *= samplerEvents->computeWeight(id, Es, Es / E, i);
-				w *= samplerDistribution->interpolateAt(Es);
-				candidate->addSecondary(22, Es, pos, w);
-			}
-		}
-
-		samplerDistribution->clear();
-	}
+	candidate->current.setEnergy(Ee / (1 + z));
 }
 
 VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const ref_ptr<AbstractKinematics>& kin) {
