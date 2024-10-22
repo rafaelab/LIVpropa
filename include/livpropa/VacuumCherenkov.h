@@ -45,7 +45,7 @@ enum class VacuumCherenkovSpectrum {
 */
 class VacuumCherenkov: public Module {
 	private:
-		static constexpr double _defaultInteractionRate = 0;//std::numeric_limits<double>::infinity();
+		static constexpr double _defaultInteractionRate = 0;
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
 
 	protected:
