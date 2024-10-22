@@ -5,10 +5,12 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec, bool havePhotons, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
+	setAngularCorrection(angularCorrection);
+	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
 
 	if (not kin.exists(id)) {
@@ -26,20 +28,24 @@ VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum
 	setSpectrum(spec);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
+	setAngularCorrection(angularCorrection);
+	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
 	setKinematicsPhoton(kinPh);
 	setKinematicsParticle(kinOt);
 	setSpectrum(spec);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
+	setAngularCorrection(angularCorrection);
+	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
 	setKinematicsPhoton(kin);
 	setKinematicsParticle(kin);
@@ -63,6 +69,14 @@ void VacuumCherenkov::setKinematicsParticle(ref_ptr<AbstractKinematics> kin) {
 
 void VacuumCherenkov::setHavePhotons(bool photons) {
 	havePhotons = photons;
+}
+
+void VacuumCherenkov::setAngularCorrection(bool correction) {
+	angularCorrection = correction;
+}
+
+void VacuumCherenkov::setContinuousEnergyLoss(bool loss) {
+	continuousEnergyLoss = loss;
 }
 
 void VacuumCherenkov::setLimit(double l) {

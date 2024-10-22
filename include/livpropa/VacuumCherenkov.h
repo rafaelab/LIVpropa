@@ -49,9 +49,11 @@ class VacuumCherenkov: public Module {
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
 
 	protected:
-		int particleId;
 		string interactionTag;
+		int particleId;
 		bool havePhotons;
+		bool angularCorrection;
+		bool continuousEnergyLoss;
 		double limit;
 		double thinning;
 		VacuumCherenkovSpectrum spectrum;
@@ -60,12 +62,14 @@ class VacuumCherenkov: public Module {
 		ref_ptr<Histogram1D> distribution;
 
 	public:
-		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, double limit = 0.1);
+		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<AbstractKinematics> kin);
 		void setKinematicsPhoton(ref_ptr<AbstractKinematics> kin);
+		void setAngularCorrection(bool correction);
+		void setContinuousEnergyLoss(bool loss);
 		void setHavePhotons(bool photons);
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
