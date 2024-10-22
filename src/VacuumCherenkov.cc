@@ -205,30 +205,49 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	if (p <= 0)
 		return;
 
-	double rate = computeInteractionRate(E);
-	if (rate <= 0)
-		return;
-
 	std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
 	if (range.first < 0. or range.second < 0.) 
 		return;
 
-	double Ee = E;
-	do {
-		double x = distribution->getSample(range);
-		if (x <= 0 or x >= 1)
+	// Two implementations: continunous energy loss and instantaneous energy loss (the latter is faster)
+	if (continuousEnergyLoss) {
+		double rate = computeInteractionRate(E);
+		if (rate <= 0)
 			return;
 
-		Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+		double lossLength = c_light / rate;
+		double loss = step / lossLength; // relative energy loss
+		double dE = E * loss;
+		do {
+			double x = distribution->getSample(range);
+			if (x <= 0 or x >= 1)
+				return;
 
-		double Ephoton = x * Ee;
+			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+			double Ephoton = x * E;
+			candidate->addSecondary(22, Ephoton / (1 + z), pos);
 
-		candidate->addSecondary(22, Ephoton / (1 + z), pos);
+			dE -= Ephoton;
+		} while (dE > 0);
 
-		Ee -= Ephoton;
-	} while (Ee > Ethr);
+		candidate->current.setEnergy((E - dE) / (1 + z));
 
-	candidate->current.setEnergy(Ee / (1 + z));
+	} else {
+		double Ee = E;
+		do {
+			double x = distribution->getSample(range);
+			if (x <= 0 or x >= 1)
+				return;
+
+			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+			double Ephoton = x * Ee;
+			candidate->addSecondary(22, Ephoton / (1 + z), pos);
+
+			Ee -= Ephoton;
+		} while (Ee > Ethr);
+
+		candidate->current.setEnergy(Ee / (1 + z));
+	}
 }
 
 VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const ref_ptr<AbstractKinematics>& kin) {
