@@ -92,14 +92,11 @@ class VacuumCherenkov: public Module {
 		template<> static double interactionRate(const double& p, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh);
 		template<> static double interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
 		template<> static double interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
-		// // template<class KO, class KP> double differentialInteractionRate(const double& p, const KO& kinOt, const KP& kinPh);
-		// // template<> double differentialInteractionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
 		template<class KO, class KP> static std::pair<double, double> xRange(const KO& kinOt, const KP& kinPh); 
 		template<> std::pair<double, double> xRange(const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh);
 		template<> static std::pair<double, double> xRange(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
-		// template<class KO, class KP> static double differentialProbability(const double& x, const KO& kinOt, const KP& kinPh);
-		// template<> static double differentialProbability(const double& x, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
-		// template<> static double differentialProbability(const double& x, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const SpecialRelativisticKinematics& kinPh);
+		static double _Gp(const double& chiOt, const double& chiPh);
+		static double _Gm(const double& chiOt, const double& chiPh);
 };
 /** @}*/
 
@@ -108,46 +105,6 @@ constexpr VacuumCherenkovSpectrum VacuumCherenkovSpectrumDefault = VacuumCherenk
 constexpr VacuumCherenkovSpectrum VacuumCherenkovSpectrumStep = VacuumCherenkovSpectrum::Step;
 constexpr VacuumCherenkovSpectrum VacuumCherenkovSpectrumFull = VacuumCherenkovSpectrum::Full;
 
-
-
-
-// namespace vc::monoLIV0 {
-// 	double computeThresholdMomentum(const double& chiOt, const double& chiPh, const double& mass);
-// } // namespace vc::monoLIV0
-
-// namespace vc::monoLIV1 {
-// 	double computeThresholdMomentum(const double& chiOt, const double& chiPh, const double& mass);
-// } // namespace vc::monoLIV1
-
-// namespace vc::monoLIV2 {
-
-// 	double _S(const double& chiOt, const double& chiPh);
-
-// 	double _tau(const double& chiOt, const double& chiPh); 
-
-// 	double _F(const double& chiOt, const double& chiPh);
-
-// 	double _G(const double& chiOt, const double& chiPh, const double& sign);
-
-// 	double _x(const double& chiOt, const double& chiPh, const double& sign);
-
-// 	double _rateQ(const double& p);
-
-// 	double _rate1(const double& p, const double& chiOt, const double& chiPh);
-
-// 	double _rate2(const double& p, const double& chiOt, const double& chiPh);
-
-// 	double _rate3(const double& p, const double& chiOt, const double& chiPh);
-
-// 	double computeSpectrum(const double& x, const double& chiOt, const double& chiPh);
-
-// 	void loadSpectrumDistribution(Histogram1D& distribution, const double& chiOt, const double& chiPh); 
-
-// 	double computeThresholdMomentum(const double& chiOt, const double& chiPh, const double& mass);
-
-// 	double computeInteractionRate(const double& p, const double& chiOt, const double& chiPh);
-
-// } // namespace vc::monoLIV2
 
 
 } // namespace livpropa
