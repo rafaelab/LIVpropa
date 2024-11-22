@@ -47,6 +47,13 @@ using crpropa::interpolate;
 using crpropa::closestIndex;
 
 
+
+inline double logBase(double x, double b) {
+    return log(x) / log(b);
+}
+
+
+
 } // livpropa
 
 
