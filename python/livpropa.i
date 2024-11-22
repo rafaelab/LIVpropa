@@ -177,6 +177,7 @@
 %include "livpropa/Data.h"
 %include "livpropa/UnitsAndConstants.h"
 %include "livpropa/Histogram.h"
+%include "livpropa/Sampler.h"
 %include "livpropa/Kinematics.h"
 %include "livpropa/InverseComptonScattering.h"
 %include "livpropa/PairProduction.h"
@@ -203,6 +204,35 @@
 }
 %enddef
 __STR_Histogram1D__(Histogram1D);
+
+
+/* Rename automatically generate enum class */
+%rename(LogBase_e) livpropa::LogBase_e;
+%rename(LogBase_2) livpropa::LogBase_two;
+%rename(LogBase_10) livpropa::LogBase_ten;
+
+
+// %template(HistogramLinear1D) livpropa::Histogram1<livpropa::BinLinear1>;
+// %template(HistogramLogarithmic1D) livpropa::Histogram1<livpropa::BinLogarithmic1>;
+
+
+// %template(HistogramLinear1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1<livpropa::BinLinear1>>;
+// %template(HistogramLogarithmic1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1<livpropa::BinLogarithmic1>>;
+
+// %feature("director") livpropa::Histogram1;
+
+
+/*************************************************************************************************/
+/**	                           			 Samplers  			                                    **/
+/*************************************************************************************************/
+
+
+// /* To enable access to abstract base class  */
+// %implicitconv crpropa::ref_ptr<livpropa::Sampler>;
+// %ignore operator livpropa::Sampler*;
+
+%template(SamplerRefPtr) crpropa::ref_ptr<livpropa::Sampler>;
+%feature("director") livpropa::Sampler;
 
 
 
