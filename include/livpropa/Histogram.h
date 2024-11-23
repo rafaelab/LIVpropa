@@ -9,12 +9,13 @@
 
 #include "livpropa/Common.h"
 
+
+
 namespace livpropa {
 
-
 /**
-  @class AbstractBin1D
-  @brief Abstract class for a 1D bin.
+ @class AbstractBin1D
+ @brief Abstract class for a 1D bin.
  */
 class AbstractBin1D: public Referenced {
 	protected:
@@ -35,8 +36,8 @@ class AbstractBin1D: public Referenced {
 };
 
 /**
-  @class Bin1DLin
-  @brief Linear 1D bin.
+ @class Bin1DLin
+ @brief Linear 1D bin.
 */
 class Bin1DLin : public AbstractBin1D {
 	public:
@@ -48,9 +49,9 @@ class Bin1DLin : public AbstractBin1D {
 
 
 /**
-  @class LogBase
-  @brief Enumeration for the base of the logarithm.
-  This class is only implemented to be used later as a template parameter.
+ @class LogBase
+ @brief Enumeration for the base of the logarithm.
+ This class is only implemented to be used later as a template parameter.
  */
 enum class LogBase {
 	e,
@@ -70,9 +71,9 @@ inline double getLogBase(const LogBase& b) {
 }
 
 /**
-  @class Bin1DLog
-  @brief Logarithmic 1D bin.
-  The base of the logarithm is given as a template parameter.
+ @class Bin1DLog
+ @brief Logarithmic 1D bin.
+ The base of the logarithm is given as a template parameter.
  */
 template<LogBase B>
 class Bin1DLog : public AbstractBin1D {
@@ -97,10 +98,10 @@ typedef Bin1DLog<LogBase::e> Bin1DLogE;
 
 
 /**
-  @class AbstractHistogram1D
-  @brief Abstract class for a 1D histogram.
-  This class is meant to be used as a base class for specific implementations of 1D histograms.
-  Nevertheless, it already provides most functionalities that are common to all 1D histograms.
+ @class AbstractHistogram1D
+ @brief Abstract class for a 1D histogram.
+ This class is meant to be used as a base class for specific implementations of 1D histograms.
+ Nevertheless, it already provides most functionalities that are common to all 1D histograms.
  */
 class AbstractHistogram1D : public Referenced {
 	public:
@@ -139,10 +140,10 @@ class AbstractHistogram1D : public Referenced {
 };
 
 /**
-  @class Histogram1
-  @brief 1D histogram.
-  This class is a template class that can be instantiated with different types of bins.
-  It is meant to be used as a concrete implementation of a 1D histogram.
+ @class Histogram1
+ @brief 1D histogram.
+ This class is a template class that can be instantiated with different types of bins.
+ It is meant to be used as a concrete implementation of a 1D histogram.
  */
 template<class B>
 class Histogram1 : public AbstractHistogram1D {
@@ -166,5 +167,7 @@ typedef Histogram1<Bin1DLog10> Histogram1DLog10;
 
 
 } // namespace livpropa
+
+
 
 #endif // LIVPROPA_HISTOGRAM_H
