@@ -2,6 +2,7 @@
 #define LIVPROPA_HISTOGRAM_H
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <numeric>
 #include <string>
@@ -35,7 +36,10 @@ class Bin1D: public Referenced {
 		double getCentre() const;
 		double getWidth() const;
 		bool isInBin(const double& v) const;
+		double randUniform(Random& random = Random::instance()) const;
 		virtual double rand(Random& random = Random::instance()) const = 0;
+		virtual double directTransformation(const double& v) const = 0;
+		virtual double inverseTransformation(const double& v) const = 0;
 };
 
 /**
@@ -46,6 +50,8 @@ class Bin1DLin : public Bin1D {
 	public:
 		Bin1DLin(double l, double r);
 		double rand(Random& random = Random::instance()) const;
+		double directTransformation(const double& v) const;
+		double inverseTransformation(const double& v) const;
 };
 
 
@@ -72,6 +78,8 @@ class Bin1DLog : public Bin1D {
 		Bin1DLog(double l, double r);
 		double getBase() const;
 		double rand(Random& random = Random::instance()) const;
+		double directTransformation(const double& v) const;
+		double inverseTransformation(const double& v) const;
 };
 
 typedef Bin1DLog<LogBase::ten> Bin1DLog10;
@@ -99,16 +107,17 @@ class Histogram1D : public Referenced {
 
 	public:
 		virtual ~Histogram1D() = default;
+		void setBinContent(const size_t& idx, const double& value);
+		void setBinContents(const std::vector<double>& values);
 		bool isInRange(const double& v) const;
-		size_t getBinIndex(const double& v) const;
 		unsigned int getNumberOfBins() const;
 		double leftEdge() const;
 		double rightEdge() const;
 		Bin getBin(const size_t& i) const;
-		void setBinContent(const size_t& idx, const double& value);
-		void setBinContents(const std::vector<double>& values);
+		size_t getBinIndex(const double& v) const;
 		double getBinContent(const size_t& i) const;
 		double getBinCentre(const size_t& i) const;
+		double getBinWidth(const size_t& i) const;
 		vector<double> getBinEdges() const;
 		vector<double> getBinCentres() const;
 		vector<double> getBinContents() const;
@@ -118,7 +127,7 @@ class Histogram1D : public Referenced {
 		double sum() const;
 		double integrate() const;
 		double operator[](const size_t& i) const;
-		// virtual double interpolateAt(const double& v) const = 0;
+		virtual double interpolateAt(const double& v) const = 0;
 		void reset();
 		void clear();
 };
@@ -141,8 +150,9 @@ class Histogram1 : public Histogram1D {
 		Histogram1(Histogram1<B>&& h) noexcept;
 		~Histogram1();
 		void setBins(vector<Bin> bins);
-		bool isInRange(const double& v) const;
-		// double interpolateAt(const double& v) const = 0;
+		double directTransformation(const double& v) const;
+		double inverseTransformation(const double& v) const;
+		double interpolateAt(const double& v) const;
 };
 
 typedef Histogram1<Bin1DLin> Histogram1DLin;

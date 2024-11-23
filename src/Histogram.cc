@@ -38,6 +38,11 @@ bool Bin1D::isInBin(const double& v) const {
 	return v >= left and v < right;
 }
 
+double Bin1D::randUniform(Random& random) const {
+	return random.randUniform(left, right);
+}
+
+
 
 Bin1DLin::Bin1DLin(double l, double r) {
 	setEdges(l, r);
@@ -47,6 +52,16 @@ Bin1DLin::Bin1DLin(double l, double r) {
 double Bin1DLin::rand(Random& random) const {
 	return random.randUniform(getLeftEdge(), getRightEdge());
 }
+
+double Bin1DLin::directTransformation(const double& v) const {
+	return v;
+}
+
+double Bin1DLin::inverseTransformation(const double& v) const {
+	return v;
+}
+
+
 
 template<LogBase B>
 Bin1DLog<B>::Bin1DLog(double l, double r) {
@@ -70,7 +85,23 @@ double Bin1DLog<B>::getBase() const {
 
 template<LogBase B>
 double Bin1DLog<B>::rand(Random& random) const {
-	return random.randUniform(getLeftEdge(), getRightEdge());
+	double base = getBase();
+	double vMin = logBase(getLeftEdge(), base);
+	double vMax = logBase(getRightEdge(), base);
+	
+	double r = random.randUniform(vMin, vMax);
+
+	return pow(base, r);
+}
+
+template<LogBase B>
+double Bin1DLog<B>::directTransformation(const double& v) const {
+	return logBase(v, getBase());
+}
+
+template<LogBase B>
+double Bin1DLog<B>::inverseTransformation(const double& v) const {
+	return pow(getBase(), v);
 }
 
 
@@ -81,18 +112,6 @@ bool Histogram1D::isInRange(const double& v) const {
 		return true;
 
 	return false;
-}
-
-size_t Histogram1D::getBinIndex(const double& v) const {
-	if (! isInRange(v))
-		return -1;
-
-	for (size_t i = 0; i < nBins; i++) {
-		if (bins[i]->isInBin(v))
-			return i;
-	}
-
-	return -1;
 }
 
 unsigned int Histogram1D::getNumberOfBins() const {
@@ -107,8 +126,31 @@ double Histogram1D::rightEdge() const {
 	return bins[nBins - 1]->getRightEdge();
 }
 
+void Histogram1D::setBinContent(const size_t& idx, const double& value) {
+	contents[idx] = value;
+}
+
+void Histogram1D::setBinContents(const vector<double>& values) {
+	if (values.size() != nBins)
+		throw std::runtime_error("Number of values must match number of bins.");
+
+	contents = values;
+}
+
 Histogram1D::Bin Histogram1D::getBin(const size_t& i) const {
 	return bins[i];
+}
+
+size_t Histogram1D::getBinIndex(const double& v) const {
+	if (! isInRange(v))
+		return -1;
+
+	for (size_t i = 0; i < nBins; i++) {
+		if (bins[i]->isInBin(v))
+			return i;
+	}
+
+	return -1;
 }
 
 double Histogram1D::getBinContent(const size_t& i) const {
@@ -117,6 +159,10 @@ double Histogram1D::getBinContent(const size_t& i) const {
 
 double Histogram1D::getBinCentre(const size_t& i) const {
 	return bins[i]->getCentre();
+}
+
+double Histogram1D::getBinWidth(const size_t& i) const {
+	return bins[i]->getWidth();
 }
 
 vector<double> Histogram1D::getBinEdges() const {
@@ -159,17 +205,6 @@ void Histogram1D::fill(const vector<double>& v, const vector<double>& w) {
 		for (size_t i = 0; i < v.size(); i++)
 			push(v[i], w[i]);
 	}
-}
-
-void Histogram1D::setBinContent(const size_t& idx, const double& value) {
-	contents[idx] = value;
-}
-
-void Histogram1D::setBinContents(const vector<double>& values) {
-	if (values.size() != nBins)
-		throw std::runtime_error("Number of values must match number of bins.");
-
-	contents = values;
 }
 
 void Histogram1D::normalise(double norm) {
@@ -283,18 +318,58 @@ void Histogram1<B>::setBins(vector<Bin> b) {
 	contents.resize(nBins, 0.);
 }
 
-// template<>
-// double Histogram1<Bin1DLin>::interpolateAt(const double& v) const {
-// 	Random& random = Random::instance();
+template<class B>
+double Histogram1<B>::directTransformation(const double& v) const {
+	return bins[0]->directTransformation(v);
+}
 
-// 	size_t i = getBinIndex(v);
+template<class B>
+double Histogram1<B>::inverseTransformation(const double& v) const {
+	return bins[0]->inverseTransformation(v);
+}
 
-// 	if (binned) {
-// 		size_t idx = random.randBin(v) + 1;
-// 		return random.randUniform();
-// 	}
+template<class B>
+double Histogram1<B>::interpolateAt(const double& x0) const {
+	if (! isInRange(x0)) {
+		cout << "Value out of range for interpolation. Returning NaN." << endl;
+		return std::nan("");
+	}
 
-// }
+	vector<double> x;
+	vector<double> y;
+
+	size_t idx = getBinIndex(x0);
+
+	// value is in the first bin, within the histogram range, but below the first bin centre
+	if (x0 < bins[0]->getCentre()) {
+		for (size_t i = 1; i < 3; i++) {
+			x[i] = directTransformation(bins[i]->getCentre());
+			y[i] = contents[i];
+		}
+		x[0] = directTransformation(bins[0]->getLeftEdge());
+		y[0] = twoPointExtrapolation(x[0], x[1], y[1], x[2], y[2]);
+
+	// value is in the last bin, within the histogram range, but above the last bin centre
+	} else if (x0 >= bins[nBins - 1]->getCentre()) {
+		for (size_t i = 0; i < 2; i++) {
+			size_t j = nBins - 3 + i + 1;
+			x[i] = directTransformation(bins[j]->getCentre());
+			y[i] = contents[j];
+		}
+		size_t j = nBins - 2;
+		x[2] = directTransformation(bins[j]->getRightEdge());
+		y[2] = twoPointExtrapolation(x[2], x[0], y[0], x[1], y[1]);
+
+	// general case
+	} else {
+		for (size_t i = idx - 1; i < idx + 2; i++) {
+			x[i] = directTransformation(bins[i]->getCentre());
+			y[i] = contents[i];
+		}
+	}
+
+	return interpolate(directTransformation(x0), x, y);
+}
 
 
 
