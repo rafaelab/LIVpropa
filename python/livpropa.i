@@ -14,6 +14,7 @@
 %include "std_iostream.i"
 %include "std_list.i"
 %include "std_map.i"
+%include "std_pair.i"
 %include "std_set.i"
 %include "std_shared_ptr.i"
 %include "std_sstream.i"
@@ -31,6 +32,11 @@
 	class StopIterator {
 	};
 %}
+
+
+/* C++ containers */
+%template() std::pair<double, double>;
+%template(PairVector) std::vector<std::pair<double, double>>;
 
 
 /*************************************************************************************************/
@@ -209,16 +215,6 @@
 %feature("director") livpropa::Histogram1D;
 
 
-// %template(Histogram1DLin) livpropa::Histogram1<livpropa::Bin1DLin>;
-// %template(Histogram1DLog10) livpropa::Histogram1<livpropa::Bin1DLog10>;
-
-
-// /* To enable access to abstract base class Kinematics */
-// %implicitconv crpropa::ref_ptr<livpropa::Kinematics>;
-// %template(KinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
-// %feature("director") livpropa::Kinematics;
-
-
 /*************************************************************************************************/
 /**	                           			 Samplers  			                                    **/
 /*************************************************************************************************/
@@ -317,7 +313,6 @@ __STR_Kinematics__(KinematicsMap);
 %}
 
 
-
 /*************************************************************************************************/
 /**	                                	Interactions  		                                    **/
 /*************************************************************************************************/
@@ -331,6 +326,8 @@ __STR_Kinematics__(KinematicsMap);
 
 /*************************************************************************************************/
 /*************************************************************************************************/
+
+
 
 
 %clear(double* vector, int length);
