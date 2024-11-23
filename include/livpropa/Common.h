@@ -1,6 +1,7 @@
 #ifndef LIVPROPA_COMMON_H
 #define LIVPROPA_COMMON_H
 
+#include <cmath>
 #include <complex>
 #include <cstring>
 #include <iostream>
@@ -47,11 +48,27 @@ using crpropa::interpolate;
 using crpropa::closestIndex;
 
 
-
+/**
+ @brief Calculate the logarithm of a number with a given base.
+ */
 inline double logBase(double x, double b) {
-    return log(x) / log(b);
+	return log(x) / log(b);
 }
 
+/**
+  @brief Linear interpolation between two points.
+ */
+inline double twoPointExtrapolation(const double& xi, const double& x1, const double& y1, const double& x2, const double& y2) {
+	if (x1 == x2) {
+		cout << "Error: x1 and x2 cannot be the same value. Returning NaN." << endl;
+		return std::nan("");
+	}
+
+	double dydx = (y2 - y1) / (x2 - x1);
+	double yi = y1 + dydx * (xi - x1);
+
+	return yi;
+}
 
 
 } // livpropa
