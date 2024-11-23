@@ -60,16 +60,6 @@ enum class LogBase {
 	ten
 };
 
-inline double getLogBase(const LogBase& b) {
-	switch (b) {
-		case LogBase::e:
-			return M_E;
-		case LogBase::two:
-			return 2.;
-		case LogBase::ten:
-			return 10.;
-	}
-}
 
 /**
  @class Bin1DLog

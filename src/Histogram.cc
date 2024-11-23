@@ -58,7 +58,14 @@ Bin1DLog<B>::Bin1DLog(double l, double r) {
 
 template<LogBase B>
 double Bin1DLog<B>::getBase() const { 
-	return getLogBase(B);
+	switch (B) {
+		case LogBase::e:
+			return M_E;
+		case LogBase::two:
+			return 2.;
+		case LogBase::ten:
+			return 10.;
+	}
 }
 
 template<LogBase B>
