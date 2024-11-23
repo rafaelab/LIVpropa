@@ -189,22 +189,6 @@
 /**                                		Histograms                               				**/
 /*************************************************************************************************/
 
-/* To enable access to abstract base class Histogram1D */
-%template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
-
-/* Print info for Histogram1D */
-%define __STR_Histogram1D__(Histogram1D) 
-%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::Histogram1D::_print();
-%extend livpropa::Histogram1D {
-	std::string _print() {
-		std::ostringstream out;
-		out << *$self;
-		return out.str();
-	}
-}
-%enddef
-__STR_Histogram1D__(Histogram1D);
-
 
 /* Rename automatically generate enum class */
 %rename(LogBase_e) livpropa::LogBase_e;
@@ -212,25 +196,25 @@ __STR_Histogram1D__(Histogram1D);
 %rename(LogBase_10) livpropa::LogBase_ten;
 
 
-// %template(HistogramLinear1D) livpropa::Histogram1<livpropa::BinLinear1>;
-// %template(HistogramLogarithmic1D) livpropa::Histogram1<livpropa::BinLogarithmic1>;
+/* Ignore list */
+%ignore operator livpropa::AbstractHistogram1D*;
+// %ignore operator livpropa::LorentzViolatingKinematics*;
+// %ignore operator livpropa::AbstractMonochromaticLorentzViolatingKinematics*;
 
-
-// %template(HistogramLinear1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1<livpropa::BinLinear1>>;
-// %template(HistogramLogarithmic1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1<livpropa::BinLogarithmic1>>;
-
-// %feature("director") livpropa::Histogram1;
-
+/* To enable access to abstract base class Kinematics */
+%implicitconv crpropa::ref_ptr<livpropa::AbstractHistogram1D>;
+%template(AbstractHistogram1DRefPtr) crpropa::ref_ptr<livpropa::AbstractHistogram1D>;
+%feature("director") livpropa::AbstractHistogram1D;
 
 /*************************************************************************************************/
 /**	                           			 Samplers  			                                    **/
 /*************************************************************************************************/
 
+/* Ignore list */
+%ignore operator livpropa::Sampler*;
 
-// /* To enable access to abstract base class  */
-// %implicitconv crpropa::ref_ptr<livpropa::Sampler>;
-// %ignore operator livpropa::Sampler*;
-
+/* To enable access to abstract base class  */
+%implicitconv crpropa::ref_ptr<livpropa::Sampler>;
 %template(SamplerRefPtr) crpropa::ref_ptr<livpropa::Sampler>;
 %feature("director") livpropa::Sampler;
 
