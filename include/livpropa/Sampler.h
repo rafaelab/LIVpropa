@@ -25,14 +25,10 @@ class Sampler : public crpropa::Referenced {
 	public:
 		virtual ~Sampler() = default;
 		virtual double getSample(Random& random) const = 0;
-		// virtual vector<double> getSamples(unsigned int nSamples) const = 0;
+		virtual vector<double> getSamples(Random& random, unsigned int nSamples) const = 0;
 		void setHistogram(ref_ptr<AbstractHistogram1D> histogram);
 		ref_ptr<AbstractHistogram1D> getHistogram() const;
 		void computeCDF();
-
-		// void setBinEdges(const vector<double>& edges);
-		// void setCDF(const vector<double>& cdf);
-		// void setScale(const string& scale);
 };
 
 
@@ -44,9 +40,9 @@ class SamplerInverse: public Sampler {
 	public:
 		SamplerInverse();
 		SamplerInverse(ref_ptr<AbstractHistogram1D> h);
-		~SamplerInverse();
+		// ~SamplerInverse();
 		double getSample(Random& random) const;
-		// vector<double> getSamples(unsigned int nSamples) const override;
+		vector<double> getSamples(Random& random, unsigned int nSamples) const;
 };
 
 
