@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-PhotonDecay::PhotonDecay(Kinematics kinematics, bool haveElectrons, double thinning, double limit) {
+PhotonDecay::PhotonDecay(KinematicsMap kinematics, bool haveElectrons, double thinning, double limit) {
 	setHaveElectrons(haveElectrons);
 	setLimit(limit);
 	setThinning(thinning);
@@ -13,7 +13,7 @@ PhotonDecay::PhotonDecay(Kinematics kinematics, bool haveElectrons, double thinn
 	setInteractionTag("PD");
 }
 
-void PhotonDecay::setKinematics(Kinematics kin) {
+void PhotonDecay::setKinematics(KinematicsMap kin) {
 	kinematics = kin;
 }
 

@@ -5,11 +5,11 @@ namespace livpropa {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-double AbstractKinematics::computeEnergyFromMomentum(const double& p, const int& id) const {
+double Kinematics::computeEnergyFromMomentum(const double& p, const int& id) const {
 	return sqrt(computeEnergy2FromMomentum(p, id));
 }
 
-bool AbstractKinematics::isLorentzInvariant() const {
+bool Kinematics::isLorentzInvariant() const {
 	if (getNameTag() == "SR") {
 		return true;
 	} else if (getNameTag() == "LIVmono0") {
@@ -26,34 +26,34 @@ bool AbstractKinematics::isLorentzInvariant() const {
 	return false;
 }
 
-bool AbstractKinematics::isLorentzViolating() const {
+bool Kinematics::isLorentzViolating() const {
 	return ! isLorentzInvariant();
 }
 
-bool AbstractKinematics::isSpecialRelativistic() const {
+bool Kinematics::isSpecialRelativistic() const {
 	return getNameTag() == "SR";
 }
 
-bool AbstractKinematics::isLorentzViolatingMonochromatic() const {
+bool Kinematics::isLorentzViolatingMonochromatic() const {
 	if (getNameTag().find("LIVmono") != std::string::npos)
 		return true;
 
 	return false;
 }
 
-const SpecialRelativisticKinematics& AbstractKinematics::toSpecialRelativisticKinematics() const {
+const SpecialRelativisticKinematics& Kinematics::toSpecialRelativisticKinematics() const {
 	return *static_cast<const SpecialRelativisticKinematics*>(this);
 }
 
-const MonochromaticLorentzViolatingKinematics<0>& AbstractKinematics::toMonochromaticLorentzViolatingKinematics0() const {
+const MonochromaticLorentzViolatingKinematics<0>& Kinematics::toMonochromaticLorentzViolatingKinematics0() const {
 	return *static_cast<const MonochromaticLorentzViolatingKinematics<0>*>(this);
 }
 
-const MonochromaticLorentzViolatingKinematics<1>& AbstractKinematics::toMonochromaticLorentzViolatingKinematics1() const {
+const MonochromaticLorentzViolatingKinematics<1>& Kinematics::toMonochromaticLorentzViolatingKinematics1() const {
 	return *static_cast<const MonochromaticLorentzViolatingKinematics<1>*>(this);
 }
 
-const MonochromaticLorentzViolatingKinematics<2>& AbstractKinematics::toMonochromaticLorentzViolatingKinematics2() const {
+const MonochromaticLorentzViolatingKinematics<2>& Kinematics::toMonochromaticLorentzViolatingKinematics2() const {
 	return *static_cast<const MonochromaticLorentzViolatingKinematics<2>*>(this);
 }
 
@@ -368,10 +368,10 @@ double MonochromaticLorentzViolatingKinematics<2>::computeMomentumFromEnergy(con
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Kinematics::Kinematics() {
+KinematicsMap::KinematicsMap() {
 }
 
-Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
+KinematicsMap::KinematicsMap(vector<int> p, vector<ref_ptr<Kinematics>> kin) {
 	if (p.size() != kin.size())
 		throw std::length_error("Vector of particles and kinematics must have the same length.");
 
@@ -379,28 +379,28 @@ Kinematics::Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin) {
 		add(p[i], kin[i]);
 }
 
-Kinematics::Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin) {
+KinematicsMap::KinematicsMap(vector<int> p, ref_ptr<Kinematics> kin) {
 	for (size_t i = 0; i < p.size(); i++) 
 		add(p[i], kin);
 }
 
-Kinematics::Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>> kin) {
+KinematicsMap::KinematicsMap(vector<pair<int, ref_ptr<Kinematics>>> kin) {
 	for (size_t i = 0; i < kin.size(); i++) 
 		add(kin[i].first, kin[i].second);
 }
 
-void Kinematics::add(const int& particle, ref_ptr<AbstractKinematics> kin) {
+void KinematicsMap::add(const int& particle, ref_ptr<Kinematics> kin) {
 	kinematics[particle] = kin;
 }
 
-void Kinematics::remove(const int& particle) {
+void KinematicsMap::remove(const int& particle) {
 	if (! exists(particle))
 		throw runtime_error("Cannot retrieve inexistent particle with id " + std::to_string(particle) + ".");
 
 	kinematics.erase(particle);
 }
 
-bool Kinematics::isLorentzInvariant() const {
+bool KinematicsMap::isLorentzInvariant() const {
 	for (auto& kin : kinematics) {
 		if (kin.second->getNameTag() != "SR")
 			return false;
@@ -408,16 +408,16 @@ bool Kinematics::isLorentzInvariant() const {
 	return true;
 }
 
-bool Kinematics::isLorentzViolating() const {
+bool KinematicsMap::isLorentzViolating() const {
 	return ! isLorentzInvariant();
 }
 
-bool Kinematics::exists(const int& pId) const {
+bool KinematicsMap::exists(const int& pId) const {
 	vector<int> particles = getParticles();
 	return std::find(particles.begin(), particles.end(), pId) != particles.end();
 }
 
-vector<int> Kinematics::getParticles() const {
+vector<int> KinematicsMap::getParticles() const {
 	vector<int> particles;
 	for (auto& kin : kinematics)
 		particles.push_back(kin.first);
@@ -425,7 +425,7 @@ vector<int> Kinematics::getParticles() const {
 	return particles;
 }
 
-string Kinematics::getIdentifierForParticle(const int& pId, bool showParticleId) const {
+string KinematicsMap::getIdentifierForParticle(const int& pId, bool showParticleId) const {
 	char identifier[128] = "";
 
 	const auto& kin = (kinematics.find(pId))->second;
@@ -440,7 +440,7 @@ string Kinematics::getIdentifierForParticle(const int& pId, bool showParticleId)
 	return std::string(identifier);
 }
 
-string Kinematics::getIdentifier(const std::vector<int>& particles, bool simplify) const {
+string KinematicsMap::getIdentifier(const std::vector<int>& particles, bool simplify) const {
 	string identifier = "";
 
 	// if particles have exactly the same kinematics, return just one identifier.
@@ -471,25 +471,25 @@ string Kinematics::getIdentifier(const std::vector<int>& particles, bool simplif
 	return identifier;
 }
 
-string Kinematics::info() const {
-	string s = "Kinematics: \n";
+string KinematicsMap::info() const {
+	string s = "KinematicsMap: \n";
 	for (auto& kin : kinematics) {
 		s += "  . particle " + std::to_string(kin.first) + " ==> " + kin.second->info() + "\n";
 	}
 	return s;
 }
 
-ParticleKinematicsMap Kinematics::getParticleKinematicsMap() const {
+ParticleKinematicsMap KinematicsMap::getParticleKinematicsMap() const {
 	return kinematics;
 }
 
-const ref_ptr<AbstractKinematics>& Kinematics::find(const int& id, bool showWarningInexistent) const {
+const ref_ptr<Kinematics>& KinematicsMap::find(const int& id, bool showWarningInexistent) const {
 	bool declared = exists(id);
 
 	if (declared) {
 		ParticleKinematicsMapIterator kinIt = kinematics.find(id);
 		if (kinIt != kinematics.end()) {
-			const ref_ptr<AbstractKinematics>& kin = kinIt->second;
+			const ref_ptr<Kinematics>& kin = kinIt->second;
 			return kin;
 		}
 	}
@@ -497,15 +497,15 @@ const ref_ptr<AbstractKinematics>& Kinematics::find(const int& id, bool showWarn
 	if (showWarningInexistent) 
 		KISS_LOG_WARNING << "Cannot retrieve inexistent particle with id " << id << "." << "Returning special-relativistic kinematics." << endl;
 
-	ref_ptr<AbstractKinematics> specialRelativity = new SpecialRelativisticKinematics();
+	ref_ptr<Kinematics> specialRelativity = new SpecialRelativisticKinematics();
 	return specialRelativity;	
 }
 
-const ref_ptr<AbstractKinematics>& Kinematics::operator[](const int& pId) {
+const ref_ptr<Kinematics>& KinematicsMap::operator[](const int& pId) {
 	return find(pId);
 }
 
-ref_ptr<AbstractKinematics> Kinematics::operator[](const int& pId) const {
+ref_ptr<Kinematics> KinematicsMap::operator[](const int& pId) const {
 	return find(pId);
 }
 
@@ -516,13 +516,13 @@ ref_ptr<AbstractKinematics> Kinematics::operator[](const int& pId) const {
 // 	return *k;
 // }
 
-std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin) {
+std::ostream& operator<<(std::ostream& os, const Kinematics& kin) {
 	os << kin.info();
 	return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Kinematics& kin) {
-	os << "Kinematics: " << endl;
+std::ostream& operator<<(std::ostream& os, const KinematicsMap& kin) {
+	os << "KinematicsMap: " << endl;
 
 	vector<int> particles = kin.getParticles();
 	for (auto& p : particles) 

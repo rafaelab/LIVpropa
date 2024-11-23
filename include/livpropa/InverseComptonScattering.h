@@ -29,7 +29,7 @@ namespace livpropa {
 class InverseComptonScattering: public Module {
 	protected:
 		ref_ptr<PhotonField> photonField; 	// target photon field
-		Kinematics kinematics; //!< the type of kinematics (SR, LIV)
+		KinematicsMap kinematics; //!< the type of kinematics (SR, LIV)
 		bool havePhotons; // add secondary photons to simulation
 		double limit; // limit the step to a fraction of the mean free path
 		double thinning; // factor of the thinning (0: no thinning, 1: maximum thinning)
@@ -42,9 +42,9 @@ class InverseComptonScattering: public Module {
 		vector<vector<double>> tabCDF;  //!< cumulative interaction rate
 
 	public:
-		InverseComptonScattering(ref_ptr<PhotonField> photonField, Kinematics kinematics, bool havePhotons = false, double thinning = 0, double limit = 0.1, unsigned int numberOfSubsteps = 10000);
+		InverseComptonScattering(ref_ptr<PhotonField> photonField, KinematicsMap kinematics, bool havePhotons = false, double thinning = 0, double limit = 0.1, unsigned int numberOfSubsteps = 10000);
 		void setPhotonField(ref_ptr<PhotonField> photonField);
-		void setKinematics(Kinematics kin);
+		void setKinematics(KinematicsMap kin);
 		void setHavePhotons(bool havePhotons);
 		void setLimit(double limit);
 		void setThinning(double thinning);

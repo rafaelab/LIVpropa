@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -14,12 +14,12 @@ VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum
 	setLimit(limit);
 
 	if (not kin.exists(id)) {
-		throw runtime_error("VacuumCherenkov: kinematics for the desired particle is not specified in `Kinematics`.");
+		throw runtime_error("VacuumCherenkov: kinematics for the desired particle is not specified in `KinematicsMap`.");
 	}
 	setKinematicsParticle(kin[id]);
 
 	if (not kin.exists(22)) {
-		KISS_LOG_WARNING << "`VacuumCherenkov` is being iniatialised from `Kinematics` without specifying the photon kinematics. It will be set to the same as the desired particle kinematics, by default." << endl;
+		KISS_LOG_WARNING << "`VacuumCherenkov` is being iniatialised from `KinematicsMap` without specifying the photon kinematics. It will be set to the same as the desired particle kinematics, by default." << endl;
 		setKinematicsPhoton(kin[id]);
 	} else {
 		setKinematicsPhoton(kin[22]);
@@ -31,7 +31,7 @@ VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum
 	setSpectrum(spec);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_ptr<AbstractKinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -47,7 +47,7 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_
 	setSpectrum(spec);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -70,11 +70,11 @@ void VacuumCherenkov::setParticle(int id) {
 	particleId = id;
 }
 
-void VacuumCherenkov::setKinematicsPhoton(ref_ptr<AbstractKinematics> kin) {
+void VacuumCherenkov::setKinematicsPhoton(ref_ptr<Kinematics> kin) {
 	kinematicsPhoton = kin;
 }
 
-void VacuumCherenkov::setKinematicsParticle(ref_ptr<AbstractKinematics> kin) {
+void VacuumCherenkov::setKinematicsParticle(ref_ptr<Kinematics> kin) {
 	kinematicsParticle = kin;
 }
 
@@ -139,11 +139,11 @@ string VacuumCherenkov::getInteractionTag() const {
 	return interactionTag;
 }
 
-ref_ptr<AbstractKinematics> VacuumCherenkov::getKinematicsParticle() const {
+ref_ptr<Kinematics> VacuumCherenkov::getKinematicsParticle() const {
 	return kinematicsParticle;
 }
 
-ref_ptr<AbstractKinematics> VacuumCherenkov::getKinematicsPhoton() const {
+ref_ptr<Kinematics> VacuumCherenkov::getKinematicsPhoton() const {
 	return kinematicsPhoton;
 }
 
@@ -281,7 +281,7 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	}
 }
 
-VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const ref_ptr<AbstractKinematics>& kin) {
+VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const ref_ptr<Kinematics>& kin) {
 	string kinType = kin->getNameTag();
 	
 	if (kinType == "SR") {
@@ -304,7 +304,7 @@ double VacuumCherenkov::thresholdMomentum(const int& id, const KO& kinOt, const 
 }
 
 template<>
-double VacuumCherenkov::thresholdMomentum(const int& id, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh) {
+double VacuumCherenkov::thresholdMomentum(const int& id, const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
 	string kOt = kinOt->getNameTag();
 	string kPh = kinPh->getNameTag();
 
@@ -406,7 +406,7 @@ ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const KO& kinOt, const KP& k
 }
 
 template<>
-ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh) {
+ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
 	string kOt = kinOt->getNameTag();
 	string kPh = kinPh->getNameTag();
 
@@ -484,7 +484,7 @@ double VacuumCherenkov::interactionRate(const double& p, const KO& kinOt, const 
 }
 
 template<>
-double VacuumCherenkov::interactionRate(const double& p, const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh) {
+double VacuumCherenkov::interactionRate(const double& p, const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
 	string kOt = kinOt->getNameTag();
 	string kPh = kinPh->getNameTag();
 
@@ -528,7 +528,7 @@ std::pair<double, double> VacuumCherenkov::xRange(const KO& kinOt, const KP& kin
 }
 
 template<>
-std::pair<double, double> VacuumCherenkov::xRange(const ref_ptr<AbstractKinematics>& kinOt, const ref_ptr<AbstractKinematics>& kinPh) {
+std::pair<double, double> VacuumCherenkov::xRange(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
 	string kOt = kinOt->getNameTag();
 	string kPh = kinPh->getNameTag();
 

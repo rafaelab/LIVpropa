@@ -31,7 +31,7 @@ namespace livpropa {
 class PairProduction: public Module {
 	protected:
 		ref_ptr<PhotonField> photonField; 	// target photon field
-		Kinematics kinematics; //!< the type of kinematics (SR, LIV)
+		KinematicsMap kinematics; //!< the type of kinematics (SR, LIV)
 		bool haveElectrons; // add secondary electrons to simulation
 		double limit; // limit the step to a fraction of the mean free path
 		double thinning; // factor of the thinning (0: no thinning, 1: maximum thinning)
@@ -44,12 +44,12 @@ class PairProduction: public Module {
 
 	public:
 		PairProduction();
-		PairProduction(ref_ptr<PhotonField> photonField, Kinematics kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
+		PairProduction(ref_ptr<PhotonField> photonField, KinematicsMap kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
 		void setPhotonField(ref_ptr<PhotonField> photonField);
 		void setHaveElectrons(bool haveElectrons);
 		void setLimit(double limit);
 		void setThinning(double thinning);
-		void setKinematics(Kinematics kin);
+		void setKinematics(KinematicsMap kin);
 		void setInteractionTag(string tag);
 		string getInteractionTag() const;
 		void initRate(string filename);

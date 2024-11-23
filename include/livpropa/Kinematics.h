@@ -33,16 +33,16 @@ template<int N> class MonochromaticLorentzViolatingKinematics;
 
 
 /**
- @class Kinematics
+ @class KinematicsMap
  @brief Class holding information about the kinematics at play.
   The class is abstract.
   Note that the virtual methods are explicitly implemented with dummy values to workaround a SWIG bug.
  */
-class AbstractKinematics: public crpropa::Referenced {
+class Kinematics: public crpropa::Referenced {
 	public:
-		virtual ~AbstractKinematics() = default;
+		virtual ~Kinematics() = default;
 		virtual string getNameTag() const {
-			return "AbstractKinematics";
+			return "Kinematics";
 		};
 		virtual string getIdentifier() const {
 			return "";
@@ -57,7 +57,7 @@ class AbstractKinematics: public crpropa::Referenced {
 			return 0;
 		};
 		virtual string info() const {
-			return "AbstractKinematics";
+			return "Kinematics";
 		};
 		double computeEnergyFromMomentum(const double& p, const int& id) const;
 		bool isLorentzInvariant() const;
@@ -68,10 +68,10 @@ class AbstractKinematics: public crpropa::Referenced {
 		const MonochromaticLorentzViolatingKinematics<0>& toMonochromaticLorentzViolatingKinematics0() const;
 		const MonochromaticLorentzViolatingKinematics<1>& toMonochromaticLorentzViolatingKinematics1() const;
 		const MonochromaticLorentzViolatingKinematics<2>& toMonochromaticLorentzViolatingKinematics2() const;
-		friend std::ostream& operator<<(std::ostream& os, const AbstractKinematics& kin);
+		friend std::ostream& operator<<(std::ostream& os, const Kinematics& kin);
 };
 
-using ParticleKinematicsMap = unordered_map<int, ref_ptr<AbstractKinematics>>;
+using ParticleKinematicsMap = unordered_map<int, ref_ptr<Kinematics>>;
 using ParticleKinematicsMapIterator = typename ParticleKinematicsMap::const_iterator;
 
 
@@ -81,7 +81,7 @@ using ParticleKinematicsMapIterator = typename ParticleKinematicsMap::const_iter
   This class corresponds to a general form of the dispersion relation:
     E^2 = (mc)^2 + (pc)^2
  */
-class SpecialRelativisticKinematics : public AbstractKinematics {
+class SpecialRelativisticKinematics : public Kinematics {
 	public:
 		SpecialRelativisticKinematics();
 		~SpecialRelativisticKinematics();
@@ -110,7 +110,7 @@ class SpecialRelativisticKinematics : public AbstractKinematics {
   Note that 1 and 2 are the most "sensible" ones.
   The third is phenomenologically motivated.
  */
-class LorentzViolatingKinematics : public AbstractKinematics {
+class LorentzViolatingKinematics : public Kinematics {
 	public:
 		enum class SymmetryBreaking {
 			Random,
@@ -191,21 +191,21 @@ class MonochromaticLorentzViolatingKinematics : public AbstractMonochromaticLore
 
 
 /**
- @class Kinematics
+ @class KinematicsMap
  @brief Class holding information about the kinematics at play for each type of particle.
   This class is a container for the kinematics of different particles.
   Particles whose kinematics are not specified will be treated as special relativistic.
  */
-class Kinematics {
+class KinematicsMap {
 	protected:
 		 ParticleKinematicsMap kinematics;
 
 	public:
-		Kinematics();
-		Kinematics(vector<int> p, vector<ref_ptr<AbstractKinematics>> kin);
-		Kinematics(vector<pair<int, ref_ptr<AbstractKinematics>>>);
-		Kinematics(vector<int> p, ref_ptr<AbstractKinematics> kin);
-		void add(const int& particle, ref_ptr<AbstractKinematics> kin);
+		KinematicsMap();
+		KinematicsMap(vector<int> p, vector<ref_ptr<Kinematics>> kin);
+		KinematicsMap(vector<pair<int, ref_ptr<Kinematics>>>);
+		KinematicsMap(vector<int> p, ref_ptr<Kinematics> kin);
+		void add(const int& particle, ref_ptr<Kinematics> kin);
 		void remove(const int& id);
 		bool isLorentzInvariant() const;
 		bool isLorentzViolating() const;
@@ -215,10 +215,10 @@ class Kinematics {
 		string getIdentifier(const std::vector<int>& particles, bool simplify = false) const;
 		string info() const;
 		ParticleKinematicsMap getParticleKinematicsMap() const;
-		const ref_ptr<AbstractKinematics>& find(const int& id, bool showWarningInexistent = true) const;
-		const ref_ptr<AbstractKinematics>& operator[](const int& pId);
-		ref_ptr<AbstractKinematics> operator[](const int& pId) const;
-		friend std::ostream& operator<<(std::ostream& os, const Kinematics& kin);
+		const ref_ptr<Kinematics>& find(const int& id, bool showWarningInexistent = true) const;
+		const ref_ptr<Kinematics>& operator[](const int& pId);
+		ref_ptr<Kinematics> operator[](const int& pId) const;
+		friend std::ostream& operator<<(std::ostream& os, const KinematicsMap& kin);
 };
 
 

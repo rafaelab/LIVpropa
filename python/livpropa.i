@@ -195,16 +195,17 @@
 %rename(LogBase_2) livpropa::LogBase_two;
 %rename(LogBase_10) livpropa::LogBase_ten;
 
+/* To enable access to abstract base class Bin1D */
+%ignore operator livpropa::Bin1D*;
+%implicitconv crpropa::ref_ptr<livpropa::Bin1D>;
+%template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Bin1D>;
+%feature("director") livpropa::Bin1D;
 
-/* Ignore list */
-%ignore operator livpropa::AbstractHistogram1D*;
-// %ignore operator livpropa::LorentzViolatingKinematics*;
-// %ignore operator livpropa::AbstractMonochromaticLorentzViolatingKinematics*;
-
-/* To enable access to abstract base class Kinematics */
-%implicitconv crpropa::ref_ptr<livpropa::AbstractHistogram1D>;
-%template(AbstractHistogram1DRefPtr) crpropa::ref_ptr<livpropa::AbstractHistogram1D>;
-%feature("director") livpropa::AbstractHistogram1D;
+/* To enable access to abstract base class Histogram1D */
+%ignore operator livpropa::Histogram1D*;
+%implicitconv crpropa::ref_ptr<livpropa::Histogram1D>;
+%template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
+%feature("director") livpropa::Histogram1D;
 
 /*************************************************************************************************/
 /**	                           			 Samplers  			                                    **/
@@ -225,14 +226,14 @@
 /*************************************************************************************************/
 
 /* Ignore list */
-%ignore operator livpropa::AbstractKinematics*;
+%ignore operator livpropa::Kinematics*;
 // %ignore operator livpropa::LorentzViolatingKinematics*;
 // %ignore operator livpropa::AbstractMonochromaticLorentzViolatingKinematics*;
 
 /* To enable access to abstract base class Kinematics */
-%implicitconv crpropa::ref_ptr<livpropa::AbstractKinematics>;
-%template(AbstractKinematicsRefPtr) crpropa::ref_ptr<livpropa::AbstractKinematics>;
-%feature("director") livpropa::AbstractKinematics;
+%implicitconv crpropa::ref_ptr<livpropa::Kinematics>;
+%template(AbstractKinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
+%feature("director") livpropa::Kinematics;
 
 %template(MonochromaticLorentzViolatingKinematics0) livpropa::MonochromaticLorentzViolatingKinematics<0>;
 %template(MonochromaticLorentzViolatingKinematics1) livpropa::MonochromaticLorentzViolatingKinematics<1>;
@@ -268,17 +269,17 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 /* make Kinematics subscriptable */
 // %feature("python:slot", "tp_str", functype = "reprfunc") bsmpropa::Vector4::_print();
 // %feature("python:slot", "sq_length", functype = "lenfunc") crpropa::Vector4::__len__;
-%feature("python:slot", "mp_subscript", functype = "binaryfunc") livpropa::Kinematics::__getitem__;
-%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") livpropa::Kinematics::__setitem__;
-%extend livpropa::Kinematics {
-	const crpropa::ref_ptr<livpropa::AbstractKinematics> __getitem__(int i) {
+%feature("python:slot", "mp_subscript", functype = "binaryfunc") livpropa::KinematicsMap::__getitem__;
+%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") livpropa::KinematicsMap::__setitem__;
+%extend livpropa::KinematicsMap {
+	const crpropa::ref_ptr<livpropa::Kinematics> __getitem__(int i) {
 		return (*($self))[i];
 	}
 }
 
 /* print info Kinematics */
 %define __STR_Kinematics__(AbstractMonochromaticLorentzViolatingKinematics) 
-%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::Kinematics::_print();
+%feature("python:slot", "tp_str", functype = "reprfunc") livpropa::KinematicsMap::_print();
 %extend livpropa::Kinematics {
 	std::string _print() {
 		std::ostringstream out;
@@ -287,18 +288,18 @@ __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLor
 	}
 }
 %enddef
-__STR_Kinematics__(Kinematics);
+__STR_Kinematics__(KinematicsMap);
 
 
 /* convert unordered_dict to Python dict */
-%typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::AbstractKinematics>>(PyObject* obj) %{
+%typemap(out) std::unordered_map<int, crpropa::ref_ptr<livpropa::Kinematics>>(PyObject* obj) %{
 	obj = PyDict_New();
 	for (const auto& n : $1) {
 		// convert int to Python integer
 		PyObject* pId = PyLong_FromLong(n.first); // Convert int to Python integer
 
-		// convert crpropa::ref_ptr<livpropa::AbstractKinematics> to Python object
-		PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::AbstractKinematics>(n.second));
+		// convert crpropa::ref_ptr<livpropa::Kinematics> to Python object
+		PyObject* kin = SWIG_NewPointerObj(new crpropa::ref_ptr<livpropa::Kinematics>(n.second));
 
 		PyDict_SetItem(obj, pId, kin);
 		Py_XDECREF(pId);

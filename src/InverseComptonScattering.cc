@@ -4,7 +4,7 @@
 namespace livpropa {
 
 
-InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, Kinematics kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
+InverseComptonScattering::InverseComptonScattering(ref_ptr<PhotonField> field, KinematicsMap kinematics, bool havePhotons, double thinning, double limit, unsigned int numberOfSubsteps) {
 	setKinematics(kinematics);
 	setPhotonField(field);
 	setHavePhotons(havePhotons);
@@ -27,7 +27,7 @@ void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> field) {
 	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
 }
 
-void InverseComptonScattering::setKinematics(Kinematics kin) {
+void InverseComptonScattering::setKinematics(KinematicsMap kin) {
 	kinematics = kin;
 }
 

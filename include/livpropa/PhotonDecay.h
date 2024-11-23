@@ -43,15 +43,15 @@ class PhotonDecay: public Module {
 		typedef unordered_map<int, EmissionSpectrum> EmissionSpectraTable;
 
 	protected:
-		Kinematics kinematics;
+		KinematicsMap kinematics;
 		bool haveElectrons;
 		double limit;
 		double thinning;
 		string interactionTag;
 
 	public:
-		PhotonDecay(Kinematics kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
-		void setKinematics(Kinematics kinematics);
+		PhotonDecay(KinematicsMap kinematics, bool haveElectrons = false, double thinning = 0, double limit = 0.1);
+		void setKinematics(KinematicsMap kinematics);
 		void setHaveElectrons(bool electrons);
 		void setLimit(double limit);
 		void setThinning(double thinning);

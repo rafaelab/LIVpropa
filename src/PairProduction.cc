@@ -7,7 +7,7 @@ namespace livpropa {
 PairProduction::PairProduction() {
 }
 
-PairProduction::PairProduction(ref_ptr<PhotonField> photonField, Kinematics kinematics, bool haveElectrons, double thinning, double limit) {
+PairProduction::PairProduction(ref_ptr<PhotonField> photonField, KinematicsMap kinematics, bool haveElectrons, double thinning, double limit) {
 	setKinematics(kinematics);
 	setPhotonField(photonField);
 	setThinning(thinning);
@@ -46,7 +46,7 @@ void PairProduction::setInteractionTag(string tag) {
 	interactionTag = tag;
 }
 
-void PairProduction::setKinematics(Kinematics kin) {
+void PairProduction::setKinematics(KinematicsMap kin) {
 	kinematics = kin;
 }
 
