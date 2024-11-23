@@ -16,14 +16,11 @@ VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpect
 	if (not kin.exists(id)) {
 		throw runtime_error("VacuumCherenkov: kinematics for the desired particle is not specified in `KinematicsMap`.");
 	}
-	setKinematicsParticle(kin[id]);
-
 	if (not kin.exists(22)) {
 		KISS_LOG_WARNING << "`VacuumCherenkov` is being iniatialised from `KinematicsMap` without specifying the photon kinematics. It will be set to the same as the desired particle kinematics, by default." << endl;
-		setKinematicsPhoton(kin[id]);
-	} else {
-		setKinematicsPhoton(kin[22]);
 	}
+
+	setKinematics(kin);
 
 	ref_ptr<Sampler> s = new SamplerInverse();
 	setSampler(s);
@@ -38,8 +35,11 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kine
 	setAngularCorrection(angularCorrection);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
-	setKinematicsPhoton(kinPh);
-	setKinematicsParticle(kinOt);
+
+	kin = Kinematics()
+	kin[id] = kinOt;
+	kin[22] = kinPh;
+	setKinematics(kin);
 	
 	ref_ptr<Sampler> s = new SamplerInverse();
 	setSampler(s);
@@ -54,8 +54,11 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenko
 	setAngularCorrection(angularCorrection);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
-	setKinematicsPhoton(kin);
-	setKinematicsParticle(kin);
+
+	kin = Kinematics()
+	kin[id] = kinOt;
+	kin[22] = kinPh;
+	setKinematics(kin);
 
 	ref_ptr<Sampler> s = new SamplerInverse();
 	setSampler(s);
@@ -70,12 +73,8 @@ void VacuumCherenkov::setParticle(int id) {
 	particleId = id;
 }
 
-void VacuumCherenkov::setKinematicsPhoton(ref_ptr<Kinematics> kin) {
-	kinematicsPhoton = kin;
-}
-
-void VacuumCherenkov::setKinematicsParticle(ref_ptr<Kinematics> kin) {
-	kinematicsParticle = kin;
+void VacuumCherenkov::setKinematics(KinematicsMap kin) {
+	kinematics = kin;
 }
 
 void VacuumCherenkov::setHavePhotons(bool photons) {

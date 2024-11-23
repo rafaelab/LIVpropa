@@ -59,8 +59,7 @@ class VacuumCherenkov: public Module {
 		double limit;
 		double thinning;
 		VacuumCherenkovSpectrum spectrum;
-		ref_ptr<Kinematics> kinematicsPhoton;
-		ref_ptr<Kinematics> kinematicsParticle;
+		KinematicsMap kinematics;
 		ref_ptr<Histogram1D> distribution;
 		ref_ptr<Sampler> sampler;
 		
@@ -70,8 +69,6 @@ class VacuumCherenkov: public Module {
 		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
 		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
 		void setParticle(int id);
-		void setKinematicsParticle(ref_ptr<Kinematics> kin);
-		void setKinematicsPhoton(ref_ptr<Kinematics> kin);
 		void setAngularCorrection(bool correction);
 		void setContinuousEnergyLoss(bool loss);
 		void setHavePhotons(bool photons);

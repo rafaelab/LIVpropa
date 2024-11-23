@@ -147,7 +147,7 @@ class LorentzViolatingKinematics : public Kinematics {
 
 
 /**
- @class LorentzViolatingKinematicsMonochromatic
+ @class AbstractLorentzViolatingKinematicsMonochromatic
  @brief Class holding information about a scenario with monochromatic LIV.
   A simple phenomenological implementation of LIV.
   This preserves energy-momentum conservations and modifies the dispersion relations as:
