@@ -19,15 +19,16 @@ namespace livpropa {
 */
 class Sampler : public crpropa::Referenced {
 	protected:
-		ref_ptr<AbstractHistogram1D> histogram;
+		ref_ptr<Histogram1D> histogram;
 		vector<double> cdf;
 
 	public:
 		virtual ~Sampler() = default;
-		virtual double getSample(Random& random) const = 0;
-		virtual vector<double> getSamples(Random& random, unsigned int nSamples) const = 0;
-		void setHistogram(ref_ptr<AbstractHistogram1D> histogram);
-		ref_ptr<AbstractHistogram1D> getHistogram() const;
+		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
+		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+		void setDistribution(ref_ptr<Histogram1D> histogram);
+		ref_ptr<Histogram1D> getDistribution() const;
+		ref_ptr<Histogram1D> getCumulativeDistribution() const;
 		void computeCDF();
 };
 
@@ -36,33 +37,31 @@ class Sampler : public crpropa::Referenced {
  @class InverseSampler
  @brief Sample from a distribution using the inverse transform method.
 */
-class SamplerInverse: public Sampler {
+class InverseSampler: public Sampler {
 	public:
-		SamplerInverse();
-		SamplerInverse(ref_ptr<AbstractHistogram1D> h);
-		// ~SamplerInverse();
-		double getSample(Random& random) const;
-		vector<double> getSamples(Random& random, unsigned int nSamples) const;
+		InverseSampler();
+		InverseSampler(ref_ptr<Histogram1D> h);
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
 
+/**
+ @class ImportanceSampler
+ @brief Sample from a distribution using the importance sampling method.
+ The default CDF function is changed here to incorporate the proposal distribution.
+*/
+class ImportanceSampler: public Sampler {
+	protected:
+		ref_ptr<Histogram1D> proposalPDF;
+		InverseSampler inverseSampler;
 
-// // /**
-// //  @class ImportanceSampler
-// //  @brief Sample from a distribution using the importance sampling method.
-// // */
-// // class ImportanceSampler: public Sampler {
-// // 	private:
-// // 		vector<double> edges;
-// // 		vector<double> cdf;
-// // 		vector<double> proposal;
-// // 		vector<double> contents;
-// // 		string scale;
-// // 		double total;
-
-// // 	public:
-// // 		ImportanceSampler(const vector<double>& edges, const vector<double>& cdf, const vector<double>& proposalCDF, const vector<double>& contents, double total, const string& scale);
-// // 		double sample() const override;
-// // };
+	public:
+		ImportanceSampler();
+		ImportanceSampler(ref_ptr<Histogram1D> pdf, ref_ptr<Histogram1D> proposalPDF);
+		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
+		ref_ptr<Histogram1D> getProposalPDF() const;
+		void computeCDF();
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+};
 
 
 

@@ -3,11 +3,13 @@
 namespace livpropa {
 
 
-void Sampler::setHistogram(ref_ptr<AbstractHistogram1D> h) {
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Sampler::setDistribution(ref_ptr<Histogram1D> h) {
 	histogram = h;
 }
 
-ref_ptr<AbstractHistogram1D> Sampler::getHistogram() const {
+ref_ptr<Histogram1D> Sampler::getDistribution() const {
 	return histogram;
 }
 
@@ -39,40 +41,84 @@ void Sampler::computeCDF() {
 	}
 }
 
-
-
-SamplerInverse::SamplerInverse() {
-}
-
-SamplerInverse::SamplerInverse(ref_ptr<AbstractHistogram1D> h) {
-	setHistogram(h);
-	computeCDF();
-}
-
-// SamplerInverse::~SamplerInverse() {
-// }
-
-double SamplerInverse::getSample(Random& random) const {
-	double r = random.rand();
-
-	auto it = std::lower_bound(cdf.begin(), cdf.end(), r);
-	size_t idx = std::distance(cdf.begin(), it) - 1;
-
-	// if (idx >= edges.size() - 1)
-	// 	idx = edges.size() - 2;
-
-	return interpolate(r, cdf, histogram->getBinCentres());
-}
-
-vector<double> SamplerInverse::getSamples(Random& random, unsigned int nSamples) const {
-	vector<double> samples;
-
-	for (size_t i = 0; i < nSamples; i++) {
-		samples.push_back(getSample(random));
+vector<std::pair<double, double>> Sampler::getSamples(unsigned int nSamples, Random& random, const std::pair<double, double>& range) const {
+	vector<std::pair<double, double>> samples;
+	for (unsigned int i = 0; i < nSamples; i++) {
+		samples.push_back(getSample(random, range));
 	}
 
 	return samples;
 }
+
+ref_ptr<Histogram1D> Sampler::getCumulativeDistribution() const {
+	ref_ptr<Histogram1D> hCum = histogram;
+	hCum->setBinContents(cdf);
+	return hCum;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+InverseSampler::InverseSampler() {
+}
+
+InverseSampler::InverseSampler(ref_ptr<Histogram1D> h) {
+	setDistribution(h);
+	computeCDF();
+}
+
+std::pair<double, double> InverseSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	double r = random.randUniform(range.first, range.second);
+	unsigned int nBins = histogram->getNumberOfBins();
+
+	auto it = std::lower_bound(cdf.begin(), cdf.end(), r);
+	size_t idx = std::distance(cdf.begin(), it) - 1;
+
+	if (idx >= nBins - 1)
+		idx = nBins - 2;
+
+	double x = interpolate(r, cdf, histogram->getBinCentres());
+	double w = 1.;
+
+	return std::make_pair(x, w);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+ImportanceSampler::ImportanceSampler() {
+}
+
+ImportanceSampler::ImportanceSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D> proposal) {
+	setDistribution(h);
+	setProposalPDF(proposal);
+	computeCDF();
+}
+
+void ImportanceSampler::computeCDF() {
+	inverseSampler.computeCDF();
+}
+
+void ImportanceSampler::setProposalPDF(ref_ptr<Histogram1D> proposal) {
+	proposalPDF = proposal;
+	inverseSampler.setDistribution(proposal);
+	inverseSampler.computeCDF();
+}
+
+ref_ptr<Histogram1D> ImportanceSampler::getProposalPDF() const {
+	return proposalPDF;
+}
+
+std::pair<double, double> ImportanceSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	std::pair<double, double> sample = inverseSampler.getSample(random, range);
+	double x = sample.first;
+	double w = histogram->getBinContent(histogram->getBinIndex(x)) / proposalPDF->getBinContent(proposalPDF->getBinIndex(x));
+	
+	return std::make_pair(x, w);
+}
+
+
+
 
 
 } // namespace livpropa
