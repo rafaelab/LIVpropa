@@ -1,5 +1,14 @@
 __pycache__
 build
+
 helper/__pycache__
 helper/temp
 helper/CRPropa3-data
+
+data/*
+
+.DS_Store
+include/.DS_Store
+include/livpropa/.DS_Store
+
+examples/*txt
