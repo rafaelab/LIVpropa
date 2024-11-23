@@ -14,17 +14,17 @@
 namespace livpropa {
 
 /**
- @class AbstractBin1D
+ @class Bin1D
  @brief Abstract class for a 1D bin.
  */
-class AbstractBin1D: public Referenced {
+class Bin1D: public Referenced {
 	protected:
 		double left;
 		double right;
 		double centre;
 
 	public:
-		virtual ~AbstractBin1D() = default;
+		virtual ~Bin1D() = default;
 		void setCentre(double c);
 		void setEdges(double l, double r);
 		std::pair<double, double> getEdges() const;
@@ -39,7 +39,7 @@ class AbstractBin1D: public Referenced {
  @class Bin1DLin
  @brief Linear 1D bin.
 */
-class Bin1DLin : public AbstractBin1D {
+class Bin1DLin : public Bin1D {
 	public:
 		Bin1DLin(double l, double r) {
 			setEdges(l, r);
@@ -76,7 +76,7 @@ inline double getLogBase(const LogBase& b) {
  The base of the logarithm is given as a template parameter.
  */
 template<LogBase B>
-class Bin1DLog : public AbstractBin1D {
+class Bin1DLog : public Bin1D {
 	public:
 		Bin1DLog(double l, double r) {
 			setEdges(l, r);
@@ -98,14 +98,14 @@ typedef Bin1DLog<LogBase::e> Bin1DLogE;
 
 
 /**
- @class AbstractHistogram1D
+ @class Histogram1D
  @brief Abstract class for a 1D histogram.
  This class is meant to be used as a base class for specific implementations of 1D histograms.
  Nevertheless, it already provides most functionalities that are common to all 1D histograms.
  */
-class AbstractHistogram1D : public Referenced {
+class Histogram1D : public Referenced {
 	public:
-		typedef ref_ptr<AbstractBin1D> Bin;
+		typedef ref_ptr<Bin1D> Bin;
 
 	protected:
 		vector<Bin> bins;
@@ -114,7 +114,7 @@ class AbstractHistogram1D : public Referenced {
 		unsigned int nBins;
 
 	public:
-		virtual ~AbstractHistogram1D() = default;
+		virtual ~Histogram1D() = default;
 		bool isInRange(const double& v) const;
 		size_t getBinIndex(const double& v) const;
 		unsigned int getNumberOfBins() const;
@@ -146,9 +146,9 @@ class AbstractHistogram1D : public Referenced {
  It is meant to be used as a concrete implementation of a 1D histogram.
  */
 template<class B>
-class Histogram1 : public AbstractHistogram1D {
+class Histogram1 : public Histogram1D {
 	public:
-		using AbstractHistogram1D::Bin;
+		using Histogram1D::Bin;
 
 	public:
 		Histogram1();

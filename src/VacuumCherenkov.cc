@@ -25,6 +25,9 @@ VacuumCherenkov::VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum
 		setKinematicsPhoton(kin[22]);
 	}
 
+	ref_ptr<Sampler> s = new SamplerInverse();
+	setSampler(s);
+
 	setSpectrum(spec);
 }
 
@@ -37,6 +40,10 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kinOt, ref_
 	setLimit(limit);
 	setKinematicsPhoton(kinPh);
 	setKinematicsParticle(kinOt);
+	
+	ref_ptr<Sampler> s = new SamplerInverse();
+	setSampler(s);
+
 	setSpectrum(spec);
 }
 
@@ -49,6 +56,10 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<AbstractKinematics> kin, Vacuum
 	setLimit(limit);
 	setKinematicsPhoton(kin);
 	setKinematicsParticle(kin);
+
+	ref_ptr<Sampler> s = new SamplerInverse();
+	setSampler(s);
+
 	setSpectrum(spec);
 }
 
@@ -111,7 +122,13 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec) {
 
 	if (spectrum == VacuumCherenkovSpectrum::Full) {
 		distribution = buildSpectrum(kinematicsParticle, kinematicsPhoton);
+		sampler->setHistogram(distribution);
+		sampler->computeCDF();
 	}
+}
+
+void VacuumCherenkov::setSampler(ref_ptr<Sampler> s) {
+	sampler = s;
 }
 
 int VacuumCherenkov::getParticle() const {
@@ -122,8 +139,20 @@ string VacuumCherenkov::getInteractionTag() const {
 	return interactionTag;
 }
 
+ref_ptr<AbstractKinematics> VacuumCherenkov::getKinematicsParticle() const {
+	return kinematicsParticle;
+}
+
+ref_ptr<AbstractKinematics> VacuumCherenkov::getKinematicsPhoton() const {
+	return kinematicsPhoton;
+}
+
 ref_ptr<Histogram1D> VacuumCherenkov::getDistribution() const {
 	return distribution;
+}
+
+ref_ptr<Sampler> VacuumCherenkov::getSampler() const {
+	return sampler;
 }
 
 double VacuumCherenkov::computeThresholdMomentum() const {
@@ -143,15 +172,15 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 	// check if electron/positron (only particles implemented so far)
 	int id = candidate->current.getId();
 
-	if (id == 22 && particleId != id)
+	if (particleId != id)
 		return;
 
 	// do not perform any calculations for the special-relativistic case
 	if (kinematicsParticle->isLorentzInvariant())
 		return;
 
-	if (spectrum == VacuumCherenkovSpectrum::Absent) 
-		return;
+	// if (spectrum == VacuumCherenkovSpectrum::Absent) 
+	// 	return;
 
 	// get and scale the particle energy
 	double z = candidate->getRedshift();
@@ -195,7 +224,7 @@ void VacuumCherenkov::emissionSpectrumStep(Candidate* candidate, const double& E
 }
 
 void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& Ethr) const {
-	Random &random = Random::instance();
+	Random& random = Random::instance();
 	int id = candidate->current.getId();
 	double z = candidate->getRedshift();
 	double step = candidate->getCurrentStep() / (1 + z);
@@ -209,7 +238,7 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	if (range.first < 0. or range.second < 0.) 
 		return;
 
-	// Two implementations: continunous energy loss and instantaneous energy loss (the latter is faster)
+	// Two implementations: continuous energy loss and instantaneous energy loss (the latter is faster)
 	if (continuousEnergyLoss) {
 		double rate = computeInteractionRate(E);
 		if (rate <= 0)
@@ -218,30 +247,32 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		double lossLength = c_light / rate;
 		double loss = step / lossLength; // relative energy loss
 		double dE = E * loss;
-		do {
-			double x = distribution->getSample(range);
-			if (x <= 0 or x >= 1)
-				return;
 
+		if (E - dE < Ethr)
+			return;
+
+		while (dE > 0) {
+			auto range = xRange(kinematicsParticle, kinematicsPhoton);
+			double x = sampler->getSample(random);
 			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			double Ephoton = x * E;
 			candidate->addSecondary(22, Ephoton / (1 + z), pos);
-
 			dE -= Ephoton;
-		} while (dE > 0);
-
+		}		
 		candidate->current.setEnergy((E - dE) / (1 + z));
 
 	} else {
 		double Ee = E;
 		do {
-			double x = distribution->getSample(range);
-			if (x <= 0 or x >= 1)
-				return;
+			double x = sampler->getSample(random);
+			if (x < range.first or x > range.second)
+				continue;
 
-			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+			Vector3d pos = candidate->current.getPosition();
+			// Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			double Ephoton = x * Ee;
 			candidate->addSecondary(22, Ephoton / (1 + z), pos);
+			// candidate->current.setEnergy((Ee - Ephoton) / (1 + z));
 
 			Ee -= Ephoton;
 		} while (Ee > Ethr);
@@ -413,34 +444,21 @@ ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const ref_ptr<AbstractKinema
 
 template<class KP>
 ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
-	unsigned int nBins = 1000;
-	ref_ptr<Histogram1D> dist = new Histogram1D(0., 1., nBins);
-	
-	double dx = 1. / nBins;
+	unsigned int nBins = 2601;
+	ref_ptr<Histogram1D> dist = new Histogram1DLog10(1e-12, 1., nBins);
+
 	std::pair<double, double> range = xRange(kinOt, kinPh);
 
 	double chiOt = kinOt.getCoefficient();
 	double chiPh = kinPh.getCoefficient();
 
-	double chiOt2 = chiOt * chiOt;
-	double chiOt3 = chiOt2 * chiOt;
-	double chiPh2 = chiPh * chiPh;
-	double dChi = chiPh - chiOt;
-
-	double Gp = 1;
-	double Gm = 0;
-	if (3. * chiOt * (4 * chiPh - chiOt) >= 0) {
-		double S = sqrt(3. * chiOt * (4 * chiPh - chiOt));
-		double Gp0 = chiOt * (S - 3 * chiOt) / 160. / pow_integer<4>(dChi);
-		double Gp1 = 37. * (S - 6 * chiPh) * chiPh * chiOt - 64. * pow_integer<3>(chiOt);
-		double Gp2 = - pow_integer<2>(chiOt) * (14 * S - 207. * chiPh);
-		double Gp3 = - 10 * (5 * S - 16 * chiPh) * pow_integer<2>(chiPh);
-		double Gp = Gp0 * (Gp1 + Gp2 + Gp3);
-		double Gm0 = chiOt * (- S - 3 * chiOt) / 160. / pow_integer<4>(dChi);
-		double Gm1 = 37. * (- S - 6 * chiPh) * chiPh * chiOt - 64. * pow_integer<3>(chiOt);
-		double Gm2 = - pow_integer<2>(chiOt) * (- 14 * S - 207. * chiPh);
-		double Gm3 = - 10 * (- 5 * S - 16 * chiPh) * pow_integer<2>(chiPh);
-		double Gm = Gm0 * (Gm1 + Gm2 + Gm3);
+	double g0 = 0;
+	if ((chiOt >= 0 and chiPh <= chiOt) or (chiOt == 0 and chiOt > chiPh)) {
+		g0 = _G0(chiOt, chiPh);
+	} else if (chiOt < 0 and chiPh < chiOt) {
+		g0 = (_G0(chiOt, chiPh) - _Gm(chiOt, chiPh));
+	} else if (chiOt > 0 and chiOt < chiPh) {
+		g0 = _Gp(chiOt, chiPh);
 	}
 
 	double P;
@@ -448,28 +466,14 @@ ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const MonochromaticLorentzVi
 		double x = dist->getBinCentre(i);
 		P = 0;
 		if (x >= range.first and x <= range.second) {
-			double x2 = x * x;
-			double x3 = x2 * x;
-			double y = x3 - 3. * x2 + 3. * x;
-			double a =  (2. / x - 2. + x);
-			double b1 = - chiPh * x3 / 2.;
-			double b2 = chiOt * y / 2.;
-			double b = b1 + b2;
-			double c = (157. * chiOt - 22. * chiPh) / 120.;
-			if (chiOt >= std::max(0., chiPh)) {
-				P = a * b / c;
-			} else if (chiOt > 0 and chiOt < chiPh) {
-				P = a * b / (c - Gm);
-				P = std::max(0., P);
-			} else if (chiOt > chiPh and chiOt < 0.) {
-				P = a * b / (Gp);
-				P = std::max(0., P);
-			}
+			double w0 = 0.5 * chiOt * (x * x * x - 3 * x * x + 3 * x) - 0.5 * chiPh * x * x * x;
+			double P = (2. / x - 2. + x)  * w0 / g0;
+			P = std::max(P, 0.);
 			dist->setBinContent(i, P);
 		}
 	}
 
-	dist->prepareCDF();
+	// dist->prepareCDF();
 
 	return dist;
 }
@@ -501,19 +505,12 @@ double VacuumCherenkov::interactionRate(const double& p, const MonochromaticLore
 	double q = pow_integer<3>(p * c_light) / pow_integer<2>(energy_planck) / h_dirac;
 	double Q = alpha_finestructure * q;
 
-	if (chiOt == 0) {
-		if (chiOt > chiPh)
-			return (157. * chiOt - 22. * chiPh) / 120. * Q;
-	} else if (chiOt > 0) {
-		if (chiOt < chiPh) {
-			return Q * _Gp(chiOt, chiPh);
-		} else {
-			return (157. * chiOt - 22. * chiPh) / 120. * Q;
-		}
-	} else {
-		if (chiOt > chiPh) {
-			return Q * ((157. * chiOt - 22. * chiPh) / 120. - _Gm(chiOt, chiPh));
-		}
+	if ((chiOt >= 0 and chiPh <= chiOt) or (chiOt == 0 and chiOt > chiPh)) {
+		return _G0(chiOt, chiPh) * Q;
+	} else if (chiOt < 0 and chiPh < chiOt) {
+		return Q * (_G0(chiOt, chiPh) - _Gm(chiOt, chiPh));
+	} else if (chiOt > 0 and chiOt < chiPh) {
+		return Q * _Gp(chiOt, chiPh);
 	}
 
 	return _defaultInteractionRate;;
@@ -566,6 +563,7 @@ std::pair<double, double> VacuumCherenkov::xRange(const MonochromaticLorentzViol
 	return std::make_pair(xMin, xMax);
 }
 
+
 double VacuumCherenkov::_Gp(const double& chiOt, const double& chiPh) {
 	double S = sqrt(3. * chiOt * (4 * chiPh - chiOt));
 	double Gp0 = chiOt * (S - 3 * chiOt) / 160. / pow_integer<4>(chiPh - chiOt);
@@ -581,5 +579,10 @@ double VacuumCherenkov::_Gm(const double& chiOt, const double& chiPh) {
 	double Gm2 = - pow_integer<2>(chiOt) * (- 14 * S - 207. * chiPh) - 10 * (- 5 * S - 16 * chiPh) * pow_integer<2>(chiPh);
 	return Gm0 * (Gm1 + Gm2);
 }
+
+double VacuumCherenkov::_G0(const double& chiOt, const double& chiPh) {
+	return (157. * chiOt - 22. * chiPh) / 120.;
+}
+
 
 } // namespace livpropa

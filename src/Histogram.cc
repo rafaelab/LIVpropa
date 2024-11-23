@@ -4,49 +4,49 @@ namespace livpropa {
 
 
 
-void AbstractBin1D::setEdges(double l, double r) {
+void Bin1D::setEdges(double l, double r) {
 	left = l;
 	right = r;
 }
 
-void AbstractBin1D::setCentre(double c) {
+void Bin1D::setCentre(double c) {
 	centre = c;
 }
 
-pair<double, double> AbstractBin1D::getEdges() const {
+pair<double, double> Bin1D::getEdges() const {
 	return std::make_pair(left, right);
 }
 
-double AbstractBin1D::getLeftEdge() const {
+double Bin1D::getLeftEdge() const {
 	return left;
 }
 
-double AbstractBin1D::getRightEdge() const {
+double Bin1D::getRightEdge() const {
 	return right;
 }
 
-double AbstractBin1D::getCentre() const {
+double Bin1D::getCentre() const {
 	return centre;
 }
 
-double AbstractBin1D::getWidth() const {
+double Bin1D::getWidth() const {
 	return right - left;
 }
 
-bool AbstractBin1D::isInBin(const double& v) const {
+bool Bin1D::isInBin(const double& v) const {
 	return v >= left and v < right;
 }
 
 
 
-bool AbstractHistogram1D::isInRange(const double& v) const {
+bool Histogram1D::isInRange(const double& v) const {
 	if (v >= bins[0]->getLeftEdge() and v < bins[nBins - 1]->getRightEdge())
 		return true;
 
 	return false;
 }
 
-size_t AbstractHistogram1D::getBinIndex(const double& v) const {
+size_t Histogram1D::getBinIndex(const double& v) const {
 	if (! isInRange(v))
 		return -1;
 
@@ -58,31 +58,31 @@ size_t AbstractHistogram1D::getBinIndex(const double& v) const {
 	return -1;
 }
 
-unsigned int AbstractHistogram1D::getNumberOfBins() const {
+unsigned int Histogram1D::getNumberOfBins() const {
 	return nBins;
 }
 
-double AbstractHistogram1D::leftEdge() const {
+double Histogram1D::leftEdge() const {
 	return bins[0]->getLeftEdge();
 }
 
-double AbstractHistogram1D::rightEdge() const {
+double Histogram1D::rightEdge() const {
 	return bins[nBins - 1]->getRightEdge();
 }
 
-AbstractHistogram1D::Bin AbstractHistogram1D::getBin(const size_t& i) const {
+Histogram1D::Bin Histogram1D::getBin(const size_t& i) const {
 	return bins[i];
 }
 
-double AbstractHistogram1D::getBinContent(const size_t& i) const {
+double Histogram1D::getBinContent(const size_t& i) const {
 	return contents[i];
 }
 
-double AbstractHistogram1D::getBinCentre(const size_t& i) const {
+double Histogram1D::getBinCentre(const size_t& i) const {
 	return bins[i]->getCentre();
 }
 
-vector<double> AbstractHistogram1D::getBinEdges() const {
+vector<double> Histogram1D::getBinEdges() const {
 	vector<double> edges;
 	for (size_t i = 0; i < nBins; i++) {
 		edges.push_back(bins[i]->getLeftEdge());
@@ -92,7 +92,7 @@ vector<double> AbstractHistogram1D::getBinEdges() const {
 	return edges;
 }
 
-vector<double> AbstractHistogram1D::getBinCentres() const {
+vector<double> Histogram1D::getBinCentres() const {
 	vector<double> centres;
 	for (size_t i = 0; i < nBins; i++) {
 		centres.push_back(bins[i]->getCentre());
@@ -101,17 +101,17 @@ vector<double> AbstractHistogram1D::getBinCentres() const {
 	return centres;
 }
 
-vector<double> AbstractHistogram1D::getBinContents() const {
+vector<double> Histogram1D::getBinContents() const {
 	return contents;
 }
 
-void AbstractHistogram1D::push(const double& v, const double& w) {
+void Histogram1D::push(const double& v, const double& w) {
 	size_t i = getBinIndex(v);
 	contents[i] += w;
 	weights[i] = w;
 }
 
-void AbstractHistogram1D::fill(const vector<double>& v, const vector<double>& w) {
+void Histogram1D::fill(const vector<double>& v, const vector<double>& w) {
 	if (w.size() == 0) {
 		for (size_t i = 0; i < v.size(); i++) 
 			push(v[i]);
@@ -124,24 +124,24 @@ void AbstractHistogram1D::fill(const vector<double>& v, const vector<double>& w)
 	}
 }
 
-void AbstractHistogram1D::setBinContent(const size_t& idx, const double& value) {
+void Histogram1D::setBinContent(const size_t& idx, const double& value) {
 	contents[idx] = value;
 }
 
-void AbstractHistogram1D::setBinContents(const vector<double>& values) {
+void Histogram1D::setBinContents(const vector<double>& values) {
 	if (values.size() != nBins)
 		throw std::runtime_error("Number of values must match number of bins.");
 
 	contents = values;
 }
 
-void AbstractHistogram1D::normalise(double norm) {
+void Histogram1D::normalise(double norm) {
 	for (size_t i = 0; i < nBins; i++) {
 		contents[i] /= norm;
 	}
 }
 
-double AbstractHistogram1D::sum() const {
+double Histogram1D::sum() const {
 	double s = 0;
 	for (size_t i = 0; i < nBins; i++) {
 		s += contents[i];
@@ -150,7 +150,7 @@ double AbstractHistogram1D::sum() const {
 	return s;
 }
 
-double AbstractHistogram1D::integrate() const {
+double Histogram1D::integrate() const {
 	double s = 0;
 	for (size_t i = 0; i < nBins; i++) {
 		double dx = bins[i]->getWidth();
@@ -160,17 +160,17 @@ double AbstractHistogram1D::integrate() const {
 	return s;
 }
 
-double AbstractHistogram1D::operator[](const size_t& i) const {
+double Histogram1D::operator[](const size_t& i) const {
 	return contents[i];
 }
 
-void AbstractHistogram1D::reset() {
+void Histogram1D::reset() {
 	contents.clear();
 	bins.clear();
 	weights.clear();
 }
 
-void AbstractHistogram1D::clear() {
+void Histogram1D::clear() {
 	std::fill(contents.begin(), contents.end(), 0.);
 	std::fill(weights.begin(), weights.end(), 1.);
 }

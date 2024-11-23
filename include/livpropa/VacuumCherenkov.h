@@ -12,6 +12,7 @@
 #include "livpropa/Data.h"
 #include "livpropa/Histogram.h"
 #include "livpropa/Kinematics.h"
+#include "livpropa/Sampler.h"
 #include "livpropa/UnitsAndConstants.h"
 
 
@@ -47,6 +48,7 @@ class VacuumCherenkov: public Module {
 	private:
 		static constexpr double _defaultInteractionRate = 0;
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
+		// ref_ptr<Sampler> _defaultSampler;
 
 	protected:
 		string interactionTag;
@@ -60,6 +62,8 @@ class VacuumCherenkov: public Module {
 		ref_ptr<AbstractKinematics> kinematicsPhoton;
 		ref_ptr<AbstractKinematics> kinematicsParticle;
 		ref_ptr<Histogram1D> distribution;
+		ref_ptr<Sampler> sampler;
+		
 
 	public:
 		VacuumCherenkov(int id, Kinematics kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
@@ -74,9 +78,13 @@ class VacuumCherenkov: public Module {
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
 		void setSpectrum(VacuumCherenkovSpectrum spec);
+		void setSampler(ref_ptr<Sampler> sampler);
 		int getParticle() const;
 		string getInteractionTag() const;
+		ref_ptr<AbstractKinematics> getKinematicsParticle() const;
+		ref_ptr<AbstractKinematics> getKinematicsPhoton() const;
 		ref_ptr<Histogram1D> getDistribution() const;
+		ref_ptr<Sampler> getSampler() const;
 		double computeThresholdMomentum() const;
 		double computeThresholdEnergy() const;
 		double computeInteractionRate(const double& p) const;
@@ -101,6 +109,7 @@ class VacuumCherenkov: public Module {
 		template<> static std::pair<double, double> xRange(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
 		static double _Gp(const double& chiOt, const double& chiPh);
 		static double _Gm(const double& chiOt, const double& chiPh);
+		static double _G0(const double& chiOt, const double& chiPh);
 };
 /** @}*/
 
