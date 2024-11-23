@@ -479,7 +479,7 @@ string KinematicsMap::info() const {
 	return s;
 }
 
-ParticleKinematicsMap KinematicsMap::getParticleKinematicsMap() const {
+ParticleKinematicsDict KinematicsMap::getParticleKinematicsMap() const {
 	return kinematics;
 }
 
@@ -487,7 +487,7 @@ const ref_ptr<Kinematics>& KinematicsMap::find(const int& id, bool showWarningIn
 	bool declared = exists(id);
 
 	if (declared) {
-		ParticleKinematicsMapIterator kinIt = kinematics.find(id);
+		ParticleKinematicsDictIterator kinIt = kinematics.find(id);
 		if (kinIt != kinematics.end()) {
 			const ref_ptr<Kinematics>& kin = kinIt->second;
 			return kin;

@@ -33,7 +33,7 @@ template<int N> class MonochromaticLorentzViolatingKinematics;
 
 
 /**
- @class KinematicsMap
+ @class Kinematics
  @brief Class holding information about the kinematics at play.
   The class is abstract.
   Note that the virtual methods are explicitly implemented with dummy values to workaround a SWIG bug.
@@ -71,8 +71,8 @@ class Kinematics: public crpropa::Referenced {
 		friend std::ostream& operator<<(std::ostream& os, const Kinematics& kin);
 };
 
-using ParticleKinematicsMap = unordered_map<int, ref_ptr<Kinematics>>;
-using ParticleKinematicsMapIterator = typename ParticleKinematicsMap::const_iterator;
+using ParticleKinematicsDict = unordered_map<int, ref_ptr<Kinematics>>;
+using ParticleKinematicsDictIterator = typename ParticleKinematicsDict::const_iterator;
 
 
 /**
@@ -198,7 +198,7 @@ class MonochromaticLorentzViolatingKinematics : public AbstractMonochromaticLore
  */
 class KinematicsMap {
 	protected:
-		 ParticleKinematicsMap kinematics;
+		ParticleKinematicsDict kinematics;
 
 	public:
 		KinematicsMap();
@@ -214,7 +214,7 @@ class KinematicsMap {
 		string getIdentifierForParticle(const int& pId, bool showParticleId = true) const; 
 		string getIdentifier(const std::vector<int>& particles, bool simplify = false) const;
 		string info() const;
-		ParticleKinematicsMap getParticleKinematicsMap() const;
+		ParticleKinematicsDict getParticleKinematicsMap() const;
 		const ref_ptr<Kinematics>& find(const int& id, bool showWarningInexistent = true) const;
 		const ref_ptr<Kinematics>& operator[](const int& pId);
 		ref_ptr<Kinematics> operator[](const int& pId) const;
