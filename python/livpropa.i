@@ -189,6 +189,9 @@
 /**                                		Histograms                               				**/
 /*************************************************************************************************/
 
+/* Ignore list */
+%ignore operator livpropa::Bin1D*;
+%ignore operator livpropa::Histogram1D*;
 
 /* Rename automatically generate enum class */
 %rename(LogBase_e) livpropa::LogBase_e;
@@ -196,16 +199,25 @@
 %rename(LogBase_10) livpropa::LogBase_ten;
 
 /* To enable access to abstract base class Bin1D */
-%ignore operator livpropa::Bin1D*;
 %implicitconv crpropa::ref_ptr<livpropa::Bin1D>;
-%template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Bin1D>;
+%template(Bin1DRefPtr) crpropa::ref_ptr<livpropa::Bin1D>;
 %feature("director") livpropa::Bin1D;
 
 /* To enable access to abstract base class Histogram1D */
-%ignore operator livpropa::Histogram1D*;
 %implicitconv crpropa::ref_ptr<livpropa::Histogram1D>;
 %template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
 %feature("director") livpropa::Histogram1D;
+
+
+// %template(Histogram1DLin) livpropa::Histogram1<livpropa::Bin1DLin>;
+// %template(Histogram1DLog10) livpropa::Histogram1<livpropa::Bin1DLog10>;
+
+
+// /* To enable access to abstract base class Kinematics */
+// %implicitconv crpropa::ref_ptr<livpropa::Kinematics>;
+// %template(KinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
+// %feature("director") livpropa::Kinematics;
+
 
 /*************************************************************************************************/
 /**	                           			 Samplers  			                                    **/
@@ -227,12 +239,10 @@
 
 /* Ignore list */
 %ignore operator livpropa::Kinematics*;
-// %ignore operator livpropa::LorentzViolatingKinematics*;
-// %ignore operator livpropa::AbstractMonochromaticLorentzViolatingKinematics*;
 
 /* To enable access to abstract base class Kinematics */
 %implicitconv crpropa::ref_ptr<livpropa::Kinematics>;
-%template(AbstractKinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
+%template(KinematicsRefPtr) crpropa::ref_ptr<livpropa::Kinematics>;
 %feature("director") livpropa::Kinematics;
 
 %template(MonochromaticLorentzViolatingKinematics0) livpropa::MonochromaticLorentzViolatingKinematics<0>;
@@ -266,9 +276,7 @@ __STR_SpecialRelativisticKinematics__(SpecialRelativisticKinematics);
 __STR_AbstractMonochromaticLorentzViolatingKinematics__(AbstractMonochromaticLorentzViolatingKinematics);
 
 
-/* make Kinematics subscriptable */
-// %feature("python:slot", "tp_str", functype = "reprfunc") bsmpropa::Vector4::_print();
-// %feature("python:slot", "sq_length", functype = "lenfunc") crpropa::Vector4::__len__;
+/* make KinematicsMap subscriptable */
 %feature("python:slot", "mp_subscript", functype = "binaryfunc") livpropa::KinematicsMap::__getitem__;
 %feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") livpropa::KinematicsMap::__setitem__;
 %extend livpropa::KinematicsMap {
