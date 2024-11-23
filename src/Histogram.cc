@@ -3,6 +3,7 @@
 namespace livpropa {
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Bin1D::setEdges(double l, double r) {
 	left = l;
@@ -38,6 +39,35 @@ bool Bin1D::isInBin(const double& v) const {
 }
 
 
+Bin1DLin::Bin1DLin(double l, double r) {
+	setEdges(l, r);
+	setCentre((l + r) / 2.);
+}
+
+double Bin1DLin::rand(Random& random) const {
+	return random.randUniform(getLeftEdge(), getRightEdge());
+}
+
+template<LogBase B>
+Bin1DLog<B>::Bin1DLog(double l, double r) {
+	setEdges(l, r);
+
+	double b = getBase();
+	setCentre(pow(b, (logBase(l, b) + logBase(r, b)) / 2.));
+}
+
+template<LogBase B>
+double Bin1DLog<B>::getBase() const { 
+	return getLogBase(B);
+}
+
+template<LogBase B>
+double Bin1DLog<B>::rand(Random& random) const {
+	return random.randUniform(getLeftEdge(), getRightEdge());
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool Histogram1D::isInRange(const double& v) const {
 	if (v >= bins[0]->getLeftEdge() and v < bins[nBins - 1]->getRightEdge())
@@ -175,6 +205,9 @@ void Histogram1D::clear() {
 	std::fill(weights.begin(), weights.end(), 1.);
 }
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<class B>
 Histogram1<B>::Histogram1() {
 	nBins = 0;
@@ -243,6 +276,18 @@ void Histogram1<B>::setBins(vector<Bin> b) {
 	contents.resize(nBins, 0.);
 }
 
+// template<>
+// double Histogram1<Bin1DLin>::interpolateAt(const double& v) const {
+// 	Random& random = Random::instance();
+
+// 	size_t i = getBinIndex(v);
+
+// 	if (binned) {
+// 		size_t idx = random.randBin(v) + 1;
+// 		return random.randUniform();
+// 	}
+
+// }
 
 
 

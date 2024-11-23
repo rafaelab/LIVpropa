@@ -13,6 +13,8 @@
 
 namespace livpropa {
 
+
+
 /**
  @class Bin1D
  @brief Abstract class for a 1D bin.
@@ -33,6 +35,7 @@ class Bin1D: public Referenced {
 		double getCentre() const;
 		double getWidth() const;
 		bool isInBin(const double& v) const;
+		virtual double rand(Random& random = Random::instance()) const = 0;
 };
 
 /**
@@ -41,10 +44,8 @@ class Bin1D: public Referenced {
 */
 class Bin1DLin : public Bin1D {
 	public:
-		Bin1DLin(double l, double r) {
-			setEdges(l, r);
-			setCentre((l + r) / 2.);
-		}
+		Bin1DLin(double l, double r);
+		double rand(Random& random = Random::instance()) const;
 };
 
 
@@ -78,16 +79,9 @@ inline double getLogBase(const LogBase& b) {
 template<LogBase B>
 class Bin1DLog : public Bin1D {
 	public:
-		Bin1DLog(double l, double r) {
-			setEdges(l, r);
-
-			double b = getBase();
-			setCentre(pow(b, (logBase(l, b) + logBase(r, b)) / 2.));
-		}
-
-		double getBase() const { 
-			return getLogBase(B);
-		}
+		Bin1DLog(double l, double r);
+		double getBase() const;
+		double rand(Random& random = Random::instance()) const;
 };
 
 typedef Bin1DLog<LogBase::ten> Bin1DLog10;
@@ -158,7 +152,7 @@ class Histogram1 : public Histogram1D {
 		~Histogram1();
 		void setBins(vector<Bin> bins);
 		bool isInRange(const double& v) const;
-		// virtual double interpolateAt(const double& v) const = 0;
+		// double interpolateAt(const double& v) const = 0;
 };
 
 typedef Histogram1<Bin1DLin> Histogram1DLin;
