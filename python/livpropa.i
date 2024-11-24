@@ -220,12 +220,12 @@
 /*************************************************************************************************/
 
 /* Ignore list */
-%ignore operator livpropa::Sampler*;
+%ignore operator livpropa::DistributionSampler*;
 
 /* To enable access to abstract base class  */
-%implicitconv crpropa::ref_ptr<livpropa::Sampler>;
-%template(SamplerRefPtr) crpropa::ref_ptr<livpropa::Sampler>;
-%feature("director") livpropa::Sampler;
+%implicitconv crpropa::ref_ptr<livpropa::DistributionSampler>;
+%template(DistributionSamplerRefPtr) crpropa::ref_ptr<livpropa::DistributionSampler>;
+%feature("director") livpropa::DistributionSampler;
 
 
 

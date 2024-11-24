@@ -14,16 +14,16 @@ namespace livpropa {
 
 
 /**
- @class Sampler
+ @class DistributionSampler
  @brief Interface for sampling from a distribution.
 */
-class Sampler : public crpropa::Referenced {
+class DistributionSampler : public crpropa::Referenced {
 	protected:
 		ref_ptr<Histogram1D> histogram;
 		vector<double> cdf;
 
 	public:
-		virtual ~Sampler() = default;
+		virtual ~DistributionSampler() = default;
 		virtual string getNameTag() const = 0;
 		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
@@ -38,7 +38,7 @@ class Sampler : public crpropa::Referenced {
  @class InverseSampler
  @brief Sample from a distribution using the inverse transform method.
 */
-class InverseSampler: public Sampler {
+class InverseSampler: public DistributionSampler {
 	public:
 		InverseSampler();
 		InverseSampler(ref_ptr<Histogram1D> h);
@@ -53,7 +53,7 @@ class InverseSampler: public Sampler {
  @brief Sample from a distribution using the rejection sampling method.
  (UNTESTED)
 */
-class RejectionSampler: public Sampler {
+class RejectionSampler: public DistributionSampler {
 	protected:
 		ref_ptr<Histogram1D> proposalPDF;
 		InverseSampler inverseSampler;
@@ -75,7 +75,7 @@ class RejectionSampler: public Sampler {
  @brief Sample from a distribution using the importance sampling method.
  The default CDF function is changed here to incorporate the proposal distribution.
 */
-class ImportanceSampler: public Sampler {
+class ImportanceSampler: public DistributionSampler {
 	protected:
 		ref_ptr<Histogram1D> proposalPDF;
 		InverseSampler inverseSampler;

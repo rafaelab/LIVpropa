@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler,  double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<DistributionSampler> sampler,  double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -28,7 +28,7 @@ VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpect
 	setSpectrum(spec, sampler);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<DistributionSampler> sampler, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -40,7 +40,7 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kine
 	setSpectrum(spec, sampler);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<DistributionSampler> sampler, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -91,7 +91,7 @@ void VacuumCherenkov::setWeightFunction(std::function<double(double)> f) {
 	weightFunction = f;
 }
 
-void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler> s) {
+void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<DistributionSampler> s) {
 	string kinType = kinematicsParticle->getNameTag();
 
 	if (spec == VacuumCherenkovSpectrum::Default) {
@@ -148,7 +148,7 @@ ref_ptr<Histogram1D> VacuumCherenkov::getDistribution() const {
 	return distribution;
 }
 
-ref_ptr<Sampler> VacuumCherenkov::getSampler() const {
+ref_ptr<DistributionSampler> VacuumCherenkov::getSampler() const {
 	return sampler;
 }
 
@@ -583,8 +583,8 @@ double VacuumCherenkov::_G0(const double& chiOt, const double& chiPh) {
 	return (157. * chiOt - 22. * chiPh) / 120.;
 }
 
-ref_ptr<Sampler> VacuumCherenkov::_getDefaultSampler() {
-	ref_ptr<Sampler> s = new InverseSampler();
+ref_ptr<DistributionSampler> VacuumCherenkov::_getDefaultSampler() {
+	ref_ptr<DistributionSampler> s = new InverseSampler();
 	return s;
 }
 
