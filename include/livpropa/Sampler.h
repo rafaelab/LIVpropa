@@ -24,6 +24,7 @@ class Sampler : public crpropa::Referenced {
 
 	public:
 		virtual ~Sampler() = default;
+		virtual string getNameTag() const = 0;
 		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		void setDistribution(ref_ptr<Histogram1D> histogram);
@@ -41,8 +42,33 @@ class InverseSampler: public Sampler {
 	public:
 		InverseSampler();
 		InverseSampler(ref_ptr<Histogram1D> h);
+		string getNameTag() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
+
+
+
+/**
+ @class RejectionSampler
+ @brief Sample from a distribution using the rejection sampling method.
+ (UNTESTED)
+*/
+class RejectionSampler: public Sampler {
+	protected:
+		ref_ptr<Histogram1D> proposalPDF;
+		InverseSampler inverseSampler;
+		double maxRatio;
+
+	public:
+		RejectionSampler();
+		RejectionSampler(ref_ptr<Histogram1D> pdf, ref_ptr<Histogram1D> proposalPDF, double maxRatio);
+		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
+		string getNameTag() const;
+		ref_ptr<Histogram1D> getProposalPDF() const;
+		void computeCDF();
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+};
+
 
 /**
  @class ImportanceSampler
@@ -58,11 +84,11 @@ class ImportanceSampler: public Sampler {
 		ImportanceSampler();
 		ImportanceSampler(ref_ptr<Histogram1D> pdf, ref_ptr<Histogram1D> proposalPDF);
 		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
+		string getNameTag() const;
 		ref_ptr<Histogram1D> getProposalPDF() const;
 		void computeCDF();
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
-
 
 
 

@@ -67,6 +67,10 @@ InverseSampler::InverseSampler(ref_ptr<Histogram1D> h) {
 	computeCDF();
 }
 
+string InverseSampler::getNameTag() const {
+	return "inverse";
+}
+
 std::pair<double, double> InverseSampler::getSample(Random& random, const std::pair<double, double>& range) const {
 	double r = random.randUniform(range.first, range.second);
 	unsigned int nBins = histogram->getNumberOfBins();
@@ -84,6 +88,51 @@ std::pair<double, double> InverseSampler::getSample(Random& random, const std::p
 }
 
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+RejectionSampler::RejectionSampler() {
+}
+
+RejectionSampler::RejectionSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D> proposal, double maxRatio) {
+	setDistribution(h);
+	setProposalPDF(proposal);
+	computeCDF();
+	this->maxRatio = maxRatio;
+}
+
+string RejectionSampler::getNameTag() const {
+	return "rejection";
+}
+
+void RejectionSampler::computeCDF() {
+	inverseSampler.computeCDF();
+}
+
+void RejectionSampler::setProposalPDF(ref_ptr<Histogram1D> proposal) {
+	proposalPDF = proposal;
+}
+
+ref_ptr<Histogram1D> RejectionSampler::getProposalPDF() const {
+	return proposalPDF;
+}
+
+std::pair<double, double> RejectionSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	while (true) {
+		std::pair<double, double> sample = inverseSampler.getSample(random, range);
+		double x = sample.first;
+		double u = random.randUniform(0, 1);
+		double pdfValue = histogram->getBinContent(histogram->getBinIndex(x));
+		double proposalValue = proposalPDF->getBinContent(proposalPDF->getBinIndex(x));
+		if (u < pdfValue / (proposalValue * maxRatio)) {
+			return std::make_pair(x, 1.0);
+		}
+	}
+}
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImportanceSampler::ImportanceSampler() {
@@ -93,6 +142,10 @@ ImportanceSampler::ImportanceSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D
 	setDistribution(h);
 	setProposalPDF(proposal);
 	computeCDF();
+}
+
+string ImportanceSampler::getNameTag() const {
+	return "importance";
 }
 
 void ImportanceSampler::computeCDF() {
@@ -116,8 +169,6 @@ std::pair<double, double> ImportanceSampler::getSample(Random& random, const std
 	
 	return std::make_pair(x, w);
 }
-
-
 
 
 
