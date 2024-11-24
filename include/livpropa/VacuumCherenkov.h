@@ -23,6 +23,10 @@ namespace livpropa {
 /**
  @class EmissionSpectrum
  @brief Enumerate the possible emission spectra for the Cherenkov radiation.
+ The default behaviour is:
+ . n=0, n=1: step
+ . n=2: full spectrum.
+ Therefore, whenever a full spectrum treatment is available, it is preferred.
 */
 enum class VacuumCherenkovSpectrum {
 	Default,
@@ -35,15 +39,17 @@ enum class VacuumCherenkovSpectrum {
 /**
  @class VacuumCherenkov
  @brief Simulate the emission of vacuum Cherenkov radiation due to LIV effects.
-
  This implementation follows the description from:
- 	arXiv:2312.10803 (for n=0 and n=1)
-	arXiv:2410.XXXXX (for n=2)
- Exactly one Cherenkov photon is emitted at a time, with an energy equal to the difference between the primary's energy and the threshold energy.
- The emission is considered to be instantaneous (this might change in the future).
- While the structure here is meant to be generic, it was tested only for electrons.
- Note that the treatment of the spectrum is fixed according to the kinematics.
- Since there are no other options, it is treated as step-like for n=0 and n=1, and as full for n=2.
+ . arXiv:2312.10803 (for n=0 and n=1)
+ . arXiv:2410.XXXXX (for n=2)
+
+ The emission is considered to be instantaneous, although in the future a continuous energy loss implementation will be available.
+ This can be controlled through the constructor flag `continuousEnergyLoss` which, by default, is false.
+
+ The emission can be either step-like or the full spectrum can be used.
+ For step-like spectra, exactly one Cherenkov photon is emitted at a time, with an energy equal to the difference between the primary's energy and the threshold energy.
+ Note that several photons can be produced at a time for the full spectrum case, such that this treatment can be time-consuming.
+ In this case, the user can control the type of sampling using custom functions. However, this does not work very well outside C++. The default implementation works reasonably.
 */
 class VacuumCherenkov: public Module {
 	private:
@@ -109,6 +115,7 @@ class VacuumCherenkov: public Module {
 		template<class KO, class KP> static std::pair<double, double> xRange(const KO& kinOt, const KP& kinPh); 
 		template<> std::pair<double, double> xRange(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 		template<> static std::pair<double, double> xRange(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
+
 	private:
 		static double _Gp(const double& chiOt, const double& chiPh);
 		static double _Gm(const double& chiOt, const double& chiPh);
