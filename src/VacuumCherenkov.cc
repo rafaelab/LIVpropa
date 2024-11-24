@@ -16,15 +16,16 @@ VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpect
 	if (not kin.exists(id)) {
 		throw runtime_error("VacuumCherenkov: kinematics for the desired particle is not specified in `KinematicsMap`.");
 	}
+	setKinematicsParticle(kin[id]);
+
 	if (not kin.exists(22)) {
 		KISS_LOG_WARNING << "`VacuumCherenkov` is being iniatialised from `KinematicsMap` without specifying the photon kinematics. It will be set to the same as the desired particle kinematics, by default." << endl;
+		setKinematicsPhoton(kin[id]);
+	} else {
+		setKinematicsPhoton(kin[22]);
 	}
 
-	setKinematics(kin);
-
-	ref_ptr<Sampler> s = new SamplerInverse();
-	setSampler(s);
-
+	setSampler(_getDefaultSampler());
 	setSpectrum(spec);
 }
 
@@ -35,15 +36,9 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kine
 	setAngularCorrection(angularCorrection);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
-
-	kin = Kinematics()
-	kin[id] = kinOt;
-	kin[22] = kinPh;
-	setKinematics(kin);
-	
-	ref_ptr<Sampler> s = new SamplerInverse();
-	setSampler(s);
-
+	setKinematicsPhoton(kinPh);
+	setKinematicsParticle(kinOt);
+	setSampler(_getDefaultSampler());
 	setSpectrum(spec);
 }
 
@@ -54,15 +49,9 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenko
 	setAngularCorrection(angularCorrection);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
-
-	kin = Kinematics()
-	kin[id] = kinOt;
-	kin[22] = kinPh;
-	setKinematics(kin);
-
-	ref_ptr<Sampler> s = new SamplerInverse();
-	setSampler(s);
-
+	setKinematicsPhoton(kin);
+	setKinematicsParticle(kin);
+	setSampler(_getDefaultSampler());
 	setSpectrum(spec);
 }
 
@@ -73,8 +62,12 @@ void VacuumCherenkov::setParticle(int id) {
 	particleId = id;
 }
 
-void VacuumCherenkov::setKinematics(KinematicsMap kin) {
-	kinematics = kin;
+void VacuumCherenkov::setKinematicsPhoton(ref_ptr<Kinematics> kin) {
+	kinematicsPhoton = kin;
+}
+
+void VacuumCherenkov::setKinematicsParticle(ref_ptr<Kinematics> kin) {
+	kinematicsParticle = kin;
 }
 
 void VacuumCherenkov::setHavePhotons(bool photons) {
@@ -95,6 +88,10 @@ void VacuumCherenkov::setLimit(double l) {
 
 void VacuumCherenkov::setInteractionTag(std::string tag) {
 	interactionTag = tag;
+}
+
+void VacuumCherenkov::setWeightFunction(std::function<double(double)> f) {
+	weightFunction = f;
 }
 
 void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec) {
@@ -120,8 +117,10 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec) {
 	}
 
 	if (spectrum == VacuumCherenkovSpectrum::Full) {
-		distribution = buildSpectrum(kinematicsParticle, kinematicsPhoton);
-		sampler->setHistogram(distribution);
+		auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
+		setWeightFunction(w);
+		buildSpectrum(kinematicsParticle, kinematicsPhoton);
+		sampler->setDistribution(distribution);
 		sampler->computeCDF();
 	}
 }
@@ -136,6 +135,10 @@ int VacuumCherenkov::getParticle() const {
 
 string VacuumCherenkov::getInteractionTag() const {
 	return interactionTag;
+}
+
+std::function<double(double)> VacuumCherenkov::getWeightFunction() const {
+	return weightFunction;
 }
 
 ref_ptr<Kinematics> VacuumCherenkov::getKinematicsParticle() const {
@@ -170,7 +173,6 @@ double VacuumCherenkov::computeInteractionRate(const double& p) const {
 void VacuumCherenkov::process(Candidate* candidate) const {
 	// check if electron/positron (only particles implemented so far)
 	int id = candidate->current.getId();
-
 	if (particleId != id)
 		return;
 
@@ -178,22 +180,17 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 	if (kinematicsParticle->isLorentzInvariant())
 		return;
 
-	// if (spectrum == VacuumCherenkovSpectrum::Absent) 
-	// 	return;
-
 	// get and scale the particle energy
 	double z = candidate->getRedshift();
 	double E = candidate->current.getEnergy() * (1 + z);
 
 	// compute threshold energy; emit photon only if E > Ethr
 	double Ethr = computeThresholdEnergy() * (1 + z);
+
 	if (E < Ethr or isnan(Ethr) or isinf(Ethr))
 		return;
-		
-	if (havePhotons) {
-		Vector3d pos = candidate->current.getPosition();
-		double step = candidate->getCurrentStep() / (1 + z); 
 
+	if (havePhotons) {
 		switch (spectrum) {
 			case VacuumCherenkovSpectrum::Step: 
 				emissionSpectrumStep(candidate, Ethr);
@@ -237,7 +234,8 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	if (range.first < 0. or range.second < 0.) 
 		return;
 
-	// Two implementations: continuous energy loss and instantaneous energy loss (the latter is faster)
+	// two implementations: continuous energy loss and instantaneous energy loss (the latter is faster)
+	// the CEL approach has not been thoroughly tested
 	if (continuousEnergyLoss) {
 		double rate = computeInteractionRate(E);
 		if (rate <= 0)
@@ -251,11 +249,14 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 			return;
 
 		while (dE > 0) {
-			auto range = xRange(kinematicsParticle, kinematicsPhoton);
-			double x = sampler->getSample(random);
+			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
+			std::pair<double, double> sample = sampler->getSample(random, range);
+			double x = sample.first;
+			double w = sample.second;
+
 			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			double Ephoton = x * E;
-			candidate->addSecondary(22, Ephoton / (1 + z), pos);
+			candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
 			dE -= Ephoton;
 		}		
 		candidate->current.setEnergy((E - dE) / (1 + z));
@@ -263,16 +264,12 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	} else {
 		double Ee = E;
 		do {
-			double x = sampler->getSample(random);
-			if (x < range.first or x > range.second)
-				continue;
-
-			Vector3d pos = candidate->current.getPosition();
-			// Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+			std::pair<double, double> sample = sampler->getSample(random, range);
+			double x = sample.first;
+			double w = sample.second;
 			double Ephoton = x * Ee;
-			candidate->addSecondary(22, Ephoton / (1 + z), pos);
-			// candidate->current.setEnergy((Ee - Ephoton) / (1 + z));
-
+			Vector3d pos = candidate->current.getPosition();
+			candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
 			Ee -= Ephoton;
 		} while (Ee > Ethr);
 
@@ -400,12 +397,12 @@ double VacuumCherenkov::thresholdMomentum(const int& id, const MonochromaticLore
 }
 
 template<class KO, class KP>
-ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const KO& kinOt, const KP& kinPh) {
+void VacuumCherenkov::buildSpectrum(const KO& kinOt, const KP& kinPh) {
 	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented.");
 }
 
 template<>
-ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
+void VacuumCherenkov::buildSpectrum(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
 	string kOt = kinOt->getNameTag();
 	string kPh = kinPh->getNameTag();
 
@@ -442,9 +439,10 @@ ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const ref_ptr<Kinematics>& k
 }
 
 template<class KP>
-ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
+void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
 	unsigned int nBins = 2601;
 	ref_ptr<Histogram1D> dist = new Histogram1DLog10(1e-12, 1., nBins);
+	ref_ptr<Histogram1D> aux = new Histogram1DLog10(1e-12, 1., nBins);
 
 	std::pair<double, double> range = xRange(kinOt, kinPh);
 
@@ -470,11 +468,16 @@ ref_ptr<Histogram1D> VacuumCherenkov::buildSpectrum(const MonochromaticLorentzVi
 			P = std::max(P, 0.);
 			dist->setBinContent(i, P);
 		}
+		if (x > 0)
+			aux->setBinContent(i, weightFunction(x)); 
+			// aux->setBinContent(i, 1. / x); 
 	}
+	aux->normalise(aux->sum());
 
-	// dist->prepareCDF();
+	// sampler = new InverseSampler(dist);
 
-	return dist;
+	sampler = new ImportanceSampler(dist, aux); 
+	distribution = dist;
 }
 
 template<class KO, class KP>
@@ -583,5 +586,65 @@ double VacuumCherenkov::_G0(const double& chiOt, const double& chiPh) {
 	return (157. * chiOt - 22. * chiPh) / 120.;
 }
 
+ref_ptr<Sampler> VacuumCherenkov::_getDefaultSampler() {
+	ref_ptr<Sampler> s = new InverseSampler();
+	return s;
+}
+
+
+
+template<class KO, class KP>
+std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const KO& kinOt, const KP& kinPh) {
+	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented.");
+}
+
+template<>
+std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
+	string kOt = kinOt->getNameTag();
+	string kPh = kinPh->getNameTag();
+
+	if (kOt == "LIVmono0") {
+		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics0();
+		if (kPh == "SR") {
+			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
+			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
+		} else if (kPh == "LIVmono0") {
+			const MonochromaticLorentzViolatingKinematics<0>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics0();
+			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
+		}
+	} else if (kOt == "LIVmono1") {
+		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics1();
+		if (kPh == "SR") {
+			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
+			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
+		} else if (kPh == "LIVmono1") {
+			const MonochromaticLorentzViolatingKinematics<1>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics1();
+			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
+		}
+	} else if (kOt == "LIVmono2") {
+		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics2();
+		if (kPh == "SR") {
+			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
+			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
+		} else if (kPh == "LIVmono2") {
+			const MonochromaticLorentzViolatingKinematics<2>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics2();
+			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
+		}
+	}
+
+	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented. Therefore, cannot get default weighting function.");
+} 
+
+template<class KP>
+std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
+	double chiOt = kinOt.getCoefficient();
+	double chiPh = kinPh.getCoefficient();
+
+	auto f = [](const double& x) { 
+		return 1. / x; 
+		};
+
+	return f;
+}
 
 } // namespace livpropa

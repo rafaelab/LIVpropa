@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <numeric>
 #include <stdexcept>
@@ -48,7 +49,6 @@ class VacuumCherenkov: public Module {
 	private:
 		static constexpr double _defaultInteractionRate = 0;
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
-		// ref_ptr<Sampler> _defaultSampler;
 
 	protected:
 		string interactionTag;
@@ -59,25 +59,30 @@ class VacuumCherenkov: public Module {
 		double limit;
 		double thinning;
 		VacuumCherenkovSpectrum spectrum;
-		KinematicsMap kinematics;
+		ref_ptr<Kinematics> kinematicsPhoton;
+		ref_ptr<Kinematics> kinematicsParticle;
 		ref_ptr<Histogram1D> distribution;
 		ref_ptr<Sampler> sampler;
-		
+		std::function<double(double)> weightFunction;
 
 	public:
 		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
 		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
 		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
 		void setParticle(int id);
+		void setKinematicsParticle(ref_ptr<Kinematics> kin);
+		void setKinematicsPhoton(ref_ptr<Kinematics> kin);
 		void setAngularCorrection(bool correction);
 		void setContinuousEnergyLoss(bool loss);
 		void setHavePhotons(bool photons);
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
+		void setWeightFunction(std::function<double(double)> func);
 		void setSpectrum(VacuumCherenkovSpectrum spec);
 		void setSampler(ref_ptr<Sampler> sampler);
 		int getParticle() const;
 		string getInteractionTag() const;
+		std::function<double(double)> getWeightFunction() const;
 		ref_ptr<Kinematics> getKinematicsParticle() const;
 		ref_ptr<Kinematics> getKinematicsPhoton() const;
 		ref_ptr<Histogram1D> getDistribution() const;
@@ -94,9 +99,9 @@ class VacuumCherenkov: public Module {
 		template<> static double thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<0>& kinOt, const MonochromaticLorentzViolatingKinematics<0>& kinPh);
 		template<> static double thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<1>& kinOt, const MonochromaticLorentzViolatingKinematics<1>& kinPh);
 		template<> static double thresholdMomentum(const int& id, const MonochromaticLorentzViolatingKinematics<2>& kinOt,  const MonochromaticLorentzViolatingKinematics<2>& kinPh);
-		template<class KO, class KP> ref_ptr<Histogram1D> buildSpectrum(const KO& kinOt, const KP& kinPh);
-		template<> ref_ptr<Histogram1D> buildSpectrum(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
-		template<class KP> ref_ptr<Histogram1D> buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
+		template<class KO, class KP> void buildSpectrum(const KO& kinOt, const KP& kinPh);
+		template<class KP> void buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
+		template<> void buildSpectrum(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 		template<class KO, class KP> static double interactionRate(const double& p, const KO& kinOt, const KP& kinPh);
 		template<> static double interactionRate(const double& p, const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 		template<> static double interactionRate(const double& p, const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
@@ -104,9 +109,14 @@ class VacuumCherenkov: public Module {
 		template<class KO, class KP> static std::pair<double, double> xRange(const KO& kinOt, const KP& kinPh); 
 		template<> std::pair<double, double> xRange(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 		template<> static std::pair<double, double> xRange(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const MonochromaticLorentzViolatingKinematics<2>& kinPh);
+	private:
 		static double _Gp(const double& chiOt, const double& chiPh);
 		static double _Gm(const double& chiOt, const double& chiPh);
 		static double _G0(const double& chiOt, const double& chiPh);
+		static ref_ptr<Sampler> _getDefaultSampler();
+		template<class KO, class KP> static std::function<double(double)> _getDefaultWeightFunction(const KO& kinOt, const KP& kinPh);
+		template<class KP> static std::function<double(double)> _getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
+		template<> static std::function<double(double)> _getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 };
 /** @}*/
 
