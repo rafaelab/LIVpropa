@@ -52,10 +52,6 @@ enum class VacuumCherenkovSpectrum {
  In this case, the user can control the type of sampling using custom functions. However, this does not work very well outside C++. The default implementation works reasonably.
 */
 class VacuumCherenkov: public Module {
-	private:
-		static constexpr double _defaultInteractionRate = 0;
-		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
-
 	protected:
 		string interactionTag;
 		int particleId;
@@ -72,9 +68,9 @@ class VacuumCherenkov: public Module {
 		std::function<double(double)> weightFunction;
 
 	public:
-		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, double limit = 0.1);
+		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<Kinematics> kin);
 		void setKinematicsPhoton(ref_ptr<Kinematics> kin);
@@ -84,8 +80,7 @@ class VacuumCherenkov: public Module {
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
 		void setWeightFunction(std::function<double(double)> func);
-		void setSpectrum(VacuumCherenkovSpectrum spec);
-		void setSampler(ref_ptr<Sampler> sampler);
+		void setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler> sampler);
 		int getParticle() const;
 		string getInteractionTag() const;
 		std::function<double(double)> getWeightFunction() const;
@@ -124,6 +119,10 @@ class VacuumCherenkov: public Module {
 		template<class KO, class KP> static std::function<double(double)> _getDefaultWeightFunction(const KO& kinOt, const KP& kinPh);
 		template<class KP> static std::function<double(double)> _getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
 		template<> static std::function<double(double)> _getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
+
+		static constexpr double _defaultInteractionRate = 0;
+		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
+
 };
 /** @}*/
 

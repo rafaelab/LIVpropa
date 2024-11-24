@@ -5,7 +5,7 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler,  double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -25,11 +25,10 @@ VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpect
 		setKinematicsPhoton(kin[22]);
 	}
 
-	setSampler(_getDefaultSampler());
-	setSpectrum(spec);
+	setSpectrum(spec, sampler);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -38,11 +37,10 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kine
 	setLimit(limit);
 	setKinematicsPhoton(kinPh);
 	setKinematicsParticle(kinOt);
-	setSampler(_getDefaultSampler());
-	setSpectrum(spec);
+	setSpectrum(spec, sampler);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -51,8 +49,7 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenko
 	setLimit(limit);
 	setKinematicsPhoton(kin);
 	setKinematicsParticle(kin);
-	setSampler(_getDefaultSampler());
-	setSpectrum(spec);
+	setSpectrum(spec, sampler);
 }
 
 void VacuumCherenkov::setParticle(int id) {
@@ -94,7 +91,7 @@ void VacuumCherenkov::setWeightFunction(std::function<double(double)> f) {
 	weightFunction = f;
 }
 
-void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec) {
+void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler> s) {
 	string kinType = kinematicsParticle->getNameTag();
 
 	if (spec == VacuumCherenkovSpectrum::Default) {
@@ -111,22 +108,20 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec) {
 		spectrum = spec;
 	}
 
-	string errorMesssage = "VacuumCherenkov: treatment for this particular combination of kinematics of photon + other particle is not implemented.";
+	string errorMessage = "VacuumCherenkov: treatment for this particular combination of kinematics of photon + other particle is not implemented.";
 	if ((kinType == "LIVmono0" or kinType == "LIVmono1") and spectrum != VacuumCherenkovSpectrum::Step) {
-		throw runtime_error(errorMesssage);
+		throw runtime_error(errorMessage);
 	}
 
 	if (spectrum == VacuumCherenkovSpectrum::Full) {
-		auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
-		setWeightFunction(w);
+		if (sampler == nullptr) {
+			sampler = new ImportanceSampler();
+			auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
+			setWeightFunction(w);
+		}
 		buildSpectrum(kinematicsParticle, kinematicsPhoton);
-		sampler->setDistribution(distribution);
 		sampler->computeCDF();
 	}
-}
-
-void VacuumCherenkov::setSampler(ref_ptr<Sampler> s) {
-	sampler = s;
 }
 
 int VacuumCherenkov::getParticle() const {
@@ -468,16 +463,18 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 			P = std::max(P, 0.);
 			dist->setBinContent(i, P);
 		}
-		if (x > 0)
-			aux->setBinContent(i, weightFunction(x)); 
-			// aux->setBinContent(i, 1. / x); 
+		if (x > 0 and sampler->getNameTag() == "importance") {
+			aux->setBinContent(i, weightFunction(x));
+		}
 	}
-	aux->normalise(aux->sum());
 
-	// sampler = new InverseSampler(dist);
-
-	sampler = new ImportanceSampler(dist, aux); 
+	sampler->setDistribution(dist);
 	distribution = dist;
+
+	if (sampler->getNameTag() == "importance") {
+		aux->normalise(aux->sum());
+		sampler = new ImportanceSampler(dist, aux);
+	} 	
 }
 
 template<class KO, class KP>
