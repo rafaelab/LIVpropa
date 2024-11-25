@@ -185,17 +185,15 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 	if (E < Ethr or isnan(Ethr) or isinf(Ethr))
 		return;
 
-	if (havePhotons) {
-		switch (spectrum) {
-			case VacuumCherenkovSpectrum::Step: 
-				emissionSpectrumStep(candidate, Ethr);
-				break;
-			case VacuumCherenkovSpectrum::Full:
-				emissionSpectrumFull(candidate, Ethr);
-				break;
-			default:
-				break;
-		}
+	switch (spectrum) {
+		case VacuumCherenkovSpectrum::Step: 
+			emissionSpectrumStep(candidate, Ethr);
+			break;
+		case VacuumCherenkovSpectrum::Full:
+			emissionSpectrumFull(candidate, Ethr);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -251,7 +249,8 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 
 			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			double Ephoton = x * E;
-			candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
+			if (havePhotons)
+				candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
 			dE -= Ephoton;
 		}		
 		candidate->current.setEnergy((E - dE) / (1 + z));
@@ -264,7 +263,8 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 			double w = sample.second;
 			double Ephoton = x * Ee;
 			Vector3d pos = candidate->current.getPosition();
-			candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
+			if (havePhotons)
+				candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
 			Ee -= Ephoton;
 		} while (Ee > Ethr);
 
@@ -637,11 +637,46 @@ std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const M
 	double chiOt = kinOt.getCoefficient();
 	double chiPh = kinPh.getCoefficient();
 
-	auto f = [](const double& x) { 
+	// define useful functions
+	auto f_uniform =  [](const double& x) { 
+		return 1.; 
+		};
+	auto f_log =  [](const double& x) { 
 		return 1. / x; 
 		};
+	auto f_exp =  [](const double& x) { 
+		return x; 
+		};
 
-	return f;
+	// for now, all cases return same weighting function
+	// structure is kept for future changes
+
+	// a) χ_γ > χ_o > 0
+	if (chiOt > 0 and chiPh > chiOt) { 
+		if (chiPh / chiOt > 100.) 
+			return f_exp;
+		else
+			return f_uniform;
+
+	// b) χ_o > χ_γ > 0
+	} else if (chiPh > 0 and chiOt > chiPh) { 
+		return f_log;
+		
+	// c) χ_o > 0 > χ_γ
+	} else if (chiPh < 0 and chiOt > 0) { 
+		if (abs(chiPh / chiOt) > 1.) 
+			return f_uniform;
+		else 
+			return f_log;
+
+	// d) χ_γ > 0 > χ_o
+	} else if (chiOt < chiPh and chiPh < 0) { 
+		return f_log;
+	
+	// general case
+	} else { 
+		return f_log;
+	}
 }
 
 } // namespace livpropa
