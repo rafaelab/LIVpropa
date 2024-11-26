@@ -116,8 +116,6 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Distribu
 	if (spectrum == VacuumCherenkovSpectrum::Full) {
 		if (sampler == nullptr) {
 			sampler = new ImportanceSampler();
-			auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
-			setWeightFunction(w);
 		}
 		buildSpectrum(kinematicsParticle, kinematicsPhoton);
 		sampler->computeCDF();
@@ -463,10 +461,36 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 			P = std::max(P, 0.);
 			dist->setBinContent(i, P);
 		}
-		if (x > 0 and sampler->getNameTag() == "importance") {
-			aux->setBinContent(i, weightFunction(x));
-		}
+		// if (x > 0 and sampler->getNameTag() == "importance") {
+		// 	aux->setBinContent(i, weightFunction(x));
+		// }
 	}
+
+	size_t idx1 = dist->getBinIndex(range.first);
+	size_t idx2 = dist->getBinIndex(range.second);
+	double P2 = dist->getBinContent(idx2);
+	double P1 = dist->getBinContent(idx1);
+	double dPdx = (P2 - P1) / (range.second - range.first);
+
+
+	if (sampler->getNameTag() == "importance") {
+		const double dPdx_ref = 100.;
+		const double x_ref = 0.01; 
+		for (size_t i = 0; i < aux->getNumberOfBins(); i++) {
+			double x = aux->getBinCentre(i);
+			if (x < x_ref) { 
+				if (abs(dPdx) < dPdx_ref) {
+					aux->setBinContent(i, 1.);
+				} else if (dPdx < - dPdx_ref) {
+					aux->setBinContent(i, log10(x));
+				} else {
+					aux->setBinContent(i, exp(x));
+				}
+			} else {
+				aux->setBinContent(i, 1.);
+			}
+		} 
+	} 
 
 	sampler->setDistribution(dist);
 	distribution = dist;
@@ -588,95 +612,5 @@ ref_ptr<DistributionSampler> VacuumCherenkov::_getDefaultSampler() {
 	return s;
 }
 
-
-
-template<class KO, class KP>
-std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const KO& kinOt, const KP& kinPh) {
-	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented.");
-}
-
-template<>
-std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
-	string kOt = kinOt->getNameTag();
-	string kPh = kinPh->getNameTag();
-
-	if (kOt == "LIVmono0") {
-		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics0();
-		if (kPh == "SR") {
-			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
-		} else if (kPh == "LIVmono0") {
-			const MonochromaticLorentzViolatingKinematics<0>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics0();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
-		}
-	} else if (kOt == "LIVmono1") {
-		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics1();
-		if (kPh == "SR") {
-			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
-		} else if (kPh == "LIVmono1") {
-			const MonochromaticLorentzViolatingKinematics<1>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics1();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
-		}
-	} else if (kOt == "LIVmono2") {
-		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics2();
-		if (kPh == "SR") {
-			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
-		} else if (kPh == "LIVmono2") {
-			const MonochromaticLorentzViolatingKinematics<2>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics2();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
-		}
-	}
-
-	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented. Therefore, cannot get default weighting function.");
-} 
-
-template<class KP>
-std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
-	double chiOt = kinOt.getCoefficient();
-	double chiPh = kinPh.getCoefficient();
-
-	// define useful functions
-	auto f_uniform =  [](const double& x) { 
-		return 1.; 
-		};
-	auto f_log =  [](const double& x) { 
-		return 1. / x; 
-		};
-	auto f_exp =  [](const double& x) { 
-		return x; 
-		};
-
-	// for now, all cases return same weighting function
-	// structure is kept for future changes
-
-	// a) χ_γ > χ_o > 0
-	if (chiOt > 0 and chiPh > chiOt) { 
-		if (chiPh / chiOt > 100.) 
-			return f_exp;
-		else
-			return f_uniform;
-
-	// b) χ_o > χ_γ > 0
-	} else if (chiPh > 0 and chiOt > chiPh) { 
-		return f_log;
-		
-	// c) χ_o > 0 > χ_γ
-	} else if (chiPh < 0 and chiOt > 0) { 
-		if (abs(chiPh / chiOt) > 1.) 
-			return f_uniform;
-		else 
-			return f_log;
-
-	// d) χ_γ > 0 > χ_o
-	} else if (chiOt < chiPh and chiPh < 0) { 
-		return f_log;
-	
-	// general case
-	} else { 
-		return f_log;
-	}
-}
 
 } // namespace livpropa

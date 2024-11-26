@@ -116,9 +116,6 @@ class VacuumCherenkov: public Module {
 		static double _Gm(const double& chiOt, const double& chiPh);
 		static double _G0(const double& chiOt, const double& chiPh);
 		static ref_ptr<DistributionSampler> _getDefaultSampler();
-		template<class KO, class KP> static std::function<double(double)> _getDefaultWeightFunction(const KO& kinOt, const KP& kinPh);
-		template<class KP> static std::function<double(double)> _getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
-		template<> static std::function<double(double)> _getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 
 		static constexpr double _defaultInteractionRate = 0;
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();
