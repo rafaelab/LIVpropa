@@ -184,6 +184,7 @@
 %include "livpropa/UnitsAndConstants.h"
 %include "livpropa/Histogram.h"
 %include "livpropa/Sampler.h"
+%include "livpropa/Weighter.h"
 %include "livpropa/Kinematics.h"
 %include "livpropa/InverseComptonScattering.h"
 %include "livpropa/PairProduction.h"
@@ -216,16 +217,22 @@
 
 
 /*************************************************************************************************/
-/**	                           			 Samplers  			                                    **/
+/**	                          Samplers & Weights  			                                    **/
 /*************************************************************************************************/
 
 /* Ignore list */
-%ignore operator livpropa::DistributionSampler*;
+%ignore operator livpropa::Sampler*;
+%ignore operator livpropa::Weighter*;
+%ignore operator livpropa::WeighterList*;
 
 /* To enable access to abstract base class  */
-%implicitconv crpropa::ref_ptr<livpropa::DistributionSampler>;
-%template(DistributionSamplerRefPtr) crpropa::ref_ptr<livpropa::DistributionSampler>;
-%feature("director") livpropa::DistributionSampler;
+%implicitconv crpropa::ref_ptr<livpropa::Sampler>;
+%template(SamplerRefPtr) crpropa::ref_ptr<Sampler>;
+%feature("director") livpropa::Sampler;
+
+%implicitconv crpropa::ref_ptr<livpropa::Weighter>;
+%feature("director") crpropa::Weighter;
+%template(WeighterRefPtr) crpropa::ref_ptr<livpropa::Weighter>;
 
 
 

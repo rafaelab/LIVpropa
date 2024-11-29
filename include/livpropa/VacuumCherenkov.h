@@ -9,12 +9,15 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include <kiss/logger.h>
+
 #include "livpropa/Common.h"
 #include "livpropa/Data.h"
 #include "livpropa/Histogram.h"
 #include "livpropa/Kinematics.h"
 #include "livpropa/Sampler.h"
 #include "livpropa/UnitsAndConstants.h"
+#include "livpropa/Weighter.h"
 
 
 
@@ -60,34 +63,42 @@ class VacuumCherenkov: public Module {
 		bool continuousEnergyLoss;
 		double limit;
 		double thinning;
+		double xMin;
+		unsigned int nBins;
 		VacuumCherenkovSpectrum spectrum;
 		ref_ptr<Kinematics> kinematicsPhoton;
 		ref_ptr<Kinematics> kinematicsParticle;
 		ref_ptr<Histogram1D> distribution;
-		ref_ptr<DistributionSampler> sampler;
 		std::function<double(double)> weightFunction;
+		ref_ptr<Weighter> weighter; 
+		ref_ptr<Sampler> sampler;
 
 	public:
-		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<DistributionSampler> sampler = nullptr, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<DistributionSampler> sampler = nullptr, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<DistributionSampler> sampler = nullptr, double limit = 0.1);
+		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<Weighter> weighter = nullptr, double minEnergyFraction = 1e-10, unsigned int nBins = 2001, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<Weighter> weighter = nullptr, double minEnergyFraction = 1e-10, unsigned int nBins = 2001, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<Weighter> weighter = nullptr, double minEnergyFraction = 1e-10, unsigned int nBins = 2001, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<Kinematics> kin);
 		void setKinematicsPhoton(ref_ptr<Kinematics> kin);
+		void setWeighter(ref_ptr<Weighter> weighter);
+		void setSampler(ref_ptr<Sampler> dist);
 		void setAngularCorrection(bool correction);
 		void setContinuousEnergyLoss(bool loss);
 		void setHavePhotons(bool photons);
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
 		void setWeightFunction(std::function<double(double)> func);
-		void setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<DistributionSampler> sampler);
+		void setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler> sampler);
+		void setMinimumEnergyFraction(double xMin);
+		void setNumberOfBins(unsigned int nBins);
 		int getParticle() const;
 		string getInteractionTag() const;
 		std::function<double(double)> getWeightFunction() const;
 		ref_ptr<Kinematics> getKinematicsParticle() const;
 		ref_ptr<Kinematics> getKinematicsPhoton() const;
 		ref_ptr<Histogram1D> getDistribution() const;
-		ref_ptr<DistributionSampler> getSampler() const;
+		ref_ptr<Sampler> getSampler() const;
+		ref_ptr<Weighter> getWeighter() const;
 		double computeThresholdMomentum() const;
 		double computeThresholdEnergy() const;
 		double computeInteractionRate(const double& p) const;
@@ -115,7 +126,10 @@ class VacuumCherenkov: public Module {
 		static double _Gp(const double& chiOt, const double& chiPh);
 		static double _Gm(const double& chiOt, const double& chiPh);
 		static double _G0(const double& chiOt, const double& chiPh);
-		static ref_ptr<DistributionSampler> _getDefaultSampler();
+		static ref_ptr<Sampler> _getDefaultSampler();
+		template<class KO, class KP> static std::function<double(double)> _getDefaultWeightFunction(const KO& kinOt, const KP& kinPh);
+		template<class KP> static std::function<double(double)> _getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh);
+		template<> static std::function<double(double)> _getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh);
 
 		static constexpr double _defaultInteractionRate = 0;
 		static constexpr double _defaultThresholdMomentum = std::numeric_limits<double>::infinity();

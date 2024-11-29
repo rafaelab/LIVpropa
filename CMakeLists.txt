@@ -53,6 +53,7 @@ set(SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Data.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Histogram.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Sampler.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Weighter.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Kinematics.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/PairProduction.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/InverseComptonScattering.cc

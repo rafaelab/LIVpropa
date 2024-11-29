@@ -14,16 +14,16 @@ namespace livpropa {
 
 
 /**
- @class DistributionSampler
+ @class Sampler
  @brief Interface for sampling from a distribution.
 */
-class DistributionSampler : public crpropa::Referenced {
+class Sampler : public crpropa::Referenced {
 	protected:
 		ref_ptr<Histogram1D> histogram;
 		vector<double> cdf;
 
 	public:
-		virtual ~DistributionSampler() = default;
+		virtual ~Sampler() = default;
 		virtual string getNameTag() const = 0;
 		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
@@ -38,7 +38,7 @@ class DistributionSampler : public crpropa::Referenced {
  @class InverseSampler
  @brief Sample from a distribution using the inverse transform method.
 */
-class InverseSampler: public DistributionSampler {
+class InverseSampler: public Sampler {
 	public:
 		InverseSampler();
 		InverseSampler(ref_ptr<Histogram1D> h);
@@ -53,7 +53,7 @@ class InverseSampler: public DistributionSampler {
  @brief Sample from a distribution using the rejection sampling method.
  (UNTESTED)
 */
-class RejectionSampler: public DistributionSampler {
+class RejectionSampler: public Sampler {
 	protected:
 		ref_ptr<Histogram1D> proposalPDF;
 		InverseSampler inverseSampler;
@@ -75,7 +75,7 @@ class RejectionSampler: public DistributionSampler {
  @brief Sample from a distribution using the importance sampling method.
  The default CDF function is changed here to incorporate the proposal distribution.
 */
-class ImportanceSampler: public DistributionSampler {
+class ImportanceSampler: public Sampler {
 	protected:
 		ref_ptr<Histogram1D> proposalPDF;
 		InverseSampler inverseSampler;
@@ -89,6 +89,7 @@ class ImportanceSampler: public DistributionSampler {
 		void computeCDF();
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
+
 
 
 

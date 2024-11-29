@@ -5,15 +5,15 @@ namespace livpropa {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void DistributionSampler::setDistribution(ref_ptr<Histogram1D> h) {
+void Sampler::setDistribution(ref_ptr<Histogram1D> h) {
 	histogram = h;
 }
 
-ref_ptr<Histogram1D> DistributionSampler::getDistribution() const {
+ref_ptr<Histogram1D> Sampler::getDistribution() const {
 	return histogram;
 }
 
-void DistributionSampler::computeCDF() {
+void Sampler::computeCDF() {
 	vector<double> edges = histogram->getBinEdges();
 	vector<double> contents = histogram->getBinContents();
 	size_t nBins = histogram->getNumberOfBins();
@@ -41,7 +41,7 @@ void DistributionSampler::computeCDF() {
 	}
 }
 
-vector<std::pair<double, double>> DistributionSampler::getSamples(unsigned int nSamples, Random& random, const std::pair<double, double>& range) const {
+vector<std::pair<double, double>> Sampler::getSamples(unsigned int nSamples, Random& random, const std::pair<double, double>& range) const {
 	vector<std::pair<double, double>> samples;
 	for (unsigned int i = 0; i < nSamples; i++) {
 		samples.push_back(getSample(random, range));
@@ -50,7 +50,7 @@ vector<std::pair<double, double>> DistributionSampler::getSamples(unsigned int n
 	return samples;
 }
 
-ref_ptr<Histogram1D> DistributionSampler::getCumulativeDistribution() const {
+ref_ptr<Histogram1D> Sampler::getCumulativeDistribution() const {
 	ref_ptr<Histogram1D> hCum = histogram;
 	hCum->setBinContents(cdf);
 	return hCum;
@@ -86,7 +86,6 @@ std::pair<double, double> InverseSampler::getSample(Random& random, const std::p
 
 	return std::make_pair(x, w);
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,8 +129,6 @@ std::pair<double, double> RejectionSampler::getSample(Random& random, const std:
 		}
 	}
 }
-
-
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
