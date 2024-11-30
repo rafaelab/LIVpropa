@@ -227,13 +227,12 @@
 
 /* To enable access to abstract base class  */
 %implicitconv crpropa::ref_ptr<livpropa::Sampler>;
-%template(SamplerRefPtr) crpropa::ref_ptr<Sampler>;
+%template(SamplerRefPtr) crpropa::ref_ptr<livpropa::Sampler>;
 %feature("director") livpropa::Sampler;
 
 %implicitconv crpropa::ref_ptr<livpropa::Weighter>;
-%feature("director") crpropa::Weighter;
 %template(WeighterRefPtr) crpropa::ref_ptr<livpropa::Weighter>;
-
+%feature("director") crpropa::Weighter;
 
 
 /*************************************************************************************************/
