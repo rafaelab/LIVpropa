@@ -17,7 +17,7 @@ namespace livpropa {
  @class Sampler
  @brief Interface for sampling from a distribution.
 */
-class Sampler : public crpropa::Referenced {
+class Sampler : public Referenced {
 	protected:
 		ref_ptr<Histogram1D> histogram;
 		vector<double> cdf;
@@ -77,15 +77,21 @@ class RejectionSampler: public Sampler {
 */
 class ImportanceSampler: public Sampler {
 	protected:
+		std::function<double(double)> weightFunction;
 		ref_ptr<Histogram1D> proposalPDF;
 		InverseSampler inverseSampler;
 
 	public:
 		ImportanceSampler();
-		ImportanceSampler(ref_ptr<Histogram1D> pdf, ref_ptr<Histogram1D> proposalPDF);
+		ImportanceSampler(std::function<double(double)> weight);
+		ImportanceSampler(string weight);
+		ImportanceSampler(ref_ptr<Histogram1D> pdf, ref_ptr<Histogram1D> proposalPDF, std::function<double(double)> weight);
+		ImportanceSampler(ref_ptr<Sampler> sampler);
 		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
+		void setWeightFunction(std::function<double(double)> func);
 		string getNameTag() const;
 		ref_ptr<Histogram1D> getProposalPDF() const;
+		std::function<double(double)> getWeightFunction() const;
 		void computeCDF();
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
