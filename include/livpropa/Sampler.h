@@ -13,6 +13,13 @@
 namespace livpropa {
 
 
+enum class SamplerType {
+	Inverse,
+	Rejection,
+	Importance
+};
+
+
 /**
  @class Sampler
  @brief Interface for sampling from a distribution.
@@ -21,16 +28,20 @@ class Sampler : public Referenced {
 	protected:
 		ref_ptr<Histogram1D> histogram;
 		vector<double> cdf;
+		SamplerType type;
 
 	public:
 		virtual ~Sampler() = default;
 		virtual string getNameTag() const = 0;
 		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
+		void setType(SamplerType t);
+		SamplerType getType() const;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		void setDistribution(ref_ptr<Histogram1D> histogram);
 		ref_ptr<Histogram1D> getDistribution() const;
 		ref_ptr<Histogram1D> getCumulativeDistribution() const;
 		void computeCDF();
+
 };
 
 

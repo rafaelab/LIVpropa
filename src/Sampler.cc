@@ -56,15 +56,25 @@ ref_ptr<Histogram1D> Sampler::getCumulativeDistribution() const {
 	return hCum;
 }
 
+void Sampler::setType(SamplerType t) {
+	type = t;
+}
+
+SamplerType Sampler::getType() const {
+	return type;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 InverseSampler::InverseSampler() {
+	setType(SamplerType::Inverse);
 }
 
 InverseSampler::InverseSampler(ref_ptr<Histogram1D> h) {
 	setDistribution(h);
 	computeCDF();
+	setType(SamplerType::Inverse);
 }
 
 string InverseSampler::getNameTag() const {
@@ -88,15 +98,19 @@ std::pair<double, double> InverseSampler::getSample(Random& random, const std::p
 }
 
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 RejectionSampler::RejectionSampler() {
+	setType(SamplerType::Rejection);
 }
 
 RejectionSampler::RejectionSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D> proposal, double maxRatio) {
 	setDistribution(h);
 	setProposalPDF(proposal);
 	computeCDF();
+	setType(SamplerType::Rejection);
 	this->maxRatio = maxRatio;
 }
 
@@ -134,13 +148,17 @@ std::pair<double, double> RejectionSampler::getSample(Random& random, const std:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImportanceSampler::ImportanceSampler() {
+	setType(SamplerType::Importance);
 }
 
 ImportanceSampler::ImportanceSampler(std::function<double(double)> weight) {
 	setWeightFunction(weight);
+	setType(SamplerType::Importance);
 }
 
 ImportanceSampler::ImportanceSampler(string weight) {
+	setType(SamplerType::Importance);
+
 	if (weight == "constant" or weight == "uniform") {
 		setWeightFunction([](const double& x) { return 1; });
 	} else if (weight == "linear" or weight == "lin" or weight == "1") {
@@ -253,9 +271,11 @@ ImportanceSampler::ImportanceSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D
 	setProposalPDF(proposal);
 	computeCDF();
 	setWeightFunction(weight);
+	setType(SamplerType::Importance);
 }
 
 ImportanceSampler::ImportanceSampler(ref_ptr<Sampler> sampler) {
+	setType(SamplerType::Importance);
 	if (sampler->getNameTag() == "importance") {
 		auto s = static_cast<ImportanceSampler*>(sampler.get());
 		setDistribution(s->getDistribution());
