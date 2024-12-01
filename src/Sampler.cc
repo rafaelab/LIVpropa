@@ -159,108 +159,56 @@ ImportanceSampler::ImportanceSampler(std::function<double(double)> weight) {
 ImportanceSampler::ImportanceSampler(string weight) {
 	setType(SamplerType::Importance);
 
+	auto parsePower = [](const std::string& str) -> double {
+		if (str.find("power") == 0) {
+			std::string powerStr = str.substr(5);
+			std::istringstream iss(powerStr);
+			double power;
+			iss >> power;
+			return power;
+		}
+		return 1.;
+	};
+
+	auto parseInversePower = [](const std::string& str) -> double {
+		if (str.find("ipower") == 0) {
+			std::string powerStr = str.substr(6);
+			std::istringstream iss(powerStr);
+			double power;
+			iss >> power;
+			return power;
+		}
+		return 1.;
+	};
+
 	if (weight == "constant" or weight == "uniform") {
 		setWeightFunction([](const double& x) { return 1; });
-	} else if (weight == "linear" or weight == "lin" or weight == "1") {
+	} else if (weight == "linear" or weight == "lin") {
 		setWeightFunction([](const double& x) { return x; });
-	} else if (weight == "quadratic" or weight == "quad" or weight == "2") {
+	} else if (weight == "quadratic" or weight == "quad") {
 		setWeightFunction([](const double& x) { return x * x; });
-	} else if (weight == "cubic" or weight == "3") {
+	} else if (weight == "cubic") {
 		setWeightFunction([](const double& x) { return x * x * x; });
 	} else if (weight == "exponential" or weight == "exp") {
 		setWeightFunction([](const double& x) { return exp(x); });
 	} else if (weight == "sqrt") {
 		setWeightFunction([](const double& x) { return sqrt(x); });
-	} else if (weight == "power0.001") {
-		setWeightFunction([](const double& x) { return pow(x, 0.001); });
-	} else if (weight == "power0.01") {
-		setWeightFunction([](const double& x) { return pow(x, 0.01); });
-	} else if (weight == "power0.1") {
-		setWeightFunction([](const double& x) { return pow(x, 0.1); });
-	} else if (weight == "power0.2") {
-		setWeightFunction([](const double& x) { return pow(x, 0.2); });
-	} else if (weight == "power0.3") {
-		setWeightFunction([](const double& x) { return pow(x, 0.3); });
-	} else if (weight == "power0.4") {
-		setWeightFunction([](const double& x) { return pow(x, 0.4); });
-	} else if (weight == "power0.5") {
-		setWeightFunction([](const double& x) { return pow(x, 0.5); });
-	} else if (weight == "power0.6") {
-		setWeightFunction([](const double& x) { return pow(x, 0.6); });
-	} else if (weight == "power0.7") {
-		setWeightFunction([](const double& x) { return pow(x, 0.7); });
-	} else if (weight == "power0.8") {
-		setWeightFunction([](const double& x) { return pow(x, 0.8); });
-	} else if (weight == "power0.9") {
-		setWeightFunction([](const double& x) { return pow(x, 0.9); });
-	} else if (weight == "power0.99") {
-		setWeightFunction([](const double& x) { return pow(x, 0.99); });
-	} else if (weight == "power0.999") {
-		setWeightFunction([](const double& x) { return pow(x, 0.999); });
-	} else if (weight == "power1.001") {
-		setWeightFunction([](const double& x) { return pow(x, 1.001); });
-	} else if (weight == "power1.01") {
-		setWeightFunction([](const double& x) { return pow(x, 1.01); });
-	} else if (weight == "power1.1") {
-		setWeightFunction([](const double& x) { return pow(x, 1.1); });
-	} else if (weight == "power1.2") {
-		setWeightFunction([](const double& x) { return pow(x, 1.2); });
-	} else if (weight == "power1.3") {
-		setWeightFunction([](const double& x) { return pow(x, 1.3); });
-	} else if (weight == "power1.4") {
-		setWeightFunction([](const double& x) { return pow(x, 1.4); });
-	} else if (weight == "power1.5") {
-		setWeightFunction([](const double& x) { return pow(x, 1.5); });
-	} else if (weight == "ilinear" or weight == "ilin" or weight == "i1" or weight == "inverselinear" or weight == "inverse1") {
+	} else if (weight.find("power") == 0) {
+		double power = parsePower(weight);
+		setWeightFunction([power](const double& x) { return pow(x, power); });
+	} else if (weight == "ilinear" or weight == "ilin" or weight == "i1" or weight == "inverselinear") {
 		setWeightFunction([](const double& x) { return 1. / x; });
-	} else if (weight == "iquadratic" or weight == "iquad" or weight == "i2" or weight == "inversequadratic" or weight == "inverse2") {
+	} else if (weight == "iquadratic" or weight == "iquad" or weight == "inversequadratic") {
 		setWeightFunction([](const double& x) { return 1. / (x * x); });
-	} else if (weight == "icubic" or weight == "i3" or weight == "inversecubic" or weight == "inverse3") {
+	} else if (weight == "icubic" or weight == "inversecubic") {
 		setWeightFunction([](const double& x) { return 1. / (x * x * x); });
 	} else if (weight == "iexponential" or weight == "iexp" or weight == "inverseexponential" or weight == "inverseexp") {
-		setWeightFunction([](const double& x) { return exp(- x); });
-	} else if (weight == "isqrt" or weight == "isqrt" or weight == "inversesqrt") {
+		setWeightFunction([](const double& x) { return exp(-x); });
+	} else if (weight == "isqrt" || weight == "inversesqrt") {
 		setWeightFunction([](const double& x) { return 1. / sqrt(x); });
-	} else if (weight == "ipower0001" or weight == "ipower0.001" or weight == "inversepower0.001") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.001); });
-	} else if (weight == "ipower0.01" or weight == "inversepower0.01") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.01); });
-	} else if (weight == "ipower0.1" or  weight == "inversepower0.1") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.1); });
-	} else if (weight == "ipower0.2" or  weight == "inversepower0.2") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.2); });
-	} else if (weight == "ipower0.3" or weight == "inversepower0.3") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.3); });
-	} else if (weight == "ipower0.4" or weight == "inversepower0.4") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.4); });
-	} else if (weight == "ipower0.5" or weight == "inversepower0.5") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.5); });
-	} else if (weight == "ipower0.6" or weight == "inversepower0.6") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.6); });
-	} else if (weight == "ipower0.7" or weight == "inversepower0.7") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.7); });
-	} else if (weight == "ipower0.8" or weight == "inversepower0.8") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.8); });
-	} else if (weight == "ipower0.9" or weight == "inversepower0.9") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.9); });
-	} else if (weight == "ipower0.99" or weight == "inversepower0.99") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.99); });
-	} else if (weight == "ipower0.999" or weight == "inversepower0.999") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 0.999); });
-	} else if (weight == "ipower0.999" or weight == "inversepower1.001") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.001); });
-	} else if (weight == "ipower0.999" or weight == "inversepower1.01") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.01); });
-	} else if (weight == "ipower1.1" or weight == "inversepower1.1") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.1); });
-	} else if (weight == "ipower1.2" or weight == "inversepower1.2") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.2); });
-	} else if (weight == "ipower1.3" or weight == "inversepower1.3") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.3); });
-	} else if (weight == "ipower1.4" or weight == "inversepower1.4") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.4); });
-	} else if (weight == "ipower1.5" or weight == "inversepower1.5") {
-		setWeightFunction([](const double& x) { return 1. / pow(x, 1.5); });
+	} else if (weight.find("ipower") == 0) {
+		double power = parseInversePower(weight);
+		setWeightFunction([power](const double& x) { return 1. / pow(x, power); });
 	} else {
 		throw std::runtime_error("Unknown weight function. Try setting it manually.");
 	}
