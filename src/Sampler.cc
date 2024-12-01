@@ -159,28 +159,6 @@ ImportanceSampler::ImportanceSampler(std::function<double(double)> weight) {
 ImportanceSampler::ImportanceSampler(string weight) {
 	setType(SamplerType::Importance);
 
-	// auto parsePower = [](const std::string& str) -> double {
-	// 	if (str.find("power") == 0) {
-	// 		std::string powerStr = str.substr(5);
-	// 		std::istringstream iss(powerStr);
-	// 		double power;
-	// 		iss >> power;
-	// 		return power;
-	// 	}
-	// 	return 1.;
-	// };
-
-	// auto parseInversePower = [](const std::string& str) -> double {
-	// 	if (str.find("ipower") == 0) {
-	// 		std::string powerStr = str.substr(6);
-	// 		std::istringstream iss(powerStr);
-	// 		double power;
-	// 		iss >> power;
-	// 		return power;
-	// 	}
-	// 	return 1.;
-	// };
-
 	// apply consistent naming
 	std::unordered_map<string, string> names = {
 		{"constant", "uniform"},
@@ -195,7 +173,7 @@ ImportanceSampler::ImportanceSampler(string weight) {
 	};
 	if (names.find(weight) != names.end()) 
 		weight = names[weight];
-		
+
 
 	if (weight == "uniform") {
 		setWeightFunction([](const double& x) { return 1; });
