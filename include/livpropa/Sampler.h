@@ -2,6 +2,7 @@
 #define LIVPROPA_SAMPLER_H
 
 #include <functional>
+#include <unordered_map>
 #include <vector>
 #include <stdexcept>
 
@@ -105,6 +106,9 @@ class ImportanceSampler: public Sampler {
 		std::function<double(double)> getWeightFunction() const;
 		void computeCDF();
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+	
+	private:
+		static double parseWeightFunctionName(const string& str, const string& pattern);
 };
 
 

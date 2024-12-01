@@ -159,55 +159,55 @@ ImportanceSampler::ImportanceSampler(std::function<double(double)> weight) {
 ImportanceSampler::ImportanceSampler(string weight) {
 	setType(SamplerType::Importance);
 
-	auto parsePower = [](const std::string& str) -> double {
-		if (str.find("power") == 0) {
-			std::string powerStr = str.substr(5);
-			std::istringstream iss(powerStr);
-			double power;
-			iss >> power;
-			return power;
-		}
-		return 1.;
-	};
+	// auto parsePower = [](const std::string& str) -> double {
+	// 	if (str.find("power") == 0) {
+	// 		std::string powerStr = str.substr(5);
+	// 		std::istringstream iss(powerStr);
+	// 		double power;
+	// 		iss >> power;
+	// 		return power;
+	// 	}
+	// 	return 1.;
+	// };
 
-	auto parseInversePower = [](const std::string& str) -> double {
-		if (str.find("ipower") == 0) {
-			std::string powerStr = str.substr(6);
-			std::istringstream iss(powerStr);
-			double power;
-			iss >> power;
-			return power;
-		}
-		return 1.;
-	};
+	// auto parseInversePower = [](const std::string& str) -> double {
+	// 	if (str.find("ipower") == 0) {
+	// 		std::string powerStr = str.substr(6);
+	// 		std::istringstream iss(powerStr);
+	// 		double power;
+	// 		iss >> power;
+	// 		return power;
+	// 	}
+	// 	return 1.;
+	// };
 
-	if (weight == "constant" or weight == "uniform") {
+	// apply consistent naming
+	std::unordered_map<string, string> names = {
+		{"constant", "uniform"},
+		{"linear", "power1"},
+		{"quadratic", "power2"},
+		{"cubic", "power3"},
+		{"inverselinear", "inversepower1"},
+		{"inversequadratic", "inversepower2"},
+		{"inversecubic", "inversepower3"},
+		{"sqrt", "power0.5"},
+		{"inversesqrt", "inversepower0.5"}
+	};
+	if (names.find(weight) != names.end()) 
+		weight = names[weight];
+		
+
+	if (weight == "uniform") {
 		setWeightFunction([](const double& x) { return 1; });
-	} else if (weight == "linear" or weight == "lin") {
-		setWeightFunction([](const double& x) { return x; });
-	} else if (weight == "quadratic" or weight == "quad") {
-		setWeightFunction([](const double& x) { return x * x; });
-	} else if (weight == "cubic") {
-		setWeightFunction([](const double& x) { return x * x * x; });
 	} else if (weight == "exponential" or weight == "exp") {
 		setWeightFunction([](const double& x) { return exp(x); });
-	} else if (weight == "sqrt") {
-		setWeightFunction([](const double& x) { return sqrt(x); });
-	} else if (weight.find("power") == 0) {
-		double power = parsePower(weight);
-		setWeightFunction([power](const double& x) { return pow(x, power); });
-	} else if (weight == "ilinear" or weight == "ilin" or weight == "i1" or weight == "inverselinear") {
-		setWeightFunction([](const double& x) { return 1. / x; });
-	} else if (weight == "iquadratic" or weight == "iquad" or weight == "inversequadratic") {
-		setWeightFunction([](const double& x) { return 1. / (x * x); });
-	} else if (weight == "icubic" or weight == "inversecubic") {
-		setWeightFunction([](const double& x) { return 1. / (x * x * x); });
-	} else if (weight == "iexponential" or weight == "iexp" or weight == "inverseexponential" or weight == "inverseexp") {
+	} else if (weight == "inverseexponential" or weight == "inverseexp") {
 		setWeightFunction([](const double& x) { return exp(-x); });
-	} else if (weight == "isqrt" || weight == "inversesqrt") {
-		setWeightFunction([](const double& x) { return 1. / sqrt(x); });
-	} else if (weight.find("ipower") == 0) {
-		double power = parseInversePower(weight);
+	} else if (weight.find("power") == 0) {
+		double power = parseWeightFunctionName(weight, "power");
+		setWeightFunction([power](const double& x) { return 1. / pow(x, power); });
+	} else if (weight.find("inversepower") == 0) {
+		double power = parseWeightFunctionName(weight, "inversepower");
 		setWeightFunction([power](const double& x) { return 1. / pow(x, power); });
 	} else {
 		throw std::runtime_error("Unknown weight function. Try setting it manually.");
@@ -267,6 +267,17 @@ std::pair<double, double> ImportanceSampler::getSample(Random& random, const std
 
 std::function<double(double)> ImportanceSampler::getWeightFunction() const {
 	return weightFunction;
+}
+
+double ImportanceSampler::parseWeightFunctionName(const string& str, const string& pattern) {
+	if (str.find("power") == 0) {
+		string powerStr = str.substr(pattern.length());
+		std::istringstream iss(powerStr);
+		double power;
+		iss >> power;
+		return power;
+	}
+	return 1.;
 }
 
 } // namespace livpropa
