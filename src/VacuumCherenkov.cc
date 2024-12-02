@@ -87,11 +87,19 @@ void VacuumCherenkov::setKinematicsParticle(ref_ptr<Kinematics> kin) {
 }
 
 void VacuumCherenkov::setWeighter(ref_ptr<Weighter> w) {
-	weighter = w;
+	if (w == nullptr) {
+		weighter = new WeighterNull();
+	} else {
+		weighter = w;
+	}
 }
 
 void VacuumCherenkov::setSampler(ref_ptr<Sampler> s) {
-	sampler = s;
+	if (s == nullptr) {
+		sampler = new InverseSampler();
+	} else {
+		sampler = s;
+	}
 }
 
 void VacuumCherenkov::setHavePhotons(bool photons) {
@@ -143,7 +151,8 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler>
 	if (spectrum == VacuumCherenkovSpectrum::Full) {
 		if (sampler == nullptr) {
 			sampler = new ImportanceSampler();
-			auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
+			// auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
+			std::function<double(double)> w = [](double x) { return 1; };
 			setWeightFunction(w);
 		}
 		buildSpectrum(kinematicsParticle, kinematicsPhoton);
@@ -294,7 +303,9 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
 			double Ephoton = x * E;
 			if (havePhotons) {
-				// w *= Weights->computeWeight(22, Ephoton, x, 0, random);
+				double ws = weighter->computeWeight(22, Ephoton / (1 + z), x);
+				if (ws > 0)
+					candidate->addSecondary(22, Ephoton / (1 + z), pos, w * ws);
 				candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
 			}
 				
@@ -303,17 +314,32 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		candidate->current.setEnergy((E - dE) / (1 + z));
 
 	} else {
-		double Ee = E;
+		// to account for weighting schemes
+		double wW = 1;
+		
+		double Ee = E;	
+		unsigned int counter = 0;
 		do {
 			std::pair<double, double> sample = sampler->getSample(random, range);
 			double x = sample.first;
-			double w = sample.second;
+			double wS = sample.second;
 			double Ephoton = x * Ee;
 			Vector3d pos = candidate->current.getPosition();
-			if (havePhotons) {
-				candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
-			}
-			Ee -= Ephoton;
+			wW = weighter->computeWeight(22, Ephoton / (1 + z), x, counter, random);
+			if (wW > 0) {
+				if (havePhotons) {
+					// if the weighter could lead to a negative energy, set corresponding weight to 1
+					if (Ephoton * wW > Ee) {
+						wW = 1;
+						if (counter == 0)
+							KISS_LOG_WARNING << "VacuumCherenkov: you are using a weighter that can barely sample a single particle. Choose a different value for the sampling fraction. I will proceed and ignore the weighter." << endl;
+					} 
+					candidate->addSecondary(22, Ephoton / (1 + z), pos, wW * wS);	
+				}
+				Ee -= (Ephoton  * wW);
+			} 
+			// cout << "Ephoton: " << Ephoton / eV << ", Ee: " << Ee / eV << ", wS: " << wS << ", wW: " << wW << endl;
+			counter++;
 		} while (Ee > Ethr);
 
 		candidate->current.setEnergy(Ee / (1 + z));
@@ -487,6 +513,13 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 	ref_ptr<Histogram1D> dist = new Histogram1DLog10(xMin, 1., nBins);
 	ref_ptr<Histogram1D> aux = new Histogram1DLog10(xMin, 1., nBins);
 
+	// if importance sampler, prepare it
+	ImportanceSampler* s = nullptr;
+	if (sampler->getNameTag() == "importance")  {
+		s = static_cast<ImportanceSampler*>(sampler.get());
+	}
+
+
 	std::pair<double, double> range = xRange(kinOt, kinPh);
 
 	double chiOt = kinOt.getCoefficient();
@@ -511,8 +544,10 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 			P = std::max(P, 0.);
 			dist->setBinContent(i, P);
 		}
-		if (x > 0 and  sampler->getNameTag() == "importance") {
-			aux->setBinContent(i, weightFunction(x));
+
+
+		if (sampler->getNameTag() == "importance") {
+			aux->setBinContent(i, s->getWeightFunction()(x));
 		} else {
 			aux->setBinContent(i, 1.);
 		}
@@ -523,7 +558,8 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 
 	if (sampler->getNameTag() == "importance") {
 		aux->normalise(aux->sum());
-		sampler = new ImportanceSampler(dist, aux);
+		sampler = new ImportanceSampler(dist, aux, s->getWeightFunction());
+		// delete s;
 	} 	
 }
 
@@ -631,102 +667,6 @@ double VacuumCherenkov::_Gm(const double& chiOt, const double& chiPh) {
 
 double VacuumCherenkov::_G0(const double& chiOt, const double& chiPh) {
 	return (157. * chiOt - 22. * chiPh) / 120.;
-}
-
-ref_ptr<Sampler> VacuumCherenkov::_getDefaultSampler() {
-	ref_ptr<Sampler> s = new InverseSampler();
-	return s;
-}
-
-template<class KO, class KP>
-std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const KO& kinOt, const KP& kinPh) {
-	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented.");
-}
-
-template<>
-std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const ref_ptr<Kinematics>& kinOt, const ref_ptr<Kinematics>& kinPh) {
-	string kOt = kinOt->getNameTag();
-	string kPh = kinPh->getNameTag();
-
-	if (kOt == "LIVmono0") {
-		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics0();
-		if (kPh == "SR") {
-			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
-		} else if (kPh == "LIVmono0") {
-			const MonochromaticLorentzViolatingKinematics<0>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics0();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
-		}
-	} else if (kOt == "LIVmono1") {
-		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics1();
-		if (kPh == "SR") {
-			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
-		} else if (kPh == "LIVmono1") {
-			const MonochromaticLorentzViolatingKinematics<1>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics1();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
-		}
-	} else if (kOt == "LIVmono2") {
-		const auto& kinOtNew = kinOt->toMonochromaticLorentzViolatingKinematics2();
-		if (kPh == "SR") {
-			const SpecialRelativisticKinematics& kinPhNew = kinPh->toSpecialRelativisticKinematics();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);		
-		} else if (kPh == "LIVmono2") {
-			const MonochromaticLorentzViolatingKinematics<2>& kinPhNew = kinPh->toMonochromaticLorentzViolatingKinematics2();
-			return _getDefaultWeightFunction(kinOtNew, kinPhNew);	
-		}
-	}
-
-	throw runtime_error("Full treatment of vacuum Cherenkov spectrum for this particular combination of kinematics of photon + other particle is not implemented. Therefore, cannot get default weighting function.");
-} 
-
-template<class KP>
-std::function<double(double)> VacuumCherenkov::_getDefaultWeightFunction(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
-	double chiOt = kinOt.getCoefficient();
-	double chiPh = kinPh.getCoefficient();
-
-
-	// a) χ_γ < χ_o < 0
-	if (chiPh < chiOt and chiOt < 0) {
-		double r = chiPh / chiOt;
-		if (r >= 1e4)
-			return [](const double& x) {return 1.;};
-		else if (r < 10. and r > 1e-2)
-			return [](const double& x) {return 1.;};
-		else
-			return [](const double& x) {return x;};
-
-	// b) χ_γ < 0 ≤ χ_o
-	} else if (chiPh < 0 and chiOt > 0) { 
-		return [](const double& x) {return x;};
-
-	// c) 0 < χ_γ ≤ χ_o
-	} else if (chiPh > 0 and chiOt >= chiPh) { 
-		return [](const double& x) {return 1 / x;};
-
-	// d) 0 < χ_o < χ_γ
-	} else if (chiOt > 0 and chiPh > 0) { 
-		// use ad-hoc weighting functions
-		double r = abs(log10(chiPh / chiOt));
-		if (r < 0.1) {
-			return  [](const double& x) {return 1 / pow(x, 0.999);};
-		} else if (r >= 0.1 and r < 0.5) {
-			return  [](const double& x) {return 1 / pow(x, 0.9);};
-		} else if (r >= 0.5 and r < 1.85) {
-			return [](const double& x) {return 1 / pow(x, 0.75);};;
-		} else if (r >= 1.85 and r < 5.) {
-			return  [](const double& x) {return 1.;};
-		} else {
-			return [](const double& x) {return x;};
-		}
-	
-	// general case
-	} else { 
-		return [](const double& x) {return 1.;};
-	}
-
-	
-	
 }
 
 
