@@ -162,14 +162,17 @@ ImportanceSampler::ImportanceSampler(string weight) {
 	// apply consistent naming
 	std::unordered_map<string, string> names = {
 		{"constant", "uniform"},
+		{"log", "log10"},
+		{"exponential", "exp"},
+		{"sqrt", "power0.5"},
 		{"linear", "power1"},
 		{"quadratic", "power2"},
 		{"cubic", "power3"},
 		{"inverselinear", "inversepower1"},
 		{"inversequadratic", "inversepower2"},
 		{"inversecubic", "inversepower3"},
-		{"sqrt", "power0.5"},
-		{"inversesqrt", "inversepower0.5"}
+		{"inversesqrt", "inversepower0.5"},
+		{"inverseexp", "inverseexponential"}
 	};
 	if (names.find(weight) != names.end()) 
 		weight = names[weight];
@@ -177,16 +180,20 @@ ImportanceSampler::ImportanceSampler(string weight) {
 
 	if (weight == "uniform") {
 		setWeightFunction([](const double& x) { return 1; });
-	} else if (weight == "exponential" or weight == "exp") {
+	} else if (weight == "log10" ) {
+		setWeightFunction([](const double& x) { return abs(log10(x)); });
+	} else if (weight == "ln") {
+		setWeightFunction([](const double& x) { return abs(log(x)); });
+	} else if (weight == "exponential") {
 		setWeightFunction([](const double& x) { return exp(x); });
-	} else if (weight == "inverseexponential" or weight == "inverseexp") {
-		setWeightFunction([](const double& x) { return exp(-x); });
+	} else if (weight == "inverseexponential") {
+		setWeightFunction([](const double& x) { return exp(- x); });
 	} else if (weight.find("power") == 0) {
 		double power = parseWeightFunctionName(weight, "power");
 		setWeightFunction([power](const double& x) { return 1. / pow(x, power); });
 	} else if (weight.find("inversepower") == 0) {
 		double power = parseWeightFunctionName(weight, "inversepower");
-		setWeightFunction([power](const double& x) { return 1. / pow(x, power); });
+		setWeightFunction([power](const double& x) { return pow(x, - power); });
 	} else {
 		throw std::runtime_error("Unknown weight function. Try setting it manually.");
 	}
