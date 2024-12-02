@@ -5,12 +5,21 @@
 namespace livpropa {
 
 
+void Weighter::setWeighterType(WeighterType t) {
+	type = t;
+}
+
+WeighterType Weighter::getType() const {
+	return type;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 WeighterUniformFraction::WeighterUniformFraction(int pId, double s) {
 	setSamplingFraction(s);
 	setParticleId(pId);
+	setWeighterType(WeighterType::UniformFraction);
 }
 
 void WeighterUniformFraction::setSamplingFraction(double s) {
@@ -39,7 +48,7 @@ double WeighterUniformFraction::computeWeight(const int& id, const double& E, co
 		return 0;
 	} else {
 		if (random.rand() < samplingFraction) // accept and return weight
-			return 1 / samplingFraction;
+			return 1. / samplingFraction;
 		else // reject
 			return 0;
 	}
@@ -56,6 +65,7 @@ string WeighterUniformFraction::getNameTag() const {
 WeighterUniformNumber::WeighterUniformNumber(int pId, unsigned int n) {
 	setNumberOfEvents(n);
 	setParticleId(pId);
+	setWeighterType(WeighterType::UniformNumber);
 }
 
 void WeighterUniformNumber::setNumberOfEvents(unsigned int n) {
@@ -95,12 +105,14 @@ string WeighterUniformNumber::getNameTag() const {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 WeighterList::WeighterList() {
+	setWeighterType(WeighterType::List);
 }
 
 WeighterList::WeighterList(std::vector<ref_ptr<Weighter>> ws) {
 	for (size_t i = 0; i < ws.size(); i++) {
 		add(ws[i]);
 	}
+	setWeighterType(WeighterType::List);
 }
 
 void WeighterList::add(Weighter* w) {
@@ -128,6 +140,22 @@ double WeighterList::computeWeight(const int& id, const double& E, const double&
 
 string WeighterList::getNameTag() const {
 	return "list";
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+WeighterNull::WeighterNull() {
+	setWeighterType(WeighterType::Null);
+}
+
+double WeighterNull::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
+	return 1;
+}
+
+string WeighterNull::getNameTag() const {
+	return "null";
 }
 
 

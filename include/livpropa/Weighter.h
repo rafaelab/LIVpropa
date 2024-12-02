@@ -13,15 +13,27 @@
 namespace livpropa {
 
 
+enum class WeighterType {
+	UniformFraction,
+	UniformNumber,
+	List,
+	Null
+};
+
 
  /**
  @class Weighter
  @brief Abstract base class to handle individual events.
  */
 class Weighter: public Referenced {
+	protected:
+		WeighterType type;
+
 	public:
 		virtual double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const = 0;
 		virtual string getNameTag() const = 0;
+		void setWeighterType(WeighterType type);
+		WeighterType getType() const;
 };
 
 /**
@@ -89,6 +101,25 @@ class WeighterList : public Weighter {
 		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
 		string getNameTag() const;
 };
+
+
+
+/**
+ @class WeighterNull
+ @brief Dummy object to ensure compatibility with the rest of the code.
+ Always returns a weight of 1.
+ */
+class WeighterNull : public Weighter {
+	protected:
+		int particleId;
+		unsigned int nEvents;
+
+	public:
+		WeighterNull();
+		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
+		string getNameTag() const;
+};
+
 
 
 
