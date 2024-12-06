@@ -17,8 +17,13 @@ namespace livpropa {
 enum class SamplerType {
 	Inverse,
 	Rejection,
-	Importance
+	Importance,
+	Stratified,
+	MCMC,
+	AdaptiveMCMC
 };
+
+string getSamplerNameTag(SamplerType t);
 
 
 /**
@@ -33,10 +38,10 @@ class Sampler : public Referenced {
 
 	public:
 		virtual ~Sampler() = default;
-		virtual string getNameTag() const = 0;
 		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		void setType(SamplerType t);
 		SamplerType getType() const;
+		string getNameTag() const;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		void setDistribution(ref_ptr<Histogram1D> histogram);
 		ref_ptr<Histogram1D> getDistribution() const;
@@ -54,7 +59,6 @@ class InverseSampler: public Sampler {
 	public:
 		InverseSampler();
 		InverseSampler(ref_ptr<Histogram1D> h);
-		string getNameTag() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
 
@@ -75,7 +79,6 @@ class RejectionSampler: public Sampler {
 		RejectionSampler();
 		RejectionSampler(ref_ptr<Histogram1D> pdf, ref_ptr<Histogram1D> proposalPDF, double maxRatio);
 		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
-		string getNameTag() const;
 		ref_ptr<Histogram1D> getProposalPDF() const;
 		void computeCDF();
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
@@ -101,7 +104,6 @@ class ImportanceSampler: public Sampler {
 		ImportanceSampler(ref_ptr<Sampler> sampler);
 		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
 		void setWeightFunction(std::function<double(double)> func);
-		string getNameTag() const;
 		ref_ptr<Histogram1D> getProposalPDF() const;
 		std::function<double(double)> getWeightFunction() const;
 		void computeCDF();
@@ -112,7 +114,81 @@ class ImportanceSampler: public Sampler {
 };
 
 
+/**
+ @class StratifiedSampler
+ @brief Sample from a distribution using the stratified sampling method.
+ [UNTESTED]
+*/
+class StratifiedSampler : public Sampler {
+	protected:
+		unsigned int nStrata;
+		
+	public:
+		StratifiedSampler();
+		StratifiedSampler(unsigned int nStrata);
+		StratifiedSampler(ref_ptr<Histogram1D> h, unsigned int nStrata);
+		void setNumberOfStrata(unsigned int n);
+		unsigned int getNumberOfStrata() const;
+		std::pair<double, double> getSample(Random& random, const std::pair<double, double>& range) const;
+};
 
+
+/**
+ @class MCMCSampler
+ @brief Sample from a distribution using the Markov Chain Monte Carlo (MCMC) method.
+ [UNTESTED]
+*/
+class MCMCSampler : public Sampler {
+	protected:
+		unsigned int nSteps;
+		double stepSize;
+		std::function<double(double)> pdf;
+		mutable double currentSample;
+		mutable double currentWeight;
+
+	public:
+		MCMCSampler();
+		MCMCSampler(unsigned int nSteps, double stepSize);
+		MCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize);
+		void setNumberOfSteps(unsigned int n);
+		void setStepSize(double s);
+		void createPDF();
+		unsigned int getNumberOfSteps() const;
+		double getStepSize() const;
+		std::pair<double, double> getSample(Random& random, const std::pair<double, double>& range) const;
+};
+
+
+/**
+ @class AdaptativeMCMCSampler
+ @brief Sample from a distribution using the Markov Chain Monte Carlo (MCMC) method.
+ [UNTESTED]
+*/
+class AdaptiveMCMCSampler : public Sampler {
+	protected:
+		unsigned int nSteps;
+		double adaptationRate;
+		std::function<double(double)> pdf;
+		mutable double stepSize;
+		mutable double currentSample;
+		mutable double currentWeight;
+		mutable unsigned int acceptedSamples;
+		mutable double acceptanceRate;
+		// constexpr static double acceptanceRate0 = 0.234;
+
+	public:
+		AdaptiveMCMCSampler();
+		AdaptiveMCMCSampler(unsigned int nSteps, double stepSize, double adaptationRate);
+		AdaptiveMCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize, double adaptationRate);
+		void setNumberOfSteps(unsigned int n);
+		void setStepSize(double s);
+		void setAdaptationRate(double a);
+		void createPDF();
+		unsigned int getNumberOfSteps() const;
+		double getStepSize() const;
+		double getAdaptationRate() const;
+		std::pair<double, double> getSample(Random& random, const std::pair<double, double>& range) const;
+};
 
 } // namespace livpropa
 

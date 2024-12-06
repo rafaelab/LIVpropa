@@ -3,6 +3,23 @@
 namespace livpropa {
 
 
+string getSamplerNameTag(SamplerType t) {
+	switch (t) {
+		case SamplerType::Inverse:
+			return "inverse";
+		case SamplerType::Rejection:
+			return "rejection";
+		case SamplerType::Importance:
+			return "importance";
+		case SamplerType::Stratified:
+			return "stratified";
+		case SamplerType::MCMC:
+			return "mcmc";
+		default:
+			throw std::runtime_error("Unknown sampler type.");
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Sampler::setDistribution(ref_ptr<Histogram1D> h) {
@@ -64,6 +81,9 @@ SamplerType Sampler::getType() const {
 	return type;
 }
 
+string Sampler::getNameTag() const {
+	return getSamplerNameTag(type);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -75,10 +95,6 @@ InverseSampler::InverseSampler(ref_ptr<Histogram1D> h) {
 	setDistribution(h);
 	computeCDF();
 	setType(SamplerType::Inverse);
-}
-
-string InverseSampler::getNameTag() const {
-	return "inverse";
 }
 
 std::pair<double, double> InverseSampler::getSample(Random& random, const std::pair<double, double>& range) const {
@@ -98,8 +114,6 @@ std::pair<double, double> InverseSampler::getSample(Random& random, const std::p
 }
 
 
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 RejectionSampler::RejectionSampler() {
@@ -112,10 +126,6 @@ RejectionSampler::RejectionSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D> 
 	computeCDF();
 	setType(SamplerType::Rejection);
 	this->maxRatio = maxRatio;
-}
-
-string RejectionSampler::getNameTag() const {
-	return "rejection";
 }
 
 void RejectionSampler::computeCDF() {
@@ -220,10 +230,6 @@ ImportanceSampler::ImportanceSampler(ref_ptr<Sampler> sampler) {
 	}
 }
 
-string ImportanceSampler::getNameTag() const {
-	return "importance";
-}
-
 void ImportanceSampler::computeCDF() {
 	inverseSampler.computeCDF();
 }
@@ -264,5 +270,227 @@ double ImportanceSampler::parseWeightFunctionName(const string& str, const strin
 	}
 	return 1.;
 }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+StratifiedSampler::StratifiedSampler() {
+	setType(SamplerType::Stratified);
+}
+
+StratifiedSampler::StratifiedSampler(unsigned int n) {
+	setType(SamplerType::Stratified);
+	setNumberOfStrata(n);
+}
+
+StratifiedSampler::StratifiedSampler(ref_ptr<Histogram1D> h, unsigned int n) {
+	setNumberOfStrata(n);
+	setDistribution(h);
+	computeCDF();
+	setType(SamplerType::Stratified);
+}
+
+void StratifiedSampler::setNumberOfStrata(unsigned int n) {
+	nStrata = n;
+}
+
+unsigned int StratifiedSampler::getNumberOfStrata() const {
+	return nStrata;
+}
+
+std::pair<double, double> StratifiedSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	double logMin = log10(range.first);
+	double logMax = log10(range.second);
+	double logRange = logMax - logMin;
+
+	// select a stratum
+	unsigned int stratum = std::floor(random.randUniform(0, nStrata - 1));
+
+	// sample within the stratum
+	double r = random.randUniform(0, 1);
+	double logSample = logMin + (stratum + r) * logRange / nStrata;
+	double sample = pow(10, logSample);
+
+	// compute the weight
+	double w = histogram->getBinContent(histogram->getBinIndex(sample));
+
+	return std::make_pair(sample, w);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+MCMCSampler::MCMCSampler() {
+	setType(SamplerType::MCMC);
+}
+
+MCMCSampler::MCMCSampler(unsigned int nSteps, double stepSize) {
+	setNumberOfSteps(nSteps);
+	setStepSize(stepSize);
+	setType(SamplerType::MCMC);
+	currentSample = 0;
+	currentWeight = 0;
+}
+
+MCMCSampler::MCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize) {
+	setDistribution(h);
+	computeCDF();
+	setType(SamplerType::MCMC);
+	setNumberOfSteps(nSteps);
+	setStepSize(stepSize);
+	setType(SamplerType::MCMC);
+	currentSample = 0;
+	currentWeight = 0;
+}
+
+void MCMCSampler::setNumberOfSteps(unsigned int n) {
+	nSteps = n;
+}
+
+void MCMCSampler::setStepSize(double s) {
+	stepSize = s;
+}
+
+void MCMCSampler::createPDF() {
+	pdf = [this](const double& x) { return histogram->interpolateAt(x); };
+}
+
+unsigned int MCMCSampler::getNumberOfSteps() const {
+	return nSteps;
+}
+
+double MCMCSampler::getStepSize() const {
+	return stepSize;
+}
+
+std::pair<double, double> MCMCSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	// initialise the chain
+	if (currentSample == 0) {
+		currentSample = random.randUniform(range.first, range.second);
+		currentWeight = pdf(currentSample);
+	}
+
+	for (unsigned int i = 0; i < nSteps; ++i) {
+		// propose a new sample
+		double proposedSample = currentSample + random.randUniform(- stepSize, stepSize);
+
+		// Ensure the proposed sample is within the range
+		if (proposedSample < range.first or proposedSample > range.second) {
+			continue;
+		}
+
+		// Compute the weight of the proposed sample
+		double proposedWeight = pdf(proposedSample);
+
+		// Acceptance probability
+		double acceptanceProbability = proposedWeight / currentWeight;
+
+		// Accept or reject the proposed sample
+		if (random.randUniform(0, 1) < acceptanceProbability) {
+			currentSample = proposedSample;
+			currentWeight = proposedWeight;
+		}
+	}
+
+	return std::make_pair(currentSample, currentWeight);
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+AdaptiveMCMCSampler::AdaptiveMCMCSampler() {
+	setType(SamplerType::AdaptiveMCMC);
+}
+
+AdaptiveMCMCSampler::AdaptiveMCMCSampler(unsigned int nSteps, double stepSize, double adaptationRate) {
+	setType(SamplerType::AdaptiveMCMC);
+	setNumberOfSteps(nSteps);
+	setAdaptationRate(adaptationRate);
+	currentSample = 0;
+	currentWeight = 0;
+	acceptedSamples = 0;
+	acceptanceRate = 0;
+}
+
+AdaptiveMCMCSampler::AdaptiveMCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize, double adaptationRate) {
+	setDistribution(h);
+	computeCDF();
+	setType(SamplerType::AdaptiveMCMC);
+	setNumberOfSteps(nSteps);
+	setAdaptationRate(adaptationRate);
+	currentSample = 0;
+	currentWeight = 0;
+	acceptedSamples = 0;
+	acceptanceRate = 0;
+}
+
+void AdaptiveMCMCSampler::setNumberOfSteps(unsigned int n) {
+	nSteps = n;
+}
+
+void AdaptiveMCMCSampler::setStepSize(double s) {
+	stepSize = s;
+}
+
+void AdaptiveMCMCSampler::setAdaptationRate(double a) {
+	adaptationRate = a;
+}
+
+void AdaptiveMCMCSampler::createPDF() {
+	pdf = [this](const double& x) { return histogram->interpolateAt(x); };
+}
+
+unsigned int AdaptiveMCMCSampler::getNumberOfSteps() const {
+	return nSteps;
+}
+
+double AdaptiveMCMCSampler::getStepSize() const {
+	return stepSize;
+}
+
+double AdaptiveMCMCSampler::getAdaptationRate() const {
+	return adaptationRate;
+}
+
+std::pair<double, double> AdaptiveMCMCSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	// initialise the chain
+	if (currentSample == 0) {
+		currentSample = random.randUniform(range.first, range.second);
+		currentWeight = pdf(currentSample);
+	}
+
+	for (unsigned int i = 0; i < nSteps; ++i) {
+		// propose a new sample
+		double proposedSample = currentSample + random.randUniform(- stepSize, stepSize);
+
+		// ensure the proposed sample is within the range
+		if (proposedSample < range.first or  proposedSample > range.second) {
+			continue;
+		}
+
+		// compute the weight of the proposed sample
+		double proposedWeight = pdf(proposedSample);
+
+		// Acceptance probability
+		double acceptanceProbability = proposedWeight / currentWeight;
+
+		// accept or reject the proposed sample
+		if (random.randUniform(0, 1) < acceptanceProbability) {
+			currentSample = proposedSample;
+			currentWeight = proposedWeight;
+			acceptedSamples++;
+		}
+
+		// adapt the step size
+		acceptanceRate = static_cast<double>(acceptedSamples) / (i + 1);
+		// stepSize *= exp(adaptationRate * (acceptanceRate -  acceptanceRate0));
+		stepSize *= exp(adaptationRate * (acceptanceRate - 0.234));
+	}
+
+	return std::make_pair(currentSample, currentWeight);
+}
+
+
 
 } // namespace livpropa
