@@ -217,7 +217,7 @@
 
 
 /*************************************************************************************************/
-/**	                          Samplers & Weights  			                                    **/
+/**	                          Samplers & Weighters  			                                    **/
 /*************************************************************************************************/
 
 /* Ignore list */
@@ -230,6 +230,17 @@
 %template(SamplerRefPtr) crpropa::ref_ptr<livpropa::Sampler>;
 %feature("director") livpropa::Sampler;
 
+/* allow mutables */
+%feature("immutable", "0") livpropa::MCMCSampler::currentSample;
+%feature("immutable", "0") livpropa::MCMCSampler::currentWeight;
+%feature("immutable", "0") livpropa::AdaptiveMCMCSampler::stepSize;
+%feature("immutable", "0") livpropa::AdaptiveMCMCSampler::currentSample;
+%feature("immutable", "0") livpropa::AdaptiveMCMCSampler::currentWeight;
+%feature("immutable", "0") livpropa::AdaptiveMCMCSampler::acceptedSamples;
+%feature("immutable", "0") livpropa::AdaptiveMCMCSampler::acceptanceRate;
+
+
+/* To enable access to abstract base class  */
 %implicitconv crpropa::ref_ptr<livpropa::Weighter>;
 %template(WeighterRefPtr) crpropa::ref_ptr<livpropa::Weighter>;
 %feature("director") crpropa::Weighter;
