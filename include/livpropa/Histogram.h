@@ -127,9 +127,13 @@ class Histogram1D : public Referenced {
 		double sum() const;
 		double integrate() const;
 		double operator[](const size_t& i) const;
-		virtual double interpolateAt(const double& v) const = 0;
 		void reset();
 		void clear();
+		bool isIrregular() const;
+		virtual bool isRegular() const = 0;
+		virtual double interpolateAt(const double& v) const = 0;
+		virtual std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const = 0;
+		// friend std::ostream& operator<<(std::ostream& os, const Histogram1D& h);
 };
 
 /**
@@ -150,9 +154,12 @@ class Histogram1 : public Histogram1D {
 		Histogram1(Histogram1<B>&& h) noexcept;
 		~Histogram1();
 		void setBins(vector<Bin> bins);
+		bool isRegular() const;
+		bool isIrregular() const;
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
 		double interpolateAt(const double& v) const;
+		std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const;
 		friend std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h);
 };
 

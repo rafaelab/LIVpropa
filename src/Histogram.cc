@@ -188,6 +188,10 @@ vector<double> Histogram1D::getBinContents() const {
 	return contents;
 }
 
+bool Histogram1D::isIrregular() const {
+	return isRegular();
+}
+
 void Histogram1D::push(const double& v, const double& w) {
 	size_t i = getBinIndex(v);
 	contents[i] += w;
@@ -232,10 +236,6 @@ double Histogram1D::integrate() const {
 	return s;
 }
 
-double Histogram1D::operator[](const size_t& i) const {
-	return contents[i];
-}
-
 void Histogram1D::reset() {
 	contents.clear();
 	bins.clear();
@@ -245,6 +245,10 @@ void Histogram1D::reset() {
 void Histogram1D::clear() {
 	std::fill(contents.begin(), contents.end(), 0.);
 	std::fill(weights.begin(), weights.end(), 1.);
+}
+
+double Histogram1D::operator[](const size_t& i) const {
+	return contents[i];
 }
 
 
@@ -319,6 +323,11 @@ void Histogram1<B>::setBins(vector<Bin> b) {
 }
 
 template<class B>
+bool Histogram1<B>::isRegular() const {
+	return true;
+}
+
+template<class B>
 double Histogram1<B>::directTransformation(const double& v) const {
 	return bins[0]->directTransformation(v);
 }
@@ -335,41 +344,49 @@ double Histogram1<B>::interpolateAt(const double& x0) const {
 		return std::nan("");
 	}
 
-	vector<double> x;
-	vector<double> y;
+	std::function<double(double)> interp = getInterpolator();
 
-	size_t idx = getBinIndex(x0);
-
-	// value is in the first bin, within the histogram range, but below the first bin centre
-	if (x0 < bins[0]->getCentre()) {
-		for (size_t i = 1; i < 3; i++) {
-			x.push_back(directTransformation(bins[i]->getCentre()));
-			y.push_back(contents[i]);
-		}
-		x[0] = directTransformation(bins[0]->getLeftEdge());
-		y[0] = twoPointExtrapolation(x[0], x[1], y[1], x[2], y[2]);
-
-	// value is in the last bin, within the histogram range, but above the last bin centre
-	} else if (x0 >= bins[nBins - 1]->getCentre()) {
-		for (size_t i = 0; i < 2; i++) {
-			size_t j = nBins - 3 + i + 1;
-			x.push_back(directTransformation(bins[j]->getCentre()));
-			y.push_back(contents[j]);
-		}
-		size_t j = nBins - 2;
-		x[2] = directTransformation(bins[j]->getRightEdge());
-		y[2] = twoPointExtrapolation(x[2], x[0], y[0], x[1], y[1]);
-
-	// general case
-	} else {
-		for (size_t i = idx - 1; i < idx + 2; i++) {
-			x.push_back(directTransformation(bins[i]->getCentre()));
-			y.push_back(contents[i]);
-		}
-	}
-
-	return interpolate(directTransformation(x0), x, y);
+	return interp(x0);
 }
+
+template<class B>
+std::function<double(double)> Histogram1<B>::getInterpolator(const std::pair<double, double>& range) const {
+	return [this](const double& x0) { 
+		// get index of bin containing the value
+		size_t idx = getBinIndex(x0);
+
+		// value is in the first bin, within the histogram range, but below the first bin centre
+		if (x0 < bins[0]->getCentre()) {
+			vector<double> x;
+			vector<double> y;
+			for (size_t i = 1; i < 3; i++) {
+				x.push_back(directTransformation(bins[i]->getCentre()));
+				y.push_back(contents[i]);
+			}
+			x[0] = directTransformation(bins[0]->getLeftEdge());
+			y[0] = twoPointExtrapolation(x[0], x[1], y[1], x[2], y[2]);
+			return interpolate(directTransformation(x0), x, y);
+
+		// value is in the last bin, within the histogram range, but above the last bin centre
+		} else if (x0 >= bins[nBins - 1]->getCentre()) {
+			vector<double> x;
+			vector<double> y;
+			for (size_t i = 0; i < 2; i++) {
+				size_t j = nBins - 3 + i + 1;
+				x.push_back(directTransformation(bins[j]->getCentre()));
+				y.push_back(contents[j]);
+			}
+			size_t j = nBins - 2;
+			x[2] = directTransformation(bins[j]->getRightEdge());
+			y[2] = twoPointExtrapolation(x[2], x[0], y[0], x[1], y[1]);
+			return interpolate(directTransformation(x0), x, y);
+		}
+
+		return interpolateEquidistant(directTransformation(x0), directTransformation(leftEdge()), directTransformation(rightEdge()), contents);
+	};
+}
+
+
 
 template<class B>
 std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h) {
@@ -389,6 +406,8 @@ std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h) {
 
 	return os;
 }
+
+
 
 
 } // namespace livpropa
