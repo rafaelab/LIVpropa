@@ -231,8 +231,17 @@
 %feature("director") livpropa::Sampler;
 
 /* allow mutables */
+%feature("immutable", "1") livpropa::Nested;
+%feature("immutable", "0") livpropa::NestedSampler::livePoints;
+%feature("immutable", "0") livpropa::NestedSampler::liveLikelihoods;
+%feature("immutable", "0") livpropa::NestedSampler::logEvidence;
+%feature("immutable", "0") livpropa::NestedSampler::logWeight;
+
+%feature("immutable", "1") livpropa::MCMCSampler;
 %feature("immutable", "0") livpropa::MCMCSampler::currentSample;
 %feature("immutable", "0") livpropa::MCMCSampler::currentWeight;
+
+%feature("immutable", "1") livpropa::AdaptiveMCMCSampler;
 %feature("immutable", "0") livpropa::AdaptiveMCMCSampler::stepSize;
 %feature("immutable", "0") livpropa::AdaptiveMCMCSampler::currentSample;
 %feature("immutable", "0") livpropa::AdaptiveMCMCSampler::currentWeight;
