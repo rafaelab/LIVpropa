@@ -43,6 +43,7 @@ double Bin1D::randUniform(Random& random) const {
 }
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Bin1DLin::Bin1DLin(double l, double r) {
 	setEdges(l, r);
@@ -61,7 +62,16 @@ double Bin1DLin::inverseTransformation(const double& v) const {
 	return v;
 }
 
+bool Bin1DLin::isLinear() const {
+	return true;
+}
 
+bool Bin1DLin::isLogarithmic(double base) const {
+	return false;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<LogBase B>
 Bin1DLog<B>::Bin1DLog(double l, double r) {
@@ -102,6 +112,16 @@ double Bin1DLog<B>::directTransformation(const double& v) const {
 template<LogBase B>
 double Bin1DLog<B>::inverseTransformation(const double& v) const {
 	return pow(getBase(), v);
+}
+
+template<LogBase B>
+bool Bin1DLog<B>::isLinear() const {
+	return false;
+}
+
+template<LogBase B>
+bool Bin1DLog<B>::isLogarithmic(double base) const {
+	return (base == getBase());
 }
 
 
@@ -236,6 +256,37 @@ double Histogram1D::integrate() const {
 	return s;
 }
 
+void Histogram1D::makePDF() {
+	if (isPDF)
+		return;
+
+	double integral = integrate();
+	if (integral != 1.)
+		normalise(integral);
+
+	isPDF = true;
+}
+
+void Histogram1D::makeCDF() {
+	if (isCDF)
+		return;
+
+	double cum = 0;
+	for (size_t i = 1; i < nBins; i++) {
+		auto bin = getBin(i);
+		double dx = bin->getWidth();
+		double y = contents[i];
+		cum += y * dx;
+		contents[i] = cum;
+	}
+
+	for (size_t i = 1; i < nBins; i++) {
+		contents[i] /= contents.back();
+	}
+
+	isCDF = true;
+}
+
 void Histogram1D::reset() {
 	contents.clear();
 	bins.clear();
@@ -251,17 +302,20 @@ double Histogram1D::operator[](const size_t& i) const {
 	return contents[i];
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<class B>
 Histogram1<B>::Histogram1() {
 	nBins = 0;
+	isPDF = false;
+	isCDF = false;
 }
 
 template<>
 Histogram1<Bin1DLin>::Histogram1(double vMin, double vMax, unsigned int n) {
 	nBins = n;
+	isPDF = false;
+	isCDF = false;
 
 	vector<Bin> bs;
 	double dx = (vMax - vMin) / n;
@@ -277,6 +331,8 @@ Histogram1<Bin1DLin>::Histogram1(double vMin, double vMax, unsigned int n) {
 template<>
 Histogram1<Bin1DLog10>::Histogram1(double vMin, double vMax, unsigned int n) {
 	nBins = n;
+	isPDF = false;
+	isCDF = false;
 
 	vector<Bin> bs;
 	double dx = (log10(vMax / vMin)) / n;
@@ -294,6 +350,9 @@ Histogram1<Bin1DLog10>::Histogram1(double vMin, double vMax, unsigned int n) {
 template<class B>
 Histogram1<B>::Histogram1(const Histogram1<B>& h) {
 	reset();
+
+	isPDF = false;
+	isCDF = false;
 
 	nBins = h.getNumberOfBins();
 	vector<Bin> newBins;
@@ -386,7 +445,35 @@ std::function<double(double)> Histogram1<B>::getInterpolator(const std::pair<dou
 	};
 }
 
+template<class B>
+Histogram1<B> Histogram1<B>::clone() {
+	return Histogram1<B>(*this);
+}
 
+template<class B>
+Histogram1<B>& Histogram1<B>::operator=(const Histogram1<B>& h) {
+	return clone();
+}
+
+template<class B>
+Histogram1<B> Histogram1<B>::getHistogramPDF() {
+	if (isPDF)
+		return *this;
+	
+	Histogram1<B> h = clone();
+	h.makePDF();
+	return h;
+}
+
+template<class B>
+Histogram1<B> Histogram1<B>::getHistogramCDF() {
+	if (isCDF)
+		return *this;
+
+	Histogram1<B> h = clone();
+	h.makeCDF();
+	return h;
+}
 
 template<class B>
 std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h) {

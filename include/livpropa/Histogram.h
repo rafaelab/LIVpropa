@@ -40,6 +40,8 @@ class Bin1D: public Referenced {
 		virtual double rand(Random& random = Random::instance()) const = 0;
 		virtual double directTransformation(const double& v) const = 0;
 		virtual double inverseTransformation(const double& v) const = 0;
+		virtual bool isLinear() const = 0;
+		virtual bool isLogarithmic(double base = 10.) const = 0;
 };
 
 /**
@@ -52,6 +54,8 @@ class Bin1DLin : public Bin1D {
 		double rand(Random& random = Random::instance()) const;
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
+		bool isLinear() const;
+		bool isLogarithmic(double base = 10.) const;
 };
 
 
@@ -80,11 +84,13 @@ class Bin1DLog : public Bin1D {
 		double rand(Random& random = Random::instance()) const;
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
+		bool isLinear() const;
+		bool isLogarithmic(double base = 10.) const;
 };
 
 typedef Bin1DLog<LogBase::ten> Bin1DLog10;
 typedef Bin1DLog<LogBase::two> Bin1DLog2;
-typedef Bin1DLog<LogBase::e> Bin1DLogE;
+typedef Bin1DLog<LogBase::e> Bin1DLn;
 
 
 
@@ -104,6 +110,8 @@ class Histogram1D : public Referenced {
 		vector<double> contents;
 		vector<double> weights;
 		unsigned int nBins;
+		mutable bool isPDF;
+		mutable bool isCDF;
 
 	public:
 		virtual ~Histogram1D() = default;
@@ -127,6 +135,8 @@ class Histogram1D : public Referenced {
 		double sum() const;
 		double integrate() const;
 		double operator[](const size_t& i) const;
+		void makePDF();
+		void makeCDF();
 		void reset();
 		void clear();
 		bool isIrregular() const;
@@ -160,10 +170,16 @@ class Histogram1 : public Histogram1D {
 		double inverseTransformation(const double& v) const;
 		double interpolateAt(const double& v) const;
 		std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const;
+		Histogram1<B> getHistogramPDF();
+		Histogram1<B> getHistogramCDF();
+		Histogram1<B> clone();
+		Histogram1<B>& operator=(const Histogram1<B>& h);
 		friend std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h);
 };
 
 typedef Histogram1<Bin1DLin> Histogram1DLin;
+typedef Histogram1<Bin1DLn> Histogram1DLn;
+typedef Histogram1<Bin1DLog2> Histogram1DLog2;
 typedef Histogram1<Bin1DLog10> Histogram1DLog10;
 
 
