@@ -45,6 +45,7 @@ using crpropa::Vector3d;
 using crpropa::ref_ptr;
 using crpropa::pow_integer;
 using crpropa::interpolate;
+using crpropa::interpolateEquidistant;
 using crpropa::closestIndex;
 
 
