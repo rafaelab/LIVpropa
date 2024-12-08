@@ -316,7 +316,7 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	} else {
 		// to account for weighting schemes
 		double wW = 1;
-		
+		double wTot = 0;
 		double Ee = E;	
 		unsigned int counter = 0;
 		do {
@@ -326,21 +326,35 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 			double Ephoton = x * Ee;
 			Vector3d pos = candidate->current.getPosition();
 			wW = weighter->computeWeight(22, Ephoton / (1 + z), x, counter, random);
+			wTot += wW;
+
+
 			if (wW > 0) {
-				if (havePhotons) {
-					// if the weighter could lead to a negative energy, set corresponding weight to 1
-					if (Ephoton * wW > Ee) {
-						wW = 1;
-						if (counter == 0)
-							KISS_LOG_WARNING << "VacuumCherenkov: you are using a weighter that can barely sample a single particle. Choose a different value for the sampling fraction. I will proceed and ignore the weighter." << endl;
-					} 
-					candidate->addSecondary(22, Ephoton / (1 + z), pos, wW * wS);	
-				}
-				Ee -= (Ephoton  * wW);
-			} 
-			// cout << "Ephoton: " << Ephoton / eV << ", Ee: " << Ee / eV << ", wS: " << wS << ", wW: " << wW << endl;
-			counter++;
+				if (havePhotons) 
+					candidate->addSecondary(22, Ephoton / (1 + z), pos, wS * wW);
+
+			}
+
+			Ee -= Ephoton * wW * wS;
+
+
+			// if (wW > 0) {
+			// 	if (havePhotons) {
+			// 		// if the weighter could lead to a negative energy, set corresponding weight to 1
+			// 		if (Ephoton * wW > Ee) {
+			// 			wW = 1;
+			// 			// if (counter == 0)
+			// 			// 	KISS_LOG_WARNING << "VacuumCherenkov: you are using a weighter that can barely sample a single particle. Choose a different value for the sampling fraction. I will proceed and ignore the weighter." << endl;
+			// 		} 
+			// 		candidate->addSecondary(22, Ephoton / (1 + z), pos, wS);	
+			// 	}
+			// } 
+			// Ee -= Ephoton;
+
+			// // cout << "Ephoton: " << Ephoton / eV << ", Ee: " << Ee / eV << ", wS: " << wS << ", wW: " << wW << endl;
+			// counter++;
 		} while (Ee > Ethr);
+
 
 		candidate->current.setEnergy(Ee / (1 + z));
 	}
@@ -511,14 +525,6 @@ template<class KP>
 void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
 	unsigned int nBins = 4801;
 	ref_ptr<Histogram1D> dist = new Histogram1DLog10(xMin, 1., nBins);
-	ref_ptr<Histogram1D> aux = new Histogram1DLog10(xMin, 1., nBins);
-
-	// if importance sampler, prepare it
-	ImportanceSampler* s = nullptr;
-	if (sampler->getNameTag() == "importance")  {
-		s = static_cast<ImportanceSampler*>(sampler.get());
-	}
-
 
 	std::pair<double, double> range = xRange(kinOt, kinPh);
 
@@ -544,23 +550,27 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 			P = std::max(P, 0.);
 			dist->setBinContent(i, P);
 		}
-
-
-		if (sampler->getNameTag() == "importance") {
-			aux->setBinContent(i, s->getWeightFunction()(x));
-		} else {
-			aux->setBinContent(i, 1.);
-		}
 	}
 
 	sampler->setDistribution(dist);
 	distribution = dist;
 
-	if (sampler->getNameTag() == "importance") {
-		aux->normalise(aux->sum());
-		sampler = new ImportanceSampler(dist, aux, s->getWeightFunction());
-		// delete s;
-	} 	
+	if (sampler->getType() == SamplerType::Nested) {
+		NestedSampler* s = static_cast<NestedSampler*>(sampler.get());
+		sampler = new NestedSampler(dist, s->getNumberOfLivePoints());
+
+	} else if (sampler->getType() == SamplerType::Importance) {
+		ImportanceSampler* s = static_cast<ImportanceSampler*>(sampler.get());
+		std::function<double(double)> wFunc = s->getWeightFunction();
+		ref_ptr<Histogram1D> aux = new Histogram1DLog10(xMin, 1., nBins);
+		for (size_t i = 0; i < aux->getNumberOfBins(); i++) {
+			double x = dist->getBinCentre(i);
+			if (x >= range.first and x <= range.second) {
+				aux->setBinContent(i, wFunc(aux->getBinCentre(i)));
+			}
+		}
+		sampler = new ImportanceSampler(dist, aux, wFunc);
+	}
 }
 
 template<class KO, class KP>
