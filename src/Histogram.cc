@@ -343,8 +343,8 @@ double Histogram1<B>::interpolateAt(const double& x0) const {
 	// value is in the first bin, within the histogram range, but below the first bin centre
 	if (x0 < bins[0]->getCentre()) {
 		for (size_t i = 1; i < 3; i++) {
-			x[i] = directTransformation(bins[i]->getCentre());
-			y[i] = contents[i];
+			x.push_back(directTransformation(bins[i]->getCentre()));
+			y.push_back(contents[i]);
 		}
 		x[0] = directTransformation(bins[0]->getLeftEdge());
 		y[0] = twoPointExtrapolation(x[0], x[1], y[1], x[2], y[2]);
@@ -353,8 +353,8 @@ double Histogram1<B>::interpolateAt(const double& x0) const {
 	} else if (x0 >= bins[nBins - 1]->getCentre()) {
 		for (size_t i = 0; i < 2; i++) {
 			size_t j = nBins - 3 + i + 1;
-			x[i] = directTransformation(bins[j]->getCentre());
-			y[i] = contents[j];
+			x.push_back(directTransformation(bins[j]->getCentre()));
+			y.push_back(contents[j]);
 		}
 		size_t j = nBins - 2;
 		x[2] = directTransformation(bins[j]->getRightEdge());
@@ -363,14 +363,32 @@ double Histogram1<B>::interpolateAt(const double& x0) const {
 	// general case
 	} else {
 		for (size_t i = idx - 1; i < idx + 2; i++) {
-			x[i] = directTransformation(bins[i]->getCentre());
-			y[i] = contents[i];
+			x.push_back(directTransformation(bins[i]->getCentre()));
+			y.push_back(contents[i]);
 		}
 	}
 
 	return interpolate(directTransformation(x0), x, y);
 }
 
+template<class B>
+std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h) {
+	os << "Histogram1D " << endl;
+	os << ". number of bins: " << h.getNumberOfBins();
+
+	if (std::is_same<B, Bin1DLin>::value) {
+		os << " (linear spacing)" << endl;
+	} else if (std::is_same<B, Bin1DLog10>::value) {
+		os << " (log10 spacing)" << endl;
+	}
+
+	os << ". edges: " << h.leftEdge() << ", " << h.rightEdge() << endl;
+	vector<double> v = h.getBinContents();
+
+	os << ". extrema: " << *std::max_element(v.begin(), v.end()) << ", " <<  *std::max_element(v.begin(), v.end()) << endl;
+
+	return os;
+}
 
 
-} // namespace liveprop
+} // namespace livpropa

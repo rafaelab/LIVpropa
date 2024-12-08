@@ -153,6 +153,7 @@ class Histogram1 : public Histogram1D {
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
 		double interpolateAt(const double& v) const;
+		friend std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h);
 };
 
 typedef Histogram1<Bin1DLin> Histogram1DLin;
@@ -160,8 +161,9 @@ typedef Histogram1<Bin1DLog10> Histogram1DLog10;
 
 
 
-} // namespace livpropa
 
+
+} // namespace livpropa
 
 
 #endif // LIVPROPA_HISTOGRAM_H
