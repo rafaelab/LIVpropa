@@ -116,7 +116,12 @@ class ImportanceSampler: public Sampler {
 
 /**
  @class NestedSampler
- @brief Sample from a distribution using the Nested Sampling method.
+ @brief Sample from a distribution using the (Bayesian) nested sampling method.
+ The algorithm is implemented following:
+  "Nested Sampling"
+  John Skilling
+  AIP Conference Proceedings 735 (2004) 395
+  https://doi.org/10.1063/1.1835238
 */
 class NestedSampler : public Sampler {
 	protected:
@@ -136,7 +141,7 @@ class NestedSampler : public Sampler {
 		void setDistribution(ref_ptr<Histogram1D> h);
 		unsigned int getNumberOfLivePoints() const;
 		std::function<double(double)> getLikelihoodFunction() const;
-		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const override;
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		double getLogEvidence() const;
 
 	private:
