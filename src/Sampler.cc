@@ -11,8 +11,8 @@ string getSamplerNameTag(SamplerType t) {
 			return "rejection";
 		case SamplerType::Importance:
 			return "importance";
-		case SamplerType::Stratified:
-			return "stratified";
+		case SamplerType::Nested:
+			return "nested";
 		case SamplerType::MCMC:
 			return "mcmc";
 		default:
@@ -274,47 +274,99 @@ double ImportanceSampler::parseWeightFunctionName(const string& str, const strin
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StratifiedSampler::StratifiedSampler() {
-	setType(SamplerType::Stratified);
+NestedSampler::NestedSampler() {
+	setType(SamplerType::Nested);
+	logEvidence = - std::numeric_limits<double>::infinity();
+	logWeight = 0;
 }
 
-StratifiedSampler::StratifiedSampler(unsigned int n) {
-	setType(SamplerType::Stratified);
-	setNumberOfStrata(n);
+NestedSampler::NestedSampler(unsigned int nLivePoints) {
+	setType(SamplerType::Nested);
+	setNumberOfLivePoints(nLivePoints);
+	logEvidence = -std::numeric_limits<double>::infinity();
+	logWeight = 0;
 }
 
-StratifiedSampler::StratifiedSampler(ref_ptr<Histogram1D> h, unsigned int n) {
-	setNumberOfStrata(n);
+NestedSampler::NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints) {
+	setType(SamplerType::Nested);
 	setDistribution(h);
 	computeCDF();
-	setType(SamplerType::Stratified);
+	setNumberOfLivePoints(nLivePoints);
+	setLikelihoodFunction(h->getInterpolator());
+	logEvidence = -std::numeric_limits<double>::infinity();
+	logWeight = 0;
 }
 
-void StratifiedSampler::setNumberOfStrata(unsigned int n) {
-	nStrata = n;
+void NestedSampler::setNumberOfLivePoints(unsigned int n) {
+	nLivePoints = n;
 }
 
-unsigned int StratifiedSampler::getNumberOfStrata() const {
-	return nStrata;
+void NestedSampler::setLikelihoodFunction(std::function<double(double)> func) {
+	likelihood = func;
 }
 
-std::pair<double, double> StratifiedSampler::getSample(Random& random, const std::pair<double, double>& range) const {
-	double logMin = log10(range.first);
-	double logMax = log10(range.second);
-	double logRange = logMax - logMin;
+void NestedSampler::setDistribution(ref_ptr<Histogram1D> h) {
+	histogram = h;
+	likelihood = h->getInterpolator();
+}
 
-	// select a stratum
-	unsigned int stratum = std::floor(random.randUniform(0, nStrata - 1));
+unsigned int NestedSampler::getNumberOfLivePoints() const {
+	return nLivePoints;
+}
 
-	// sample within the stratum
-	double r = random.randUniform(0, 1);
-	double logSample = logMin + (stratum + r) * logRange / nStrata;
-	double sample = pow(10, logSample);
+std::function<double(double)> NestedSampler::getLikelihoodFunction() const {
+	return likelihood;
+}
 
-	// compute the weight
-	double w = histogram->getBinContent(histogram->getBinIndex(sample));
+std::pair<double, double> NestedSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	// initialise live points (if not already done)
+	if (livePoints.empty()) {
+		for (unsigned int i = 0; i < nLivePoints; ++i) {
+			double point = random.randUniform(range.first, range.second);
+			livePoints.push_back(point);
+			liveLikelihoods.push_back(likelihood(point));
+		}
+	}
 
-	return std::make_pair(sample, w);
+	// find the live point with the lowest likelihood
+	auto minIt = std::min_element(liveLikelihoods.begin(), liveLikelihoods.end());
+	size_t minIdx = std::distance(liveLikelihoods.begin(), minIt);
+	double minLikelihood = *minIt;
+
+	// update log evidence
+	double logVolume = - static_cast<double>(minIdx + 1) / nLivePoints;
+	logWeight = logVolume + minLikelihood;
+	logEvidence = logSumExp(logEvidence, logWeight);
+
+	// Replace the worst live point with a new sample
+	double newPoint;
+	double newLikelihood;
+	do {
+		newPoint = random.randUniform(range.first, range.second);
+		newLikelihood = likelihood(newPoint);
+	} while (newLikelihood <= minLikelihood);
+
+	livePoints[minIdx] = newPoint;
+	liveLikelihoods[minIdx] = newLikelihood;
+
+	return std::make_pair(newPoint, newLikelihood);
+}
+
+double NestedSampler::getLogEvidence() const {
+	return logEvidence;
+}
+
+double NestedSampler::logSumExp(double a, double b) const {
+	if (a == - std::numeric_limits<double>::infinity()) 
+		return b;
+	
+	if (b == - std::numeric_limits<double>::infinity()) 
+		return a;
+
+	if (a > b) 
+		return a + log1p(exp(b - a));
+	
+	return b + log1p(exp(a - b));
 }
 
 
@@ -322,25 +374,24 @@ std::pair<double, double> StratifiedSampler::getSample(Random& random, const std
 
 MCMCSampler::MCMCSampler() {
 	setType(SamplerType::MCMC);
+	update(0., 1.);
 }
 
 MCMCSampler::MCMCSampler(unsigned int nSteps, double stepSize) {
+	setType(SamplerType::MCMC);
 	setNumberOfSteps(nSteps);
 	setStepSize(stepSize);
-	setType(SamplerType::MCMC);
-	currentSample = 0;
-	currentWeight = 0;
+	update(0., 1.);
 }
 
 MCMCSampler::MCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize) {
+	setType(SamplerType::MCMC);
 	setDistribution(h);
 	computeCDF();
-	setType(SamplerType::MCMC);
 	setNumberOfSteps(nSteps);
 	setStepSize(stepSize);
-	setType(SamplerType::MCMC);
-	currentSample = 0;
-	currentWeight = 0;
+	update(0., 1.);
+	createPDF();
 }
 
 void MCMCSampler::setNumberOfSteps(unsigned int n) {
@@ -355,6 +406,11 @@ void MCMCSampler::createPDF() {
 	pdf = [this](const double& x) { return histogram->interpolateAt(x); };
 }
 
+void MCMCSampler::update(double x, double w) const {
+	currentSample = x;
+	currentWeight = w;
+}
+
 unsigned int MCMCSampler::getNumberOfSteps() const {
 	return nSteps;
 }
@@ -366,41 +422,61 @@ double MCMCSampler::getStepSize() const {
 std::pair<double, double> MCMCSampler::getSample(Random& random, const std::pair<double, double>& range) const {
 	// initialise the chain
 	if (currentSample == 0) {
-		currentSample = random.randUniform(range.first, range.second);
-		currentWeight = pdf(currentSample);
+		double r;
+		double w;
+		do {
+			r = random.randUniform(range.first, range.second);
+			w = histogram->interpolateAt(r);
+		} while (w == 0 or isnan(w));
+
+		update(r, w);
 	}
 
 	for (unsigned int i = 0; i < nSteps; ++i) {
-		// propose a new sample
+		// propose a new sample (random walk)
 		double proposedSample = currentSample + random.randUniform(- stepSize, stepSize);
 
-		// Ensure the proposed sample is within the range
+		// ensure the proposed sample is within the range
 		if (proposedSample < range.first or proposedSample > range.second) {
 			continue;
 		}
 
-		// Compute the weight of the proposed sample
-		double proposedWeight = pdf(proposedSample);
+		// compute the weight of the proposed sample
+		double proposedWeight = histogram->interpolateAt(proposedSample);
+		if (proposedWeight == 0 or isnan(proposedWeight) or currentWeight == 0) {
+			continue;
+		}
 
-		// Acceptance probability
+		// acceptance probability
 		double acceptanceProbability = proposedWeight / currentWeight;
 
-		// Accept or reject the proposed sample
-		if (random.randUniform(0, 1) < acceptanceProbability) {
-			currentSample = proposedSample;
-			currentWeight = proposedWeight;
+		// accept or reject the proposed sample
+		if (random.rand() < acceptanceProbability) {
+			update(proposedSample, proposedWeight);
+			return std::make_pair(proposedSample, proposedWeight);
 		}
 	}
+
+	cout << "Sample: " << currentSample << " Weight: " << currentWeight << endl;
 
 	return std::make_pair(currentSample, currentWeight);
 }
 
+
+void MCMCSampler::reset() {
+	currentSample = 0;
+	currentWeight = 0;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 AdaptiveMCMCSampler::AdaptiveMCMCSampler() {
 	setType(SamplerType::AdaptiveMCMC);
+	currentSample = 0;
+	currentWeight = 0;
+	acceptedSamples = 0;
+	acceptanceRate = 0;
 }
 
 AdaptiveMCMCSampler::AdaptiveMCMCSampler(unsigned int nSteps, double stepSize, double adaptationRate) {

@@ -18,7 +18,7 @@ enum class SamplerType {
 	Inverse,
 	Rejection,
 	Importance,
-	Stratified,
+	Nested,
 	MCMC,
 	AdaptiveMCMC
 };
@@ -115,21 +115,32 @@ class ImportanceSampler: public Sampler {
 
 
 /**
- @class StratifiedSampler
- @brief Sample from a distribution using the stratified sampling method.
- [UNTESTED]
+ @class NestedSampler
+ @brief Sample from a distribution using the Nested Sampling method.
 */
-class StratifiedSampler : public Sampler {
+class NestedSampler : public Sampler {
 	protected:
-		unsigned int nStrata;
-		
+		unsigned int nLivePoints;
+		std::function<double(double)> likelihood;
+		mutable std::vector<double> livePoints;
+		mutable std::vector<double> liveLikelihoods;
+		mutable double logEvidence;
+		mutable double logWeight;
+
 	public:
-		StratifiedSampler();
-		StratifiedSampler(unsigned int nStrata);
-		StratifiedSampler(ref_ptr<Histogram1D> h, unsigned int nStrata);
-		void setNumberOfStrata(unsigned int n);
-		unsigned int getNumberOfStrata() const;
-		std::pair<double, double> getSample(Random& random, const std::pair<double, double>& range) const;
+		NestedSampler();
+		NestedSampler(unsigned int nLivePoints);
+		NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints);
+		void setNumberOfLivePoints(unsigned int n);
+		void setLikelihoodFunction(std::function<double(double)> func);
+		void setDistribution(ref_ptr<Histogram1D> h);
+		unsigned int getNumberOfLivePoints() const;
+		std::function<double(double)> getLikelihoodFunction() const;
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const override;
+		double getLogEvidence() const;
+
+	private:
+		double logSumExp(double a, double b) const;
 };
 
 
@@ -143,6 +154,7 @@ class MCMCSampler : public Sampler {
 		unsigned int nSteps;
 		double stepSize;
 		std::function<double(double)> pdf;
+			InverseSampler inverseSampler;
 		mutable double currentSample;
 		mutable double currentWeight;
 
@@ -153,9 +165,11 @@ class MCMCSampler : public Sampler {
 		void setNumberOfSteps(unsigned int n);
 		void setStepSize(double s);
 		void createPDF();
+		void update(double x, double w) const;
 		unsigned int getNumberOfSteps() const;
 		double getStepSize() const;
-		std::pair<double, double> getSample(Random& random, const std::pair<double, double>& range) const;
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+		void reset();
 };
 
 
@@ -187,7 +201,7 @@ class AdaptiveMCMCSampler : public Sampler {
 		unsigned int getNumberOfSteps() const;
 		double getStepSize() const;
 		double getAdaptationRate() const;
-		std::pair<double, double> getSample(Random& random, const std::pair<double, double>& range) const;
+		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 };
 
 } // namespace livpropa
