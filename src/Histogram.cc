@@ -66,7 +66,15 @@ bool Bin1DLin::isLinear() const {
 	return true;
 }
 
-bool Bin1DLin::isLogarithmic(double base) const {
+bool Bin1DLin::isLn() const {
+	return false;
+}
+
+bool Bin1DLin::isLog2() const {
+	return false;
+}
+
+bool Bin1DLin::isLog10() const {
 	return false;
 }
 
@@ -120,8 +128,18 @@ bool Bin1DLog<B>::isLinear() const {
 }
 
 template<LogBase B>
-bool Bin1DLog<B>::isLogarithmic(double base) const {
-	return (base == getBase());
+bool Bin1DLog<B>::isLn() const {
+	return (B == LogBase::e);
+}
+
+template<LogBase B>
+bool Bin1DLog<B>::isLog2() const {
+	return (B == LogBase::two);
+}
+
+template<LogBase B>
+bool Bin1DLog<B>::isLog10() const {
+	return (B == LogBase::ten);
 }
 
 
@@ -155,6 +173,14 @@ void Histogram1D::setBinContents(const vector<double>& values) {
 		throw std::runtime_error("Number of values must match number of bins.");
 
 	contents = values;
+}
+
+void Histogram1D::setIsPDF(bool b) {
+	isPDF = b;
+}
+
+void Histogram1D::setIsCDF(bool b) {
+	isCDF = b;
 }
 
 Histogram1D::Bin Histogram1D::getBin(const size_t& i) const {
@@ -208,6 +234,30 @@ vector<double> Histogram1D::getBinContents() const {
 	return contents;
 }
 
+bool Histogram1D::getIsPDF() const {
+	return isPDF;
+}
+
+bool Histogram1D::getIsCDF() const {
+	return isCDF;
+}
+
+bool Histogram1D::isLinear() const {
+	return bins[0]->isLinear();
+}
+
+bool Histogram1D::isLog10() const {
+	return bins[0]->isLog10();
+}
+
+bool Histogram1D::isLog2() const {
+	return bins[0]->isLog2();
+}
+
+bool Histogram1D::isLn() const {
+	return bins[0]->isLn();
+}
+
 bool Histogram1D::isIrregular() const {
 	return isRegular();
 }
@@ -256,6 +306,25 @@ double Histogram1D::integrate() const {
 	return s;
 }
 
+vector<double> Histogram1D::computeVectorCDF() const {
+	vector<double> cdf = {0.};
+
+	double cum = 0;
+	for (size_t i = 1; i < nBins; i++) {
+		auto bin = getBin(i);
+		double dx = bin->getWidth();
+		double y = contents[i];
+		cum += y * dx;
+		cdf.push_back(cum);
+	}
+
+	for (size_t i = 1; i < nBins; i++) {
+		cdf[i] /= cdf.back();
+	}
+
+	return cdf;
+}
+
 void Histogram1D::makePDF() {
 	if (isPDF)
 		return;
@@ -265,26 +334,16 @@ void Histogram1D::makePDF() {
 		normalise(integral);
 
 	isPDF = true;
+	isCDF = false;
 }
 
 void Histogram1D::makeCDF() {
 	if (isCDF)
 		return;
 
-	double cum = 0;
-	for (size_t i = 1; i < nBins; i++) {
-		auto bin = getBin(i);
-		double dx = bin->getWidth();
-		double y = contents[i];
-		cum += y * dx;
-		contents[i] = cum;
-	}
-
-	for (size_t i = 1; i < nBins; i++) {
-		contents[i] /= contents.back();
-	}
-
+	contents = computeVectorCDF();
 	isCDF = true;
+	isPDF = false;
 }
 
 void Histogram1D::reset() {
@@ -301,6 +360,7 @@ void Histogram1D::clear() {
 double Histogram1D::operator[](const size_t& i) const {
 	return contents[i];
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -446,7 +506,7 @@ std::function<double(double)> Histogram1<B>::getInterpolator(const std::pair<dou
 }
 
 template<class B>
-Histogram1<B> Histogram1<B>::clone() {
+Histogram1<B> Histogram1<B>::clone() const {
 	return Histogram1<B>(*this);
 }
 
@@ -456,7 +516,7 @@ Histogram1<B>& Histogram1<B>::operator=(const Histogram1<B>& h) {
 }
 
 template<class B>
-Histogram1<B> Histogram1<B>::getHistogramPDF() {
+Histogram1<B> Histogram1<B>::getHistogramPDF() const {
 	if (isPDF)
 		return *this;
 	
@@ -466,7 +526,7 @@ Histogram1<B> Histogram1<B>::getHistogramPDF() {
 }
 
 template<class B>
-Histogram1<B> Histogram1<B>::getHistogramCDF() {
+Histogram1<B> Histogram1<B>::getHistogramCDF() const {
 	if (isCDF)
 		return *this;
 

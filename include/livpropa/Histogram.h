@@ -41,7 +41,9 @@ class Bin1D: public Referenced {
 		virtual double directTransformation(const double& v) const = 0;
 		virtual double inverseTransformation(const double& v) const = 0;
 		virtual bool isLinear() const = 0;
-		virtual bool isLogarithmic(double base = 10.) const = 0;
+		virtual bool isLog10() const = 0;
+		virtual bool isLog2() const = 0;
+		virtual bool isLn() const = 0;
 };
 
 /**
@@ -55,7 +57,9 @@ class Bin1DLin : public Bin1D {
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
 		bool isLinear() const;
-		bool isLogarithmic(double base = 10.) const;
+		bool isLog10() const;
+		bool isLog2() const;
+		bool isLn() const;
 };
 
 
@@ -85,7 +89,9 @@ class Bin1DLog : public Bin1D {
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
 		bool isLinear() const;
-		bool isLogarithmic(double base = 10.) const;
+		bool isLog10() const;
+		bool isLog2() const;
+		bool isLn() const;
 };
 
 typedef Bin1DLog<LogBase::ten> Bin1DLog10;
@@ -93,6 +99,12 @@ typedef Bin1DLog<LogBase::two> Bin1DLog2;
 typedef Bin1DLog<LogBase::e> Bin1DLn;
 
 
+// forward declaration of derived Histogram1<> class
+template<class B> class Histogram1;
+typedef Histogram1<Bin1DLin> Histogram1DLin;
+typedef Histogram1<Bin1DLn> Histogram1DLn;
+typedef Histogram1<Bin1DLog2> Histogram1DLog2;
+typedef Histogram1<Bin1DLog10> Histogram1DLog10;
 
 
 /**
@@ -117,7 +129,8 @@ class Histogram1D : public Referenced {
 		virtual ~Histogram1D() = default;
 		void setBinContent(const size_t& idx, const double& value);
 		void setBinContents(const std::vector<double>& values);
-		bool isInRange(const double& v) const;
+		void setIsPDF(bool b);
+		void setIsCDF(bool b);
 		unsigned int getNumberOfBins() const;
 		double leftEdge() const;
 		double rightEdge() const;
@@ -129,20 +142,28 @@ class Histogram1D : public Referenced {
 		vector<double> getBinEdges() const;
 		vector<double> getBinCentres() const;
 		vector<double> getBinContents() const;
+		bool getIsPDF() const;
+		bool getIsCDF() const;
+		bool isInRange(const double& v) const;
 		void push(const double& v, const double& w = 1);
 		void fill(const std::vector<double>& v, const std::vector<double>& w = {});
 		void normalise(double norm);
 		double sum() const;
 		double integrate() const;
-		double operator[](const size_t& i) const;
+		vector<double> computeVectorCDF() const;
 		void makePDF();
 		void makeCDF();
 		void reset();
 		void clear();
+		bool isLinear() const;
+		bool isLog10() const;
+		bool isLog2() const;
+		bool isLn() const;
 		bool isIrregular() const;
 		virtual bool isRegular() const = 0;
 		virtual double interpolateAt(const double& v) const = 0;
 		virtual std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const = 0;
+		double operator[](const size_t& i) const;
 		// friend std::ostream& operator<<(std::ostream& os, const Histogram1D& h);
 };
 
@@ -170,18 +191,12 @@ class Histogram1 : public Histogram1D {
 		double inverseTransformation(const double& v) const;
 		double interpolateAt(const double& v) const;
 		std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const;
-		Histogram1<B> getHistogramPDF();
-		Histogram1<B> getHistogramCDF();
-		Histogram1<B> clone();
+		Histogram1<B> getHistogramPDF() const;
+		Histogram1<B> getHistogramCDF() const;
+		Histogram1<B> clone() const;
 		Histogram1<B>& operator=(const Histogram1<B>& h);
 		friend std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h);
 };
-
-typedef Histogram1<Bin1DLin> Histogram1DLin;
-typedef Histogram1<Bin1DLn> Histogram1DLn;
-typedef Histogram1<Bin1DLog2> Histogram1DLog2;
-typedef Histogram1<Bin1DLog10> Histogram1DLog10;
-
 
 
 
