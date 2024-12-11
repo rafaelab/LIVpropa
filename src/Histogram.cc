@@ -3,6 +3,7 @@
 namespace livpropa {
 
 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Bin1D::setEdges(double l, double r) {
@@ -81,28 +82,21 @@ bool Bin1DLin::isLog10() const {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-template<LogBase B>
-Bin1DLog<B>::Bin1DLog(double l, double r) {
+Bin1DLogarithmic::Bin1DLogarithmic(double l, double r, double b) {
 	setEdges(l, r);
-
-	double b = getBase();
+	setBase(b);
 	setCentre(pow(b, (logBase(l, b) + logBase(r, b)) / 2.));
 }
 
-template<LogBase B>
-double Bin1DLog<B>::getBase() const { 
-	switch (B) {
-		case LogBase::e:
-			return M_E;
-		case LogBase::two:
-			return 2.;
-		case LogBase::ten:
-			return 10.;
-	}
+void Bin1DLogarithmic::setBase(double b) {
+	base = b;
 }
 
-template<LogBase B>
-double Bin1DLog<B>::rand(Random& random) const {
+double Bin1DLogarithmic::getBase() const { 
+	return base;
+}
+
+double Bin1DLogarithmic::rand(Random& random) const {
 	double base = getBase();
 	double vMin = logBase(getLeftEdge(), base);
 	double vMax = logBase(getRightEdge(), base);
@@ -112,34 +106,28 @@ double Bin1DLog<B>::rand(Random& random) const {
 	return pow(base, r);
 }
 
-template<LogBase B>
-double Bin1DLog<B>::directTransformation(const double& v) const {
+double Bin1DLogarithmic::directTransformation(const double& v) const {
 	return logBase(v, getBase());
 }
 
-template<LogBase B>
-double Bin1DLog<B>::inverseTransformation(const double& v) const {
+double Bin1DLogarithmic::inverseTransformation(const double& v) const {
 	return pow(getBase(), v);
 }
 
-template<LogBase B>
-bool Bin1DLog<B>::isLinear() const {
+bool Bin1DLogarithmic::isLinear() const {
 	return false;
 }
 
-template<LogBase B>
-bool Bin1DLog<B>::isLn() const {
-	return (B == LogBase::e);
+bool Bin1DLogarithmic::isLn() const {
+	return (base == exp(1.));
 }
 
-template<LogBase B>
-bool Bin1DLog<B>::isLog2() const {
-	return (B == LogBase::two);
+bool Bin1DLogarithmic::isLog2() const {
+	return (base == 2.);
 }
 
-template<LogBase B>
-bool Bin1DLog<B>::isLog10() const {
-	return (B == LogBase::ten);
+bool Bin1DLogarithmic::isLog10() const {
+	return (base == 10.);
 }
 
 
@@ -234,6 +222,10 @@ vector<double> Histogram1D::getBinContents() const {
 	return contents;
 }
 
+vector<Histogram1D::Bin> Histogram1D::getBins() const {
+	return bins;
+}
+
 bool Histogram1D::getIsPDF() const {
 	return isPDF;
 }
@@ -259,7 +251,7 @@ bool Histogram1D::isLn() const {
 }
 
 bool Histogram1D::isIrregular() const {
-	return isRegular();
+	return ! isRegular();
 }
 
 void Histogram1D::push(const double& v, const double& w) {
@@ -364,100 +356,25 @@ double Histogram1D::operator[](const size_t& i) const {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-template<class B>
-Histogram1<B>::Histogram1() {
-	nBins = 0;
-	isPDF = false;
-	isCDF = false;
-}
-
-template<>
-Histogram1<Bin1DLin>::Histogram1(double vMin, double vMax, unsigned int n) {
-	nBins = n;
-	isPDF = false;
-	isCDF = false;
-
-	vector<Bin> bs;
-	double dx = (vMax - vMin) / n;
-	for (size_t i = 0; i < n; i++) {
-		double l = vMin + i * dx;
-		double r = vMin + (i + 1) * dx;
-		Bin b = new Bin1DLin(l, r);
-		bs.push_back(b);
-	}
-	setBins(bs);
-}
-
-template<>
-Histogram1<Bin1DLog10>::Histogram1(double vMin, double vMax, unsigned int n) {
-	nBins = n;
-	isPDF = false;
-	isCDF = false;
-
-	vector<Bin> bs;
-	double dx = (log10(vMax / vMin)) / n;
-	for (size_t i = 0; i < n; i++) {
-		double l = log10(vMin) + i * dx;
-		double r = log10(vMin) + (i + 1) * dx;
-		l = pow(10, l);
-		r = pow(10, r);
-		Bin b = new Bin1DLog10(l, r);
-		bs.push_back(b);
-	}
-	setBins(bs);
-}
-
-template<class B>
-Histogram1<B>::Histogram1(const Histogram1<B>& h) {
-	reset();
-
-	isPDF = false;
-	isCDF = false;
-
-	nBins = h.getNumberOfBins();
-	vector<Bin> newBins;
-	
-	for (size_t i = 0; i < nBins; i++) {
-		Bin b0 = h.getBin(i);
-		Bin bin = new B(b0->getLeftEdge(), b0->getRightEdge());
-		newBins.push_back(bin);
-		setBinContent(i, h.getBinContent[i]);
-	}
-}
-
-template<class B>
-Histogram1<B>::Histogram1(Histogram1<B>&& h) noexcept {
-	*this = std::move(h);
-}
-
-template<class B>
-Histogram1<B>::~Histogram1() {
-}
-
-template<class B>
-void Histogram1<B>::setBins(vector<Bin> b) {
+void RegularHistogram1D::setBins(vector<Bin> b) {
 	bins = b;
 	nBins = bins.size();
 	contents.resize(nBins, 0.);
 }
 
-template<class B>
-bool Histogram1<B>::isRegular() const {
+bool RegularHistogram1D::isRegular() const {
 	return true;
 }
 
-template<class B>
-double Histogram1<B>::directTransformation(const double& v) const {
+double RegularHistogram1D::directTransformation(const double& v) const {
 	return bins[0]->directTransformation(v);
 }
 
-template<class B>
-double Histogram1<B>::inverseTransformation(const double& v) const {
+double RegularHistogram1D::inverseTransformation(const double& v) const {
 	return bins[0]->inverseTransformation(v);
 }
 
-template<class B>
-double Histogram1<B>::interpolateAt(const double& x0) const {
+double RegularHistogram1D::interpolateAt(const double& x0) const {
 	if (! isInRange(x0)) {
 		cout << "Value out of range for interpolation. Returning NaN." << endl;
 		return std::nan("");
@@ -468,8 +385,7 @@ double Histogram1<B>::interpolateAt(const double& x0) const {
 	return interp(x0);
 }
 
-template<class B>
-std::function<double(double)> Histogram1<B>::getInterpolator(const std::pair<double, double>& range) const {
+std::function<double(double)> RegularHistogram1D::getInterpolator(const std::pair<double, double>& range) const {
 	return [this](const double& x0) { 
 		// get index of bin containing the value
 		size_t idx = getBinIndex(x0);
@@ -505,45 +421,52 @@ std::function<double(double)> Histogram1<B>::getInterpolator(const std::pair<dou
 	};
 }
 
-template<class B>
-Histogram1<B> Histogram1<B>::clone() const {
-	return Histogram1<B>(*this);
-}
-
-template<class B>
-Histogram1<B>& Histogram1<B>::operator=(const Histogram1<B>& h) {
-	return clone();
-}
-
-template<class B>
-Histogram1<B> Histogram1<B>::getHistogramPDF() const {
+RegularHistogram1D* RegularHistogram1D::getHistogramPDF() const {
 	if (isPDF)
-		return *this;
+		return const_cast<RegularHistogram1D*>(this);
 	
-	Histogram1<B> h = clone();
-	h.makePDF();
+	RegularHistogram1D* h = clone();
+	h->makePDF();
+
 	return h;
 }
 
-template<class B>
-Histogram1<B> Histogram1<B>::getHistogramCDF() const {
+RegularHistogram1D* RegularHistogram1D::getHistogramCDF() const {
 	if (isCDF)
+		return const_cast<RegularHistogram1D*>(this);
+	
+	RegularHistogram1D* h = clone();
+	h->makeCDF();
+
+	return h;
+}
+
+RegularHistogram1D& RegularHistogram1D::operator=(const RegularHistogram1D& h) {
+	if (this == &h)
 		return *this;
 
-	Histogram1<B> h = clone();
-	h.makeCDF();
-	return h;
+	nBins = h.getNumberOfBins();
+	isPDF = h.isPDF;
+	isCDF = h.isCDF;
+
+	setBins(h.getBins());
+	setBinContents(h.getBinContents());
+
+	return *this;
 }
 
-template<class B>
-std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h) {
+std::ostream& operator<<(std::ostream& os, const RegularHistogram1D& h) {
 	os << "Histogram1D " << endl;
 	os << ". number of bins: " << h.getNumberOfBins();
 
-	if (std::is_same<B, Bin1DLin>::value) {
+	if (h.isLinear()) {
 		os << " (linear spacing)" << endl;
-	} else if (std::is_same<B, Bin1DLog10>::value) {
+	} else if (h.isLog10()) {
 		os << " (log10 spacing)" << endl;
+	} else if (h.isLn()) {
+		os << " (ln spacing)" << endl;
+	} else if (h.isLog2()) {
+		os << " (log2 spacing)" << endl;
 	}
 
 	os << ". edges: " << h.leftEdge() << ", " << h.rightEdge() << endl;
@@ -554,6 +477,134 @@ std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h) {
 	return os;
 }
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+Histogram1DLin::Histogram1DLin() {
+	nBins = 0;
+	isPDF = false;
+	isCDF = false;
+}
+
+Histogram1DLin::Histogram1DLin(double vMin, double vMax, unsigned int n) {
+	nBins = n;
+	isPDF = false;
+	isCDF = false;
+
+	vector<Bin> bins;
+	double dx = (vMax - vMin) / n;
+	for (size_t i = 0; i < n; i++) {
+		double l = i * vMin;
+		double r = i * vMin + dx;
+		Bin bin = new Bin1DLog10(vMin, vMax);
+		bins.push_back(bin);
+	}
+
+	setBins(bins);
+}
+
+RegularHistogram1D* Histogram1DLin::clone() const {
+	return new Histogram1DLin(*this);
+}
+
+Histogram1DLog10::Histogram1DLog10() {
+	nBins = 0;
+	isPDF = false;
+	isCDF = false;
+}
+
+Histogram1DLog10::Histogram1DLog10(double vMin, double vMax, unsigned int n) {
+	nBins = n;
+	isPDF = false;
+	isCDF = false;
+
+	vector<Bin> bins;
+	Bin bin = new Bin1DLog10(vMin, vMax);
+	double dx = (bin->directTransformation(vMax) - bin->directTransformation(vMin)) / n;
+
+	for (size_t i = 0; i < n; i++) {
+		double l = i * bin->directTransformation(vMin);
+		double r = i * bin->directTransformation(vMin) + dx;
+		l = bin->inverseTransformation(l);
+		r = bin->inverseTransformation(r);
+		bin = new Bin1DLog10(vMin, vMax);
+		bins.push_back(bin);
+	}
+
+	setBins(bins);
+}
+
+RegularHistogram1D* Histogram1DLog10::clone() const {
+	return new Histogram1DLog10(*this);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+Histogram1DLog2::Histogram1DLog2() {
+	nBins = 0;
+	isPDF = false;
+	isCDF = false;
+}
+
+Histogram1DLog2::Histogram1DLog2(double vMin, double vMax, unsigned int n) {
+	nBins = n;
+	isPDF = false;
+	isCDF = false;
+
+	vector<Bin> bins;
+	Bin bin = new Bin1DLog2(vMin, vMax);
+	double dx = (bin->directTransformation(vMax) - bin->directTransformation(vMin)) / n;
+
+	for (size_t i = 0; i < n; i++) {
+		double l = i * bin->directTransformation(vMin);
+		double r = i * bin->directTransformation(vMin) + dx;
+		l = bin->inverseTransformation(l);
+		r = bin->inverseTransformation(r);
+		bin = new Bin1DLog10(vMin, vMax);
+		bins.push_back(bin);
+	}
+
+	setBins(bins);
+}
+
+RegularHistogram1D* Histogram1DLog2::clone() const {
+	return new Histogram1DLog2(*this);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+Histogram1DLn::Histogram1DLn() {
+	nBins = 0;
+	isPDF = false;
+	isCDF = false;
+}
+
+Histogram1DLn::Histogram1DLn(double vMin, double vMax, unsigned int n) {
+	nBins = n;
+	isPDF = false;
+	isCDF = false;
+
+	vector<Bin> bins;
+	Bin bin = new Bin1DLn(vMin, vMax);
+	double dx = (bin->directTransformation(vMax) - bin->directTransformation(vMin)) / n;
+
+	for (size_t i = 0; i < n; i++) {
+		double l = i * bin->directTransformation(vMin);
+		double r = i * bin->directTransformation(vMin) + dx;
+		l = bin->inverseTransformation(l);
+		r = bin->inverseTransformation(r);
+		bin = new Bin1DLog10(vMin, vMax);
+		bins.push_back(bin);
+	}
+
+	setBins(bins);
+}
+
+RegularHistogram1D* Histogram1DLn::clone() const {
+	return new Histogram1DLn(*this);
+}
 
 
 

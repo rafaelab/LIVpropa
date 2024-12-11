@@ -64,26 +64,17 @@ class Bin1DLin : public Bin1D {
 
 
 /**
- @class LogBase
- @brief Enumeration for the base of the logarithm.
- This class is only implemented to be used later as a template parameter.
- */
-enum class LogBase {
-	e,
-	two,
-	ten
-};
-
-
-/**
  @class Bin1DLog
  @brief Logarithmic 1D bin.
  The base of the logarithm is given as a template parameter.
  */
-template<LogBase B>
-class Bin1DLog : public Bin1D {
+class Bin1DLogarithmic : public Bin1D {
+	protected:
+		double base;
+
 	public:
-		Bin1DLog(double l, double r);
+		Bin1DLogarithmic(double l, double r, double base = 10);
+		void setBase(double b);
 		double getBase() const;
 		double rand(Random& random = Random::instance()) const;
 		double directTransformation(const double& v) const;
@@ -94,17 +85,35 @@ class Bin1DLog : public Bin1D {
 		bool isLn() const;
 };
 
-typedef Bin1DLog<LogBase::ten> Bin1DLog10;
-typedef Bin1DLog<LogBase::two> Bin1DLog2;
-typedef Bin1DLog<LogBase::e> Bin1DLn;
+
+class Bin1DLog2 : public Bin1DLogarithmic {
+	public:
+		Bin1DLog2(double l, double r) : Bin1DLogarithmic(l, r, 2.) {
+		};
+		// using Bin1D::setCentre;
+		// using Bin1D::setEdges;
+		// using Bin1D::getEdges;
+		// using Bin1D::getLeftEdge;
+		// using Bin1D::getRightEdge;
+		// using Bin1D::getCentre;
+		// using Bin1D::getWidth;
+		// using Bin1D::isInBin;
+		// using Bin1D::randUniform;
+};
 
 
-// forward declaration of derived Histogram1<> class
-template<class B> class Histogram1;
-typedef Histogram1<Bin1DLin> Histogram1DLin;
-typedef Histogram1<Bin1DLn> Histogram1DLn;
-typedef Histogram1<Bin1DLog2> Histogram1DLog2;
-typedef Histogram1<Bin1DLog10> Histogram1DLog10;
+class Bin1DLog10 : public Bin1DLogarithmic {
+	public:
+		Bin1DLog10(double l, double r) : Bin1DLogarithmic(l, r, 10.) {
+		};
+};
+
+
+class Bin1DLn : public Bin1DLogarithmic {
+	public:
+		Bin1DLn(double l, double r) : Bin1DLogarithmic(l, r, M_E) {
+	};
+};
 
 
 /**
@@ -142,6 +151,7 @@ class Histogram1D : public Referenced {
 		vector<double> getBinEdges() const;
 		vector<double> getBinCentres() const;
 		vector<double> getBinContents() const;
+		vector<Bin> getBins() const;
 		bool getIsPDF() const;
 		bool getIsCDF() const;
 		bool isInRange(const double& v) const;
@@ -167,38 +177,60 @@ class Histogram1D : public Referenced {
 		// friend std::ostream& operator<<(std::ostream& os, const Histogram1D& h);
 };
 
+
+
 /**
  @class Histogram1
  @brief 1D histogram.
  This class is a template class that can be instantiated with different types of bins.
  It is meant to be used as a concrete implementation of a 1D histogram.
  */
-template<class B>
-class Histogram1 : public Histogram1D {
+class RegularHistogram1D : public Histogram1D {
 	public:
 		using Histogram1D::Bin;
 
 	public:
-		Histogram1();
-		Histogram1(double vMin, double vMax, unsigned int n);
-		Histogram1(const Histogram1<B>& h);
-		Histogram1(Histogram1<B>&& h) noexcept;
-		~Histogram1();
 		void setBins(vector<Bin> bins);
 		bool isRegular() const;
-		bool isIrregular() const;
 		double directTransformation(const double& v) const;
 		double inverseTransformation(const double& v) const;
 		double interpolateAt(const double& v) const;
 		std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const;
-		Histogram1<B> getHistogramPDF() const;
-		Histogram1<B> getHistogramCDF() const;
-		Histogram1<B> clone() const;
-		Histogram1<B>& operator=(const Histogram1<B>& h);
-		friend std::ostream& operator<<(std::ostream& os, const Histogram1<B>& h);
+		RegularHistogram1D* getHistogramPDF() const;
+		RegularHistogram1D* getHistogramCDF() const;
+		RegularHistogram1D& operator=(const RegularHistogram1D& h);
+		virtual RegularHistogram1D* clone() const = 0;
+		friend std::ostream& operator<<(std::ostream& os, const RegularHistogram1D& h);
 };
 
 
+class Histogram1DLin : public RegularHistogram1D {
+	public:
+		Histogram1DLin();
+		Histogram1DLin(double vMin, double vMax, unsigned int n);
+		RegularHistogram1D* clone() const;
+};
+
+class Histogram1DLog10 : public RegularHistogram1D {
+	public:
+		Histogram1DLog10();
+		Histogram1DLog10(double vMin, double vMax, unsigned int n);
+		RegularHistogram1D* clone() const;
+};
+
+class Histogram1DLog2 : public RegularHistogram1D {
+	public:
+		Histogram1DLog2();
+		Histogram1DLog2(double vMin, double vMax, unsigned int n);
+		RegularHistogram1D* clone() const;
+};
+
+class Histogram1DLn : public RegularHistogram1D {
+	public:
+		Histogram1DLn();
+		Histogram1DLn(double vMin, double vMax, unsigned int n);
+		RegularHistogram1D* clone() const;
+};
 
 
 } // namespace livpropa
