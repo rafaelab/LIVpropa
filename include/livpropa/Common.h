@@ -72,6 +72,19 @@ inline double twoPointExtrapolation(const double& xi, const double& x1, const do
 }
 
 
+
+/**
+ * @brief Random integer between lo and hi.
+ */
+inline int randInt(int lo, int hi, Random& random) {
+	int n = hi - lo + 1;
+	int i = lround(random.rand()) % n;
+	if (i < 0) 
+		i = -i;
+	return lo + i;
+}
+
+
 } // livpropa
 
 
