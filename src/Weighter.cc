@@ -5,117 +5,147 @@
 namespace livpropa {
 
 
-void Weighter::setWeighterType(WeighterType t) {
+void RuntimeWeighter::setType(Type t) {
 	type = t;
 }
 
-WeighterType Weighter::getType() const {
+RuntimeWeighter::Type RuntimeWeighter::getType() const {
 	return type;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-WeighterUniformFraction::WeighterUniformFraction(int pId, double s) {
-	setSamplingFraction(s);
-	setParticleId(pId);
-	setWeighterType(WeighterType::UniformFraction);
-}
-
-void WeighterUniformFraction::setSamplingFraction(double s) {
-	samplingFraction = s;
-}
-
-void WeighterUniformFraction::setParticleId(int pId) {
-	particleId = pId;
-}
-
-double WeighterUniformFraction::getSamplingFraction() const {
-	return samplingFraction;
-}
-
-int WeighterUniformFraction::getParticleId() const {
-	return particleId;
-}
-
-double WeighterUniformFraction::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
-	if (id != particleId)
-		return 0;
-
-	if (samplingFraction >= 1.) {
-		return 1;
-	} else if (samplingFraction <= 0) {
-		return 0;
-	} else {
-		if (random.rand() < samplingFraction) // accept and return weight
-			return 1. / samplingFraction;
-		else // reject
-			return 0;
+string RuntimeWeighter::getNameTag() const {
+	switch (type) {
+		case Type::Null:
+			return "null";
+		case Type::List:
+			return "list";
+		case Type::EnergyFraction:
+			return "energy fraction";
+		case Type::EnergyFractionUniform:
+			return "energy fraction: uniform";
+		case Type::EnergyFractionPowerLaw:
+			return "energy fraction: power law";
+		default:
+			return "unknown";
 	}
 }
 
-string WeighterUniformFraction::getNameTag() const {
-	return "uniformFraction";
+void RuntimeWeighter::reset() {
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-WeighterUniformNumber::WeighterUniformNumber(int pId, unsigned int n) {
-	setNumberOfEvents(n);
+WeighterEnergyFraction::WeighterEnergyFraction() {
+	setType(RuntimeWeighter::Type::EnergyFraction);
+}
+
+WeighterEnergyFraction::WeighterEnergyFraction(int pId) {
+	setType(RuntimeWeighter::Type::EnergyFraction);
 	setParticleId(pId);
-	setWeighterType(WeighterType::UniformNumber);
 }
 
-void WeighterUniformNumber::setNumberOfEvents(unsigned int n) {
-	nEvents = n;
+WeighterEnergyFraction::WeighterEnergyFraction(int pId, std::function<double(double)> f) {
+	setType(RuntimeWeighter::Type::EnergyFraction);
+	setParticleId(pId);
+	setWeightFunction(f);
 }
 
-void WeighterUniformNumber::setParticleId(int pId) {
+WeighterEnergyFraction::~WeighterEnergyFraction() {
+}
+
+void WeighterEnergyFraction::setParticleId(int pId) {
 	particleId = pId;
 }
 
-unsigned int WeighterUniformNumber::getNumberOfEvents() const {
-	return nEvents;
+void WeighterEnergyFraction::setWeightFunction(std::function<double(double)> f) {
+	weightFunction = f;
 }
 
-int WeighterUniformNumber::getParticleId() const {
+int WeighterEnergyFraction::getParticleId() const {
 	return particleId;
 }
 
-double WeighterUniformNumber::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
+std::function<double(double)> WeighterEnergyFraction::getWeightFunction() const {
+	return weightFunction;
+}
+
+double WeighterEnergyFraction::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
 	if (id != particleId)
 		return 0;
-
-	// UNTESTED!!!!!!!!!!!!
-
-	if (counter >= nEvents)
-		return 0;
 	
-	return 1;
+	// accept/reject and return weight
+	double w = weightFunction(f);
+	return (random.rand() < w) ? 1. / w : 0;
 }
 
-string WeighterUniformNumber::getNameTag() const {
-	return "uniformNumber";
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+WeighterEnergyFractionUniform::WeighterEnergyFractionUniform() : WeighterEnergyFraction() {
+	setType(RuntimeWeighter::Type::EnergyFractionUniform);
 }
 
+WeighterEnergyFractionUniform::WeighterEnergyFractionUniform(int pId, double s) : WeighterEnergyFraction(pId) {
+	setType(RuntimeWeighter::Type::EnergyFractionUniform);
+	setSamplingFraction(s);
+	setParticleId(pId);
+
+	std::function<double(double)> f = [s](const double& x) { 
+		return s; 
+		};
+	setWeightFunction(f);
+}
+
+void WeighterEnergyFractionUniform::setSamplingFraction(double s) {
+	samplingFraction = s;
+}
+
+double WeighterEnergyFractionUniform::getSamplingFraction() const {
+	return samplingFraction;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+WeighterEnergyFractionPowerLaw::WeighterEnergyFractionPowerLaw() : WeighterEnergyFraction() {
+	setType(RuntimeWeighter::Type::EnergyFractionPowerLaw);
+}
+
+WeighterEnergyFractionPowerLaw::WeighterEnergyFractionPowerLaw(int pId, double s) : WeighterEnergyFraction(pId) {
+	setType(RuntimeWeighter::Type::EnergyFractionPowerLaw);
+	setExponent(s);
+	setParticleId(pId);
+
+	std::function<double(double)> f = [s](const double& x) { 
+		return pow(x, s); 
+		};
+	setWeightFunction(f);
+}
+
+void WeighterEnergyFractionPowerLaw::setExponent(double s) {
+	exponent = s;
+}
+
+double WeighterEnergyFractionPowerLaw::getExponent() const {
+	return exponent;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 WeighterList::WeighterList() {
-	setWeighterType(WeighterType::List);
+	setType(Type::List);
 }
 
-WeighterList::WeighterList(std::vector<ref_ptr<Weighter>> ws) {
+WeighterList::WeighterList(std::vector<ref_ptr<RuntimeWeighter>> ws) {
 	for (size_t i = 0; i < ws.size(); i++) {
 		add(ws[i]);
 	}
-	setWeighterType(WeighterType::List);
+	setType(Type::List);
 }
 
-void WeighterList::add(Weighter* w) {
+void WeighterList::add(RuntimeWeighter* w) {
 	weighters.push_back(w);
 }
 
@@ -138,25 +168,109 @@ double WeighterList::computeWeight(const int& id, const double& E, const double&
 	return w;
 }
 
-string WeighterList::getNameTag() const {
-	return "list";
-}
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 WeighterNull::WeighterNull() {
-	setWeighterType(WeighterType::Null);
+	setType(Type::Null);
 }
 
 double WeighterNull::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
 	return 1;
 }
 
-string WeighterNull::getNameTag() const {
-	return "null";
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void PosterioriWeighter::setType(Type t) {
+	type = t;
 }
+
+PosterioriWeighter::Type PosterioriWeighter::getType() const {
+	return type;
+}
+
+string PosterioriWeighter::getNameTag() const {
+	switch (type) {
+		case Type::Distribution:
+			return "distribution";
+		default:
+			return "unknown";
+	}
+}
+
+void PosterioriWeighter::reset() {
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+WeighterDistribution::WeighterDistribution() {
+	setType(Type::Distribution);
+}
+
+WeighterDistribution::WeighterDistribution(int pId, unsigned int n) {
+	setType(Type::Distribution);
+	setNumberOfEvents(n);
+	setParticleId(pId);
+}
+
+WeighterDistribution::WeighterDistribution(int pId, ref_ptr<Histogram1D> h, unsigned int n) {
+	setType(Type::Distribution);
+	setHistogram(h);
+	setNumberOfEvents(n);
+	setParticleId(pId);
+}
+
+void WeighterDistribution::setNumberOfEvents(unsigned int n) {
+	nEvents = n;
+}
+
+void WeighterDistribution::setParticleId(int pId) {
+	particleId = pId;
+}
+
+void WeighterDistribution::setHistogram(ref_ptr<Histogram1D> h) {
+	histogram = h;
+}
+
+void WeighterDistribution::push(const double& v, const double& w) {
+	histogram->push(v, w);
+}
+
+unsigned int WeighterDistribution::getNumberOfEvents() const {
+	return nEvents;
+}
+
+int WeighterDistribution::getParticleId() const {
+	return particleId;
+}
+
+ref_ptr<Histogram1D> WeighterDistribution::getHistogram() const {
+	return histogram;
+}
+
+double WeighterDistribution::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
+	if (id != particleId)
+		return 0;
+
+	if (counter >= nEvents)
+		return 0;
+
+	histogram->push(E);
+	nEntries++;
+	
+	return 1;
+}
+
+void WeighterDistribution::reset() {
+	histogram->reset();
+	nEntries = 0;
+}
+
+
+
 
 
 } // namespace livpropa

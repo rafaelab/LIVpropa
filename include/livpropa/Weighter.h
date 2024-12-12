@@ -13,31 +13,68 @@
 namespace livpropa {
 
 
-enum class WeighterType {
-	UniformFraction,
-	UniformNumber,
-	List,
-	Null
-};
-
 
  /**
- @class Weighter
+ @class RuntimeWeighter
  @brief Abstract base class to handle individual events.
+ Weights are assigned at runtime, during the simulation, in the `process` function.
  */
-class Weighter: public Referenced {
+class RuntimeWeighter: public Referenced {
+	public: 
+		enum class Type {
+			Null, 
+			List,
+			EnergyFraction,
+			EnergyFractionPowerLaw,
+			EnergyFractionUniform
+		};
+
 	protected:
-		WeighterType type;
+		Type type;
 
 	public:
+		virtual ~RuntimeWeighter() = default;
 		virtual double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const = 0;
-		virtual string getNameTag() const = 0;
-		void setWeighterType(WeighterType type);
-		WeighterType getType() const;
+		void setType(Type type);
+		Type getType() const;
+		string getNameTag() const;
+		void reset();
 };
 
 /**
- @class WeighterUniformFraction
+ @class WeighterNull
+ @brief Dummy object to ensure compatibility with the rest of the code.
+ Always returns a weight of 1.
+ */
+class WeighterNull : public RuntimeWeighter {
+	protected:
+		int particleId;
+		unsigned int nEvents;
+
+	public:
+		WeighterNull();
+		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
+};
+
+
+/**
+ @class WeighterList
+ @brief List of objects of type `RuntimeWeighter`.
+ */
+class WeighterList : public RuntimeWeighter {
+	protected:
+		std::vector<ref_ptr<RuntimeWeighter>> weighters;
+	
+	public:
+		WeighterList();
+		WeighterList(std::vector<ref_ptr<RuntimeWeighter>> weighters);
+		void add(RuntimeWeighter* weighter);
+		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
+};
+
+
+/**
+ @class WeighterEnergyFraction
  @brief Throw away a fraction of the particles of a given type.
  The sampling parameter controls whether all (sampling=1) or no (sampling=0) particles are accepted.
  It assumes that the total sampled energy of the secondaries (E_sampled) is a fraction of the total energy loss of the primaries.
@@ -46,78 +83,112 @@ class Weighter: public Referenced {
  This is because the structure of computeWeight should remain constant (or variadic arguments used). 
  This will be done in the future.
  */
-class WeighterUniformFraction: public Weighter {
+class WeighterEnergyFraction : public RuntimeWeighter {
 	protected:
 		int particleId;
+		std::function<double(double)> weightFunction;
+
+	public:
+		WeighterEnergyFraction();
+		WeighterEnergyFraction(int particleId);
+		WeighterEnergyFraction(int particleId, std::function<double(double)> func);
+		~WeighterEnergyFraction();
+		void setParticleId(int particleId);
+		void setWeightFunction(std::function<double(double)> func);
+		int getParticleId() const;
+		std::function<double(double)> getWeightFunction() const;
+		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
+
+};
+
+
+/**
+ @class WeighterEnergyFractionUniform
+ */
+class WeighterEnergyFractionUniform : public WeighterEnergyFraction {
+	protected:
 		double samplingFraction;
 
 	public:
-		WeighterUniformFraction(int particleId, double sampling);
+		WeighterEnergyFractionUniform();
+		WeighterEnergyFractionUniform(int particleId, double sampling);
 		void setSamplingFraction(double sampling);
-		void setParticleId(int particleId);
 		double getSamplingFraction() const;
-		int getParticleId() const;
-		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
+		using RuntimeWeighter::setType;
+		using RuntimeWeighter::getType;
+};
+
+/**
+ @class WeighterEnergyFractionPowerLaw
+ */
+class WeighterEnergyFractionPowerLaw : public WeighterEnergyFraction {
+	protected:
+		double exponent;
+		
+	public:
+		WeighterEnergyFractionPowerLaw();
+		WeighterEnergyFractionPowerLaw(int particleId, double s);
+		void setExponent(double v);
+		double getExponent() const;
+		using RuntimeWeighter::setType;
+		using RuntimeWeighter::getType;
+};
+
+
+
+
+
+ /**
+ @class PosterioriWeighter
+ @brief Abstract base class to handle "a posteriori" weights.
+ These weights are useful when the weight of an event is not known in advance, such that the whole computation must be done anyways, and only a sample of the secondary events is needed at the ended.
+ Weights are assigned at runtime, during the simulation, in the `process` function.
+ */
+class PosterioriWeighter: public Referenced {
+	public: 
+		enum class Type {
+			Distribution
+		};
+
+	protected:
+		Type type;
+
+	public:
+		virtual ~PosterioriWeighter() = default;
+		virtual double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const = 0;
+		void setType(Type type);
+		Type getType() const;
 		string getNameTag() const;
+		void reset();
 };
 
 
 /**
- @class WeighterUniformNumber
- @brief Throw away a fraction of the particles of a given type.
-The sampler counts the number of events up to the desired number, and throws away the rest.
+ @class WeighterDistribution
+ @brief Stores the full distribution of events.
+ Then it can be used to retrieve just a subsample of events to be added to the simulation.
  */
-class WeighterUniformNumber: public Weighter {
+class WeighterDistribution: public PosterioriWeighter {
 	protected:
 		int particleId;
 		unsigned int nEvents;
+		ref_ptr<Histogram1D> histogram;
+		ref_ptr<Histogram1D> histogramWeights;
+		mutable unsigned int nEntries;
 
 	public:
-		WeighterUniformNumber(int particleId, unsigned int nEvents);
+		WeighterDistribution();
+		WeighterDistribution(int particleId, unsigned int nEvents = 0);
+		WeighterDistribution(int particleId, ref_ptr<Histogram1D> h,  unsigned int nEvents = 0);
 		void setNumberOfEvents(unsigned int nEvents);
 		void setParticleId(int particleId);
+		void setHistogram(ref_ptr<Histogram1D> h);
+		void push(const double& v, const double& w);
 		unsigned int getNumberOfEvents() const;
 		int getParticleId() const;
+		ref_ptr<Histogram1D> getHistogram() const;
 		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
-		string getNameTag() const;
-};
-
-
-/**
- @class WeighterList
- @brief List of objects of type `Weighter`.
- */
-class WeighterList : public Weighter {
-	protected:
-		std::vector<ref_ptr<Weighter>> weighters;
-	
-	public:
-		WeighterList();
-		WeighterList(std::vector<ref_ptr<Weighter>> weighters);
-		void add(Weighter* weighter);
-		// inline void add(ref_ptr<Weights> Weights) {
-		// 	add(Weights.get());
-		// }
-		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
-		string getNameTag() const;
-};
-
-
-
-/**
- @class WeighterNull
- @brief Dummy object to ensure compatibility with the rest of the code.
- Always returns a weight of 1.
- */
-class WeighterNull : public Weighter {
-	protected:
-		int particleId;
-		unsigned int nEvents;
-
-	public:
-		WeighterNull();
-		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
-		string getNameTag() const;
+		void reset();
 };
 
 
