@@ -193,84 +193,135 @@ PosterioriWeighter::Type PosterioriWeighter::getType() const {
 
 string PosterioriWeighter::getNameTag() const {
 	switch (type) {
-		case Type::Distribution:
-			return "distribution";
+		case Type::RandomEvents:
+			return "random events";
+		case Type::HistogramBins:
+			return "histogram bins";
 		default:
 			return "unknown";
 	}
 }
 
-void PosterioriWeighter::reset() {
+void PosterioriWeighter::setParticleId(int pId) {
+	particleId = pId;
+}
+
+int PosterioriWeighter::getParticleId() const {
+	return particleId;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-WeighterDistribution::WeighterDistribution() {
-	setType(Type::Distribution);
-}
-
-WeighterDistribution::WeighterDistribution(int pId, unsigned int n) {
-	setType(Type::Distribution);
-	setNumberOfEvents(n);
+PosterioriWeighterRandomEvents::PosterioriWeighterRandomEvents(int pId, unsigned int nEvents, ref_ptr<Sampler> sampler) {
+	setType(Type::RandomEvents);
+	setNumberOfEvents(nEvents);
+	setSampler(sampler);
 	setParticleId(pId);
+	nEntries = 0;
+	sumWeights = 0.;
 }
 
-WeighterDistribution::WeighterDistribution(int pId, ref_ptr<Histogram1D> h, unsigned int n) {
-	setType(Type::Distribution);
-	setHistogram(h);
-	setNumberOfEvents(n);
-	setParticleId(pId);
-}
-
-void WeighterDistribution::setNumberOfEvents(unsigned int n) {
+void PosterioriWeighterRandomEvents::setNumberOfEvents(unsigned int n) {
 	nEvents = n;
 }
 
-void WeighterDistribution::setParticleId(int pId) {
-	particleId = pId;
+void PosterioriWeighterRandomEvents::setSampler(ref_ptr<Sampler> s) {
+	if (s == nullptr) {
+		sampler = new InverseSampler();
+	} else {
+		sampler = s;
+	}
 }
 
-void WeighterDistribution::setHistogram(ref_ptr<Histogram1D> h) {
-	histogram = h;
+void PosterioriWeighterRandomEvents::push(const double& v, const double& w) const {
+	sampler->push(v, w);
+	sumWeights += w;
+	nEntries++;
 }
 
-void WeighterDistribution::push(const double& v, const double& w) {
-	histogram->push(v, w);
-}
-
-unsigned int WeighterDistribution::getNumberOfEvents() const {
+unsigned int PosterioriWeighterRandomEvents::getNumberOfEvents() const {
 	return nEvents;
 }
 
-int WeighterDistribution::getParticleId() const {
-	return particleId;
+ref_ptr<Sampler> PosterioriWeighterRandomEvents::getSampler() const {
+	return sampler;
 }
 
-ref_ptr<Histogram1D> WeighterDistribution::getHistogram() const {
+ref_ptr<Histogram1D> PosterioriWeighterRandomEvents::getHistogram() const {
+	return sampler->getDistribution();
+}
+
+double PosterioriWeighterRandomEvents::computeNormalisation() const {
+	return 1. / sumWeights;
+}
+
+std::pair<double, double> PosterioriWeighterRandomEvents::getEvent(Random& random) const {
+	return sampler->getSample();
+}
+
+vector<std::pair<double, double>> PosterioriWeighterRandomEvents::getEvents(Random& random) const {
+	std::vector<std::pair<double, double>> samples;
+	double norm = computeNormalisation();
+	for (unsigned int i = 0; i < nEvents; i++) {
+		auto sample = getEvent(random);
+		sample.second *= norm;
+		samples.push_back(sample);
+	}
+
+	return samples;
+}
+
+void PosterioriWeighterRandomEvents::reset() {
+	nEntries = 0;
+	sumWeights = 0.;
+	sampler->reset();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+PosterioriWeighterHistogramBins::PosterioriWeighterHistogramBins(int pId, ref_ptr<Histogram1D> histogram) {
+	setType(Type::HistogramBins);
+	setParticleId(pId);
+	setHistogram(histogram);
+}
+
+void PosterioriWeighterHistogramBins::setHistogram(ref_ptr<Histogram1D> h) {
+	histogram = h;
+}
+
+void PosterioriWeighterHistogramBins::push(const double& v, const double& w) const {
+	histogram->push(v, w);
+}
+
+ref_ptr<Histogram1D> PosterioriWeighterHistogramBins::getHistogram() const {
 	return histogram;
 }
 
-double WeighterDistribution::computeWeight(const int& id, const double& E, const double& f, const int& counter, Random& random) const {
-	if (id != particleId)
-		return 0;
-
-	if (counter >= nEvents)
-		return 0;
-
-	histogram->push(E);
-	nEntries++;
-	
-	return 1;
+double PosterioriWeighterHistogramBins::computeNormalisation() const {
+	return 1. / sumWeights;
 }
 
-void WeighterDistribution::reset() {
-	histogram->reset();
+vector<std::pair<double, double>> PosterioriWeighterHistogramBins::getEvents(Random& random) const {
+	unsigned int n = histogram->getNumberOfBins();
+	double norm = computeNormalisation();
+
+	std::vector<std::pair<double, double>> samples;
+	for (unsigned int i = 0; i < n; i++) {
+		double x = histogram->getBinCentre(i);
+		double w = histogram->getBinContent(i) * norm;
+		samples.push_back(std::make_pair(x, w));
+	}
+
+	return samples;
+}
+
+void PosterioriWeighterHistogramBins::reset() {
 	nEntries = 0;
+	sumWeights = 0.;
+	histogram->reset();
 }
-
-
-
 
 
 } // namespace livpropa

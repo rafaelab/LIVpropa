@@ -7,6 +7,7 @@
 
 #include "livpropa/Common.h"
 #include "livpropa/Histogram.h"
+#include "livpropa/Sampler.h"
 
 
 
@@ -147,47 +148,73 @@ class WeighterEnergyFractionPowerLaw : public WeighterEnergyFraction {
 class PosterioriWeighter: public Referenced {
 	public: 
 		enum class Type {
-			Distribution
+			RandomEvents,
+			HistogramBins
 		};
 
 	protected:
 		Type type;
+		int particleId;
 
 	public:
 		virtual ~PosterioriWeighter() = default;
-		virtual double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const = 0;
 		void setType(Type type);
+		void setParticleId(int particleId);
 		Type getType() const;
 		string getNameTag() const;
-		void reset();
+		int getParticleId() const;
+		virtual void push(const double& v, const double& w) const = 0;
+		virtual vector<std::pair<double, double>> getEvents(Random& random = Random::instance()) const = 0;
+		virtual void reset() = 0;
 };
 
 
 /**
- @class WeighterDistribution
- @brief Stores the full distribution of events.
- Then it can be used to retrieve just a subsample of events to be added to the simulation.
+ @class PosterioriWeighterRandomEvents
+ @brief Randomly select the events to be stored, according to a given sampling algorithm.
+ Note that, if some kind of sampling was used to select the events to be emitted, there might be some convergence issues.
  */
-class WeighterDistribution: public PosterioriWeighter {
+class PosterioriWeighterRandomEvents: public PosterioriWeighter {
 	protected:
-		int particleId;
 		unsigned int nEvents;
-		ref_ptr<Histogram1D> histogram;
-		ref_ptr<Histogram1D> histogramWeights;
+		ref_ptr<Sampler> sampler;
 		mutable unsigned int nEntries;
+		mutable double sumWeights;
 
 	public:
-		WeighterDistribution();
-		WeighterDistribution(int particleId, unsigned int nEvents = 0);
-		WeighterDistribution(int particleId, ref_ptr<Histogram1D> h,  unsigned int nEvents = 0);
+		PosterioriWeighterRandomEvents(int pId, unsigned int nEvents, ref_ptr<Sampler> sampler = nullptr);
 		void setNumberOfEvents(unsigned int nEvents);
-		void setParticleId(int particleId);
-		void setHistogram(ref_ptr<Histogram1D> h);
-		void push(const double& v, const double& w);
+		void setSampler(ref_ptr<Sampler> s);
+		void push(const double& v, const double& w) const;
 		unsigned int getNumberOfEvents() const;
-		int getParticleId() const;
+		ref_ptr<Sampler> getSampler() const;
 		ref_ptr<Histogram1D> getHistogram() const;
-		double computeWeight(const int& id, const double& energy = 0, const double& energyFraction = 0, const int& counter = 0, Random& random = Random::instance()) const;
+		double computeNormalisation() const;
+		std::pair<double, double> getEvent(Random& random = Random::instance()) const;
+		vector<std::pair<double, double>> getEvents(Random& random = Random::instance()) const;
+		void reset();
+};
+
+
+
+/**
+ @class PosterioriWeighterHistogramBins
+ @brief Stores the full distribution of events.
+ The events are then chose deterministically, taking the centre of each bin.
+ */
+class PosterioriWeighterHistogramBins: public PosterioriWeighter {
+	protected:
+		ref_ptr<Histogram1D> histogram;
+		mutable unsigned int nEntries;
+		mutable double sumWeights;
+
+	public:
+		PosterioriWeighterHistogramBins(int pId, ref_ptr<Histogram1D> histogram = nullptr);
+		void setHistogram(ref_ptr<Histogram1D> h);
+		void push(const double& v, const double& w) const;
+		ref_ptr<Histogram1D> getHistogram() const;
+		double computeNormalisation() const;
+		vector<std::pair<double, double>> getEvents(Random& random = Random::instance()) const;
 		void reset();
 };
 
