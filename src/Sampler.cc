@@ -51,6 +51,10 @@ string Sampler::getNameTag() const {
 	return getSamplerNameTag(type);
 }
 
+void Sampler::push(const double& v, const double& w) const {
+	histogram->push(v, w);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -78,7 +82,7 @@ std::pair<double, double> InverseSampler::getSample(Random& random, const std::p
 
 	if (r > cdf[nBins - 1])
 		return std::make_pair(histogram->getBinCentre(0), 1.);
-		
+
 	double x = interpolate(r, cdf, histogram->getBinCentres());
 	double w = 1.;
 
