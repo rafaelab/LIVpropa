@@ -33,20 +33,18 @@ string getSamplerNameTag(SamplerType t);
 class Sampler : public Referenced {
 	protected:
 		ref_ptr<Histogram1D> histogram;
-		vector<double> cdf;
 		SamplerType type;
 
 	public:
 		virtual ~Sampler() = default;
-		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		void setType(SamplerType t);
 		SamplerType getType() const;
 		string getNameTag() const;
+		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		void setDistribution(ref_ptr<Histogram1D> histogram);
 		ref_ptr<Histogram1D> getDistribution() const;
-		ref_ptr<Histogram1D> getCumulativeDistribution() const;
-		void computeCDF();
+		virtual void reset() = 0;
 
 };
 
@@ -56,10 +54,15 @@ class Sampler : public Referenced {
  @brief Sample from a distribution using the inverse transform method.
 */
 class InverseSampler: public Sampler {
+	protected:
+		vector<double> cdf;
+
 	public:
 		InverseSampler();
 		InverseSampler(ref_ptr<Histogram1D> h);
+		void computeCDF();
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+		void reset();
 };
 
 
@@ -72,6 +75,7 @@ class InverseSampler: public Sampler {
 class RejectionSampler: public Sampler {
 	protected:
 		ref_ptr<Histogram1D> proposalPDF;
+		vector<double> cdf;
 		InverseSampler inverseSampler;
 		double maxRatio;
 
@@ -81,7 +85,9 @@ class RejectionSampler: public Sampler {
 		void setProposalPDF(ref_ptr<Histogram1D> proposalPDF);
 		ref_ptr<Histogram1D> getProposalPDF() const;
 		void computeCDF();
+		ref_ptr<Histogram1D> getCDF() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+		void reset();
 };
 
 
@@ -95,6 +101,7 @@ class ImportanceSampler: public Sampler {
 		std::function<double(double)> weightFunction;
 		ref_ptr<Histogram1D> proposalPDF;
 		InverseSampler inverseSampler;
+		vector<double> cdf;
 
 	public:
 		ImportanceSampler();
@@ -107,8 +114,10 @@ class ImportanceSampler: public Sampler {
 		ref_ptr<Histogram1D> getProposalPDF() const;
 		std::function<double(double)> getWeightFunction() const;
 		void computeCDF();
+		ref_ptr<Histogram1D> getCDF() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
-	
+		void reset();
+
 	private:
 		static double parseWeightFunctionName(const string& str, const string& pattern);
 };
@@ -143,6 +152,7 @@ class NestedSampler : public Sampler {
 		std::function<double(double)> getLikelihoodFunction() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		double getLogEvidence() const;
+		void reset();
 
 	private:
 		double logSumExp(double a, double b) const;
@@ -174,7 +184,7 @@ class MCMCSampler : public Sampler {
 		unsigned int getNumberOfSteps() const;
 		double getStepSize() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
-		void reset();
+		void reset() override;
 };
 
 
@@ -207,6 +217,7 @@ class AdaptiveMCMCSampler : public Sampler {
 		double getStepSize() const;
 		double getAdaptationRate() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
+		void reset();
 };
 
 } // namespace livpropa

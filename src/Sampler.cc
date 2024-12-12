@@ -30,7 +30,80 @@ ref_ptr<Histogram1D> Sampler::getDistribution() const {
 	return histogram;
 }
 
-void Sampler::computeCDF() {
+vector<std::pair<double, double>> Sampler::getSamples(unsigned int nSamples, Random& random, const std::pair<double, double>& range) const {
+	vector<std::pair<double, double>> samples;
+	for (unsigned int i = 0; i < nSamples; i++) {
+		samples.push_back(getSample(random, range));
+	}
+
+	return samples;
+}
+
+void Sampler::setType(SamplerType t) {
+	type = t;
+}
+
+SamplerType Sampler::getType() const {
+	return type;
+}
+
+string Sampler::getNameTag() const {
+	return getSamplerNameTag(type);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+InverseSampler::InverseSampler() {
+	setType(SamplerType::Inverse);
+}
+
+InverseSampler::InverseSampler(ref_ptr<Histogram1D> h) {
+	setType(SamplerType::Inverse);
+	if (h->getIsPDF())
+		setDistribution(h);
+	else
+		h->makePDF();
+	setDistribution(h);
+	computeCDF();
+}
+
+void InverseSampler::computeCDF() {
+	cdf = histogram->computeVectorCDF();
+}
+
+std::pair<double, double> InverseSampler::getSample(Random& random, const std::pair<double, double>& range) const {
+	double r = random.randUniform(range.first, range.second);
+	unsigned int nBins = histogram->getNumberOfBins();
+
+	if (r > cdf[nBins - 1])
+		return std::make_pair(histogram->getBinCentre(0), 1.);
+		
+	double x = interpolate(r, cdf, histogram->getBinCentres());
+	double w = 1.;
+
+	return std::make_pair(x, w);
+}
+
+void InverseSampler::reset() {
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+RejectionSampler::RejectionSampler() {
+	setType(SamplerType::Rejection);
+}
+
+RejectionSampler::RejectionSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D> proposal, double maxRatio) {
+	setDistribution(h);
+	setProposalPDF(proposal);
+	computeCDF();
+	setType(SamplerType::Rejection);
+	this->maxRatio = maxRatio;
+}
+
+void RejectionSampler::computeCDF() {
 	vector<double> edges = histogram->getBinEdges();
 	vector<double> contents = histogram->getBinContents();
 	size_t nBins = histogram->getNumberOfBins();
@@ -58,78 +131,10 @@ void Sampler::computeCDF() {
 	}
 }
 
-vector<std::pair<double, double>> Sampler::getSamples(unsigned int nSamples, Random& random, const std::pair<double, double>& range) const {
-	vector<std::pair<double, double>> samples;
-	for (unsigned int i = 0; i < nSamples; i++) {
-		samples.push_back(getSample(random, range));
-	}
-
-	return samples;
-}
-
-ref_ptr<Histogram1D> Sampler::getCumulativeDistribution() const {
+ref_ptr<Histogram1D> RejectionSampler::getCDF() const {
 	ref_ptr<Histogram1D> hCum = histogram;
 	hCum->setBinContents(cdf);
 	return hCum;
-}
-
-void Sampler::setType(SamplerType t) {
-	type = t;
-}
-
-SamplerType Sampler::getType() const {
-	return type;
-}
-
-string Sampler::getNameTag() const {
-	return getSamplerNameTag(type);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-InverseSampler::InverseSampler() {
-	setType(SamplerType::Inverse);
-}
-
-InverseSampler::InverseSampler(ref_ptr<Histogram1D> h) {
-	setDistribution(h);
-	computeCDF();
-	setType(SamplerType::Inverse);
-}
-
-std::pair<double, double> InverseSampler::getSample(Random& random, const std::pair<double, double>& range) const {
-	double r = random.randUniform(range.first, range.second);
-	unsigned int nBins = histogram->getNumberOfBins();
-
-	auto it = std::lower_bound(cdf.begin(), cdf.end(), r);
-	size_t idx = std::distance(cdf.begin(), it) - 1;
-
-	if (idx >= nBins - 1)
-		idx = nBins - 2;
-
-	double x = interpolate(r, cdf, histogram->getBinCentres());
-	double w = 1.;
-
-	return std::make_pair(x, w);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-RejectionSampler::RejectionSampler() {
-	setType(SamplerType::Rejection);
-}
-
-RejectionSampler::RejectionSampler(ref_ptr<Histogram1D> h, ref_ptr<Histogram1D> proposal, double maxRatio) {
-	setDistribution(h);
-	setProposalPDF(proposal);
-	computeCDF();
-	setType(SamplerType::Rejection);
-	this->maxRatio = maxRatio;
-}
-
-void RejectionSampler::computeCDF() {
-	inverseSampler.computeCDF();
 }
 
 void RejectionSampler::setProposalPDF(ref_ptr<Histogram1D> proposal) {
@@ -153,6 +158,10 @@ std::pair<double, double> RejectionSampler::getSample(Random& random, const std:
 		}
 	}
 }
+
+void RejectionSampler::reset() {
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -234,6 +243,12 @@ void ImportanceSampler::computeCDF() {
 	inverseSampler.computeCDF();
 }
 
+ref_ptr<Histogram1D> ImportanceSampler::getCDF() const {
+	ref_ptr<Histogram1D> hCum = histogram;
+	hCum->setBinContents(cdf);
+	return hCum;
+}
+
 void ImportanceSampler::setProposalPDF(ref_ptr<Histogram1D> proposal) {
 	proposalPDF = proposal;
 	inverseSampler.setDistribution(proposal);
@@ -271,6 +286,10 @@ double ImportanceSampler::parseWeightFunctionName(const string& str, const strin
 	return 1.;
 }
 
+void ImportanceSampler::reset() {
+}
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -290,7 +309,6 @@ NestedSampler::NestedSampler(unsigned int nLivePoints) {
 NestedSampler::NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints) {
 	setType(SamplerType::Nested);
 	setDistribution(h);
-	computeCDF();
 	setNumberOfLivePoints(nLivePoints);
 	setLikelihoodFunction(h->getInterpolator());
 	logEvidence = -std::numeric_limits<double>::infinity();
@@ -369,6 +387,13 @@ double NestedSampler::logSumExp(double a, double b) const {
 	return b + log1p(exp(a - b));
 }
 
+void NestedSampler::reset() {
+	livePoints.clear();
+	liveLikelihoods.clear();
+	logEvidence = - std::numeric_limits<double>::infinity();
+	logWeight = 0;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -387,7 +412,6 @@ MCMCSampler::MCMCSampler(unsigned int nSteps, double stepSize) {
 MCMCSampler::MCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize) {
 	setType(SamplerType::MCMC);
 	setDistribution(h);
-	computeCDF();
 	setNumberOfSteps(nSteps);
 	setStepSize(stepSize);
 	update(0., 1.);
@@ -462,7 +486,6 @@ std::pair<double, double> MCMCSampler::getSample(Random& random, const std::pair
 	return std::make_pair(currentSample, currentWeight);
 }
 
-
 void MCMCSampler::reset() {
 	currentSample = 0;
 	currentWeight = 0;
@@ -491,7 +514,6 @@ AdaptiveMCMCSampler::AdaptiveMCMCSampler(unsigned int nSteps, double stepSize, d
 
 AdaptiveMCMCSampler::AdaptiveMCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize, double adaptationRate) {
 	setDistribution(h);
-	computeCDF();
 	setType(SamplerType::AdaptiveMCMC);
 	setNumberOfSteps(nSteps);
 	setAdaptationRate(adaptationRate);
@@ -565,6 +587,13 @@ std::pair<double, double> AdaptiveMCMCSampler::getSample(Random& random, const s
 	}
 
 	return std::make_pair(currentSample, currentWeight);
+}
+
+void AdaptiveMCMCSampler::reset() {
+	currentSample = 0;
+	currentWeight = 0;
+	acceptedSamples = 0;
+	acceptanceRate = 0;
 }
 
 
