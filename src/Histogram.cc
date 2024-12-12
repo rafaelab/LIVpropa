@@ -339,14 +339,14 @@ void Histogram1D::makeCDF() {
 }
 
 void Histogram1D::reset() {
-	contents.clear();
-	bins.clear();
-	weights.clear();
+	std::fill(contents.begin(), contents.end(), 0.);
+	std::fill(weights.begin(), weights.end(), 1.);
 }
 
 void Histogram1D::clear() {
-	std::fill(contents.begin(), contents.end(), 0.);
-	std::fill(weights.begin(), weights.end(), 1.);
+	contents.clear();
+	bins.clear();
+	weights.clear();
 }
 
 double Histogram1D::operator[](const size_t& i) const {
