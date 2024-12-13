@@ -199,21 +199,23 @@
 /* Ignore list */
 %ignore operator livpropa::Bin1D*;
 %ignore operator livpropa::Histogram1D*;
+%ignore operator livpropa::RegularHistogram1D*;
 
-/* Rename automatically generate enum class */
-%rename(LogBase_e) livpropa::LogBase_e;
-%rename(LogBase_2) livpropa::LogBase_two;
-%rename(LogBase_10) livpropa::LogBase_ten;
 
 /* To enable access to abstract base class Bin1D */
 %implicitconv crpropa::ref_ptr<livpropa::Bin1D>;
 %template(Bin1DRefPtr) crpropa::ref_ptr<livpropa::Bin1D>;
 %feature("director") livpropa::Bin1D;
 
+// %feature("valuewrapper") livpropa::Histogram1DLog10;
+
 /* To enable access to abstract base class Histogram1D */
 %implicitconv crpropa::ref_ptr<livpropa::Histogram1D>;
 %template(Histogram1DRefPtr) crpropa::ref_ptr<livpropa::Histogram1D>;
 %feature("director") livpropa::Histogram1D;
+
+%nodefaultctor livpropa::RegularHistogram1D;
+%feature("director") livpropa::RegularHistogram1D;
 
 
 /*************************************************************************************************/
@@ -222,13 +224,20 @@
 
 /* Ignore list */
 %ignore operator livpropa::Sampler*;
-%ignore operator livpropa::Weighter*;
-%ignore operator livpropa::WeighterList*;
+%ignore operator livpropa::RuntimeWeighter*;
+%ignore operator livpropa::PosterioriWeighter*;
 
 /* To enable access to abstract base class  */
 %implicitconv crpropa::ref_ptr<livpropa::Sampler>;
 %template(SamplerRefPtr) crpropa::ref_ptr<livpropa::Sampler>;
 %feature("director") livpropa::Sampler;
+%implicitconv crpropa::ref_ptr<livpropa::RuntimeWeighter>;
+%template(RuntimeWeighterRefPtr) crpropa::ref_ptr<livpropa::RuntimeWeighter>;
+%feature("director") crpropa::RuntimeWeighter;
+%implicitconv crpropa::ref_ptr<livpropa::PosterioriWeighter>;
+%template(PosterioriWeighterRefPtr) crpropa::ref_ptr<livpropa::PosterioriWeighter>;
+%feature("director") crpropa::PosterioriWeighter;
+
 
 /* allow mutables */
 %feature("immutable", "1") livpropa::Nested;
@@ -248,11 +257,9 @@
 %feature("immutable", "0") livpropa::AdaptiveMCMCSampler::acceptedSamples;
 %feature("immutable", "0") livpropa::AdaptiveMCMCSampler::acceptanceRate;
 
-
-/* To enable access to abstract base class  */
-%implicitconv crpropa::ref_ptr<livpropa::Weighter>;
-%template(WeighterRefPtr) crpropa::ref_ptr<livpropa::Weighter>;
-%feature("director") crpropa::Weighter;
+%feature("immutable", "1") livpropa::WeighterDistribution;
+%feature("immutable", "0") livpropa::WeighterDistribution::nEntries;
+%feature("immutable", "0") livpropa::WeighterDistribution::sumWeights;
 
 
 /*************************************************************************************************/
@@ -353,7 +360,7 @@ __STR_Kinematics__(KinematicsMap);
 /*************************************************************************************************/
 /*************************************************************************************************/
 
-
+// %include "LIVpropa.h"
 
 
 %clear(double* vector, int length);
