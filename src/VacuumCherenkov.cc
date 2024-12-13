@@ -302,10 +302,12 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	// current position; photons may be emitted at different positions
 	Vector3d pos = candidate->current.getPosition();
 
+
 	do {
 		// perform sampling of the energy fraction with a specific sampler
 		std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
 		std::pair<double, double> sample = sampler->getSample(random, range);
+		// std::pair<double, double> sample = sampler->getSample(random);
 		double x = sample.first;
 		double w = sample.second;
 
@@ -313,39 +315,29 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		double Ephoton = x * Eo;
 
 
-		// decide whether to weight the secondaries at runtime or a posteriori
-		if (posterioriWeighter != nullptr) {
-			if (havePhotons) {
-				posterioriWeighter->push(Ephoton / (1 + z), w);
-			}
-
-		} else {
-			if (runtimeWeighter != nullptr) {
-				double ws = runtimeWeighter->computeWeight(22, Ephoton / (1 + z), x, 0, random);
-
-				if (havePhotons and ws > 0) {
-					// only draw random position if CEL is assumed
-					if (continuousEnergyLoss) {
-						pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-					} 
-					candidate->addSecondary(22, Ephoton / (1 + z), pos, w * ws);
-				}
-			} else {
-				if (havePhotons) {
-					// only draw random position if CEL is assumed
-					if (continuousEnergyLoss) {
-						pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-					} 
-					candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
-				}
-			}
+		double wRT = 1;
+		if (runtimeWeighter != nullptr) {
+			wRT = runtimeWeighter->computeWeight(22, Ephoton / (1 + z), x, 1, random);
 		}
-			
 
-		Eo -= Ephoton;
+		if (havePhotons and w > 0) {
+			// decide whether to weight the secondaries at runtime or a posteriori
+			if (posterioriWeighter != nullptr) {
+				posterioriWeighter->push(Ephoton / (1 + z), w * wRT);
+			} else {
+				if (continuousEnergyLoss)
+					pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+				candidate->addSecondary(22, Ephoton / (1 + z), pos, w * wRT);
+			}
+		} 
+
+		// cout << "Ephoton: " << Ephoton / eV << " wRT: " << wRT << " w: " << w << endl;
+
+		Eo -= Ephoton * w;
 	} while (Eo > Et);
 
 	candidate->current.setEnergy(Eo / (1 + z));
+
 
 
 
