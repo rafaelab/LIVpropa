@@ -202,22 +202,13 @@ string PosterioriWeighter::getNameTag() const {
 	}
 }
 
-void PosterioriWeighter::setParticleId(int pId) {
-	particleId = pId;
-}
-
-int PosterioriWeighter::getParticleId() const {
-	return particleId;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-PosterioriWeighterRandomEvents::PosterioriWeighterRandomEvents(int pId, unsigned int nEvents, ref_ptr<Sampler> sampler) {
+PosterioriWeighterRandomEvents::PosterioriWeighterRandomEvents(unsigned int nEvents, ref_ptr<Sampler> sampler) {
 	setType(Type::RandomEvents);
 	setNumberOfEvents(nEvents);
 	setSampler(sampler);
-	setParticleId(pId);
 	nEntries = 0;
 	sumWeights = 0.;
 }
@@ -234,7 +225,7 @@ void PosterioriWeighterRandomEvents::setSampler(ref_ptr<Sampler> s) {
 	}
 }
 
-void PosterioriWeighterRandomEvents::push(const double& v, const double& w) const {
+void PosterioriWeighterRandomEvents::push(const double& v, const double& w) {
 	sampler->push(v, w);
 	sumWeights += w;
 	nEntries++;
@@ -281,9 +272,8 @@ void PosterioriWeighterRandomEvents::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-PosterioriWeighterHistogramBins::PosterioriWeighterHistogramBins(int pId, ref_ptr<Histogram1D> histogram) {
+PosterioriWeighterHistogramBins::PosterioriWeighterHistogramBins(ref_ptr<Histogram1D> histogram) {
 	setType(Type::HistogramBins);
-	setParticleId(pId);
 	setHistogram(histogram);
 }
 
@@ -291,7 +281,7 @@ void PosterioriWeighterHistogramBins::setHistogram(ref_ptr<Histogram1D> h) {
 	histogram = h;
 }
 
-void PosterioriWeighterHistogramBins::push(const double& v, const double& w) const {
+void PosterioriWeighterHistogramBins::push(const double& v, const double& w) {
 	histogram->push(v, w);
 }
 
@@ -300,17 +290,22 @@ ref_ptr<Histogram1D> PosterioriWeighterHistogramBins::getHistogram() const {
 }
 
 double PosterioriWeighterHistogramBins::computeNormalisation() const {
+	if (sumWeights == 0) {
+		KISS_LOG_WARNING << "Sum of weights is zero. Normalisation will be set to 1, but problems probably occurred." << std::endl;
+		return 1;
+	}
 	return 1. / sumWeights;
 }
 
 vector<std::pair<double, double>> PosterioriWeighterHistogramBins::getEvents(Random& random) const {
 	unsigned int n = histogram->getNumberOfBins();
-	double norm = computeNormalisation();
+	// double norm = computeNormalisation();
+	// histogram->normalise(norm);
 
 	std::vector<std::pair<double, double>> samples;
 	for (unsigned int i = 0; i < n; i++) {
 		double x = histogram->getBinCentre(i);
-		double w = histogram->getBinContent(i) * norm;
+		double w = histogram->getBinContent(i);
 		samples.push_back(std::make_pair(x, w));
 	}
 

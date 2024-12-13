@@ -5,6 +5,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include <kiss/logger.h>
+
 #include "livpropa/Common.h"
 #include "livpropa/Histogram.h"
 #include "livpropa/Sampler.h"
@@ -139,6 +141,9 @@ class WeighterEnergyFractionPowerLaw : public WeighterEnergyFraction {
 
 
 
+class PosterioriWeighterRandomEvents;
+class PosterioriWeighterHistogramBins;
+
  /**
  @class PosterioriWeighter
  @brief Abstract base class to handle "a posteriori" weights.
@@ -154,16 +159,13 @@ class PosterioriWeighter: public Referenced {
 
 	protected:
 		Type type;
-		int particleId;
 
 	public:
 		virtual ~PosterioriWeighter() = default;
 		void setType(Type type);
-		void setParticleId(int particleId);
 		Type getType() const;
 		string getNameTag() const;
-		int getParticleId() const;
-		virtual void push(const double& v, const double& w) const = 0;
+		virtual void push(const double& v, const double& w) = 0;
 		virtual vector<std::pair<double, double>> getEvents(Random& random = Random::instance()) const = 0;
 		virtual void reset() = 0;
 };
@@ -177,15 +179,15 @@ class PosterioriWeighter: public Referenced {
 class PosterioriWeighterRandomEvents: public PosterioriWeighter {
 	protected:
 		unsigned int nEvents;
-		ref_ptr<Sampler> sampler;
+		mutable ref_ptr<Sampler> sampler;
 		mutable unsigned int nEntries;
 		mutable double sumWeights;
 
 	public:
-		PosterioriWeighterRandomEvents(int pId, unsigned int nEvents, ref_ptr<Sampler> sampler = nullptr);
+		PosterioriWeighterRandomEvents(unsigned int nEvents, ref_ptr<Sampler> sampler = nullptr);
 		void setNumberOfEvents(unsigned int nEvents);
 		void setSampler(ref_ptr<Sampler> s);
-		void push(const double& v, const double& w) const;
+		void push(const double& v, const double& w);
 		unsigned int getNumberOfEvents() const;
 		ref_ptr<Sampler> getSampler() const;
 		ref_ptr<Histogram1D> getHistogram() const;
@@ -204,14 +206,14 @@ class PosterioriWeighterRandomEvents: public PosterioriWeighter {
  */
 class PosterioriWeighterHistogramBins: public PosterioriWeighter {
 	protected:
-		ref_ptr<Histogram1D> histogram;
+		mutable ref_ptr<Histogram1D> histogram;
 		mutable unsigned int nEntries;
 		mutable double sumWeights;
 
 	public:
-		PosterioriWeighterHistogramBins(int pId, ref_ptr<Histogram1D> histogram = nullptr);
+		PosterioriWeighterHistogramBins(ref_ptr<Histogram1D> histogram = nullptr);
 		void setHistogram(ref_ptr<Histogram1D> h);
-		void push(const double& v, const double& w) const;
+		void push(const double& v, const double& w);
 		ref_ptr<Histogram1D> getHistogram() const;
 		double computeNormalisation() const;
 		vector<std::pair<double, double>> getEvents(Random& random = Random::instance()) const;
