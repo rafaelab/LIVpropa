@@ -118,7 +118,7 @@ WeighterEnergyFractionPowerLaw::WeighterEnergyFractionPowerLaw(int pId, double s
 	setParticleId(pId);
 
 	std::function<double(double)> f = [s](const double& x) { 
-		return pow(x, s); 
+		return pow(x, s) / (s + 1); 
 		};
 	setWeightFunction(f);
 }
