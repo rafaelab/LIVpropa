@@ -52,7 +52,6 @@ class Bin1D: public Referenced {
 */
 class Bin1DLin : public Bin1D {
 	public:
-		Bin1DLin();
 		Bin1DLin(double l, double r);
 		double rand(Random& random = Random::instance()) const;
 		double directTransformation(const double& v) const;
@@ -74,7 +73,6 @@ class Bin1DLogarithmic : public Bin1D {
 		double base;
 
 	public:
-		Bin1DLogarithmic(double base = 10.);
 		Bin1DLogarithmic(double l, double r, double base = 10);
 		void setBase(double b);
 		double getBase() const;
@@ -90,21 +88,18 @@ class Bin1DLogarithmic : public Bin1D {
 
 class Bin1DLog2 : public Bin1DLogarithmic {
 	public:
-		Bin1DLog2();
 		Bin1DLog2(double l, double r);
 };
 
 
 class Bin1DLog10 : public Bin1DLogarithmic {
 	public:
-		Bin1DLog10();
 		Bin1DLog10(double l, double r);
 };
 
 
 class Bin1DLn : public Bin1DLogarithmic {
 	public:
-		Bin1DLn();
 		Bin1DLn(double l, double r);
 };
 
@@ -192,7 +187,7 @@ class RegularHistogram1D : public Histogram1D {
 		std::function<double(double)> getInterpolator(const std::pair<double, double>& range = {0., 1.}) const;
 		ref_ptr<Histogram1D> getHistogramPDF() const;
 		ref_ptr<Histogram1D> getHistogramCDF() const;
-		// ref_ptr<Histogram1D>& operator=(const RegularHistogram1D& h);
+		ref_ptr<Histogram1D>& operator=(const RegularHistogram1D& h);
 		virtual ref_ptr<Histogram1D> clone() const = 0;
 		friend std::ostream& operator<<(std::ostream& os, const RegularHistogram1D& h);
 };
@@ -200,28 +195,24 @@ class RegularHistogram1D : public Histogram1D {
 
 class Histogram1DLin : public RegularHistogram1D {
 	public:
-		Histogram1DLin();
 		Histogram1DLin(double vMin, double vMax, unsigned int n);
 		ref_ptr<Histogram1D> clone() const;
 };
 
 class Histogram1DLog10 : public RegularHistogram1D {
 	public:
-		Histogram1DLog10();
 		Histogram1DLog10(double vMin, double vMax, unsigned int n);
 		ref_ptr<Histogram1D> clone() const;
 };
 
 class Histogram1DLog2 : public RegularHistogram1D {
 	public:
-		Histogram1DLog2();
 		Histogram1DLog2(double vMin, double vMax, unsigned int n);
 		ref_ptr<Histogram1D> clone() const;
 };
 
 class Histogram1DLn : public RegularHistogram1D {
 	public:
-		Histogram1DLn();
 		Histogram1DLn(double vMin, double vMax, unsigned int n);
 		ref_ptr<Histogram1D> clone() const;
 };
