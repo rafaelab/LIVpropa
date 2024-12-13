@@ -297,14 +297,9 @@ void ImportanceSampler::reset() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-NestedSampler::NestedSampler() {
+NestedSampler::NestedSampler(unsigned int nLivePoints, unsigned int maxIterations) {
 	setType(SamplerType::Nested);
-	logEvidence = - std::numeric_limits<double>::infinity();
-	logWeight = 0;
-}
-
-NestedSampler::NestedSampler(unsigned int nLivePoints) {
-	setType(SamplerType::Nested);
+	setMaximumIterations(maxIterations);
 	setNumberOfLivePoints(nLivePoints);
 	logEvidence = -std::numeric_limits<double>::infinity();
 	logWeight = 0;
@@ -317,6 +312,10 @@ NestedSampler::NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints) {
 	setLikelihoodFunction(h->getInterpolator());
 	logEvidence = -std::numeric_limits<double>::infinity();
 	logWeight = 0;
+}
+
+void NestedSampler::setMaximumIterations(unsigned int n) {
+	maxIterations = n;
 }
 
 void NestedSampler::setNumberOfLivePoints(unsigned int n) {
@@ -336,6 +335,10 @@ unsigned int NestedSampler::getNumberOfLivePoints() const {
 	return nLivePoints;
 }
 
+unsigned int NestedSampler::getMaximumIterations() const {
+	return maxIterations;
+}
+
 std::function<double(double)> NestedSampler::getLikelihoodFunction() const {
 	return likelihood;
 }
@@ -350,26 +353,33 @@ std::pair<double, double> NestedSampler::getSample(Random& random, const std::pa
 		}
 	}
 
-	// find the live point with the lowest likelihood
-	auto minIt = std::min_element(liveLikelihoods.begin(), liveLikelihoods.end());
-	size_t minIdx = std::distance(liveLikelihoods.begin(), minIt);
-	double minLikelihood = *minIt;
 
-	// update log evidence
-	double logVolume = - static_cast<double>(minIdx + 1) / nLivePoints;
-	logWeight = logVolume + minLikelihood;
-	logEvidence = logSumExp(logEvidence, logWeight);
+	double newPoint = 0;
+	double newLikelihood = 0;
+	
+	unsigned int iteration = 0;
+	while (iteration < maxIterations) {
+		// find the live point with the lowest likelihood
+		auto minIt = std::min_element(liveLikelihoods.begin(), liveLikelihoods.end());
+		size_t minIdx = std::distance(liveLikelihoods.begin(), minIt);
+		double minLikelihood = *minIt;
 
-	// Replace the worst live point with a new sample
-	double newPoint;
-	double newLikelihood;
-	do {
-		newPoint = random.randUniform(range.first, range.second);
-		newLikelihood = likelihood(newPoint);
-	} while (newLikelihood <= minLikelihood);
+		// update log evidence
+		double logVolume = - static_cast<double>(minIdx + 1) / nLivePoints;
+		logWeight = logVolume + minLikelihood;
+		logEvidence = logSumExp(logEvidence, logWeight);
 
-	livePoints[minIdx] = newPoint;
-	liveLikelihoods[minIdx] = newLikelihood;
+		// replace the worst live point with a new sample
+		do {
+			newPoint = random.randUniform(range.first, range.second);
+			newLikelihood = likelihood(newPoint);
+		} while (newLikelihood <= minLikelihood);
+
+		livePoints[minIdx] = newPoint;
+		liveLikelihoods[minIdx] = newLikelihood;
+
+		iteration++;
+	}
 
 	return std::make_pair(newPoint, newLikelihood);
 }
@@ -396,208 +406,6 @@ void NestedSampler::reset() {
 	liveLikelihoods.clear();
 	logEvidence = - std::numeric_limits<double>::infinity();
 	logWeight = 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-MCMCSampler::MCMCSampler() {
-	setType(SamplerType::MCMC);
-	update(0., 1.);
-}
-
-MCMCSampler::MCMCSampler(unsigned int nSteps, double stepSize) {
-	setType(SamplerType::MCMC);
-	setNumberOfSteps(nSteps);
-	setStepSize(stepSize);
-	update(0., 1.);
-}
-
-MCMCSampler::MCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize) {
-	setType(SamplerType::MCMC);
-	setDistribution(h);
-	setNumberOfSteps(nSteps);
-	setStepSize(stepSize);
-	update(0., 1.);
-	createPDF();
-}
-
-void MCMCSampler::setNumberOfSteps(unsigned int n) {
-	nSteps = n;
-}
-
-void MCMCSampler::setStepSize(double s) {
-	stepSize = s;
-}
-
-void MCMCSampler::createPDF() {
-	pdf = [this](const double& x) { return histogram->interpolateAt(x); };
-}
-
-void MCMCSampler::update(double x, double w) const {
-	currentSample = x;
-	currentWeight = w;
-}
-
-unsigned int MCMCSampler::getNumberOfSteps() const {
-	return nSteps;
-}
-
-double MCMCSampler::getStepSize() const {
-	return stepSize;
-}
-
-std::pair<double, double> MCMCSampler::getSample(Random& random, const std::pair<double, double>& range) const {
-	// initialise the chain
-	if (currentSample == 0) {
-		double r;
-		double w;
-		do {
-			r = random.randUniform(range.first, range.second);
-			w = histogram->interpolateAt(r);
-		} while (w == 0 or isnan(w));
-
-		update(r, w);
-	}
-
-	for (unsigned int i = 0; i < nSteps; ++i) {
-		// propose a new sample (random walk)
-		double proposedSample = currentSample + random.randUniform(- stepSize, stepSize);
-
-		// ensure the proposed sample is within the range
-		if (proposedSample < range.first or proposedSample > range.second) {
-			continue;
-		}
-
-		// compute the weight of the proposed sample
-		double proposedWeight = histogram->interpolateAt(proposedSample);
-		if (proposedWeight == 0 or isnan(proposedWeight) or currentWeight == 0) {
-			continue;
-		}
-
-		// acceptance probability
-		double acceptanceProbability = proposedWeight / currentWeight;
-
-		// accept or reject the proposed sample
-		if (random.rand() < acceptanceProbability) {
-			update(proposedSample, proposedWeight);
-			return std::make_pair(proposedSample, proposedWeight);
-		}
-	}
-
-	cout << "Sample: " << currentSample << " Weight: " << currentWeight << endl;
-
-	return std::make_pair(currentSample, currentWeight);
-}
-
-void MCMCSampler::reset() {
-	currentSample = 0;
-	currentWeight = 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-AdaptiveMCMCSampler::AdaptiveMCMCSampler() {
-	setType(SamplerType::AdaptiveMCMC);
-	currentSample = 0;
-	currentWeight = 0;
-	acceptedSamples = 0;
-	acceptanceRate = 0;
-}
-
-AdaptiveMCMCSampler::AdaptiveMCMCSampler(unsigned int nSteps, double stepSize, double adaptationRate) {
-	setType(SamplerType::AdaptiveMCMC);
-	setNumberOfSteps(nSteps);
-	setAdaptationRate(adaptationRate);
-	currentSample = 0;
-	currentWeight = 0;
-	acceptedSamples = 0;
-	acceptanceRate = 0;
-}
-
-AdaptiveMCMCSampler::AdaptiveMCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize, double adaptationRate) {
-	setDistribution(h);
-	setType(SamplerType::AdaptiveMCMC);
-	setNumberOfSteps(nSteps);
-	setAdaptationRate(adaptationRate);
-	currentSample = 0;
-	currentWeight = 0;
-	acceptedSamples = 0;
-	acceptanceRate = 0;
-}
-
-void AdaptiveMCMCSampler::setNumberOfSteps(unsigned int n) {
-	nSteps = n;
-}
-
-void AdaptiveMCMCSampler::setStepSize(double s) {
-	stepSize = s;
-}
-
-void AdaptiveMCMCSampler::setAdaptationRate(double a) {
-	adaptationRate = a;
-}
-
-void AdaptiveMCMCSampler::createPDF() {
-	pdf = [this](const double& x) { return histogram->interpolateAt(x); };
-}
-
-unsigned int AdaptiveMCMCSampler::getNumberOfSteps() const {
-	return nSteps;
-}
-
-double AdaptiveMCMCSampler::getStepSize() const {
-	return stepSize;
-}
-
-double AdaptiveMCMCSampler::getAdaptationRate() const {
-	return adaptationRate;
-}
-
-std::pair<double, double> AdaptiveMCMCSampler::getSample(Random& random, const std::pair<double, double>& range) const {
-	// initialise the chain
-	if (currentSample == 0) {
-		currentSample = random.randUniform(range.first, range.second);
-		currentWeight = pdf(currentSample);
-	}
-
-	for (unsigned int i = 0; i < nSteps; ++i) {
-		// propose a new sample
-		double proposedSample = currentSample + random.randUniform(- stepSize, stepSize);
-
-		// ensure the proposed sample is within the range
-		if (proposedSample < range.first or  proposedSample > range.second) {
-			continue;
-		}
-
-		// compute the weight of the proposed sample
-		double proposedWeight = pdf(proposedSample);
-
-		// Acceptance probability
-		double acceptanceProbability = proposedWeight / currentWeight;
-
-		// accept or reject the proposed sample
-		if (random.randUniform(0, 1) < acceptanceProbability) {
-			currentSample = proposedSample;
-			currentWeight = proposedWeight;
-			acceptedSamples++;
-		}
-
-		// adapt the step size
-		acceptanceRate = static_cast<double>(acceptedSamples) / (i + 1);
-		// stepSize *= exp(adaptationRate * (acceptanceRate -  acceptanceRate0));
-		stepSize *= exp(adaptationRate * (acceptanceRate - 0.234));
-	}
-
-	return std::make_pair(currentSample, currentWeight);
-}
-
-void AdaptiveMCMCSampler::reset() {
-	currentSample = 0;
-	currentWeight = 0;
-	acceptedSamples = 0;
-	acceptanceRate = 0;
 }
 
 

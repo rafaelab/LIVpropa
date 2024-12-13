@@ -136,6 +136,7 @@ class ImportanceSampler: public Sampler {
 class NestedSampler : public Sampler {
 	protected:
 		unsigned int nLivePoints;
+		unsigned int maxIterations;
 		std::function<double(double)> likelihood;
 		mutable std::vector<double> livePoints;
 		mutable std::vector<double> liveLikelihoods;
@@ -143,13 +144,14 @@ class NestedSampler : public Sampler {
 		mutable double logWeight;
 
 	public:
-		NestedSampler();
-		NestedSampler(unsigned int nLivePoints);
+		NestedSampler(unsigned int nLivePoints, unsigned int maxIterations = 10);
 		NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints);
+		void setMaximumIterations(unsigned int n);
 		void setNumberOfLivePoints(unsigned int n);
 		void setLikelihoodFunction(std::function<double(double)> func);
 		void setDistribution(ref_ptr<Histogram1D> h);
 		unsigned int getNumberOfLivePoints() const;
+		unsigned int getMaximumIterations() const;
 		std::function<double(double)> getLikelihoodFunction() const;
 		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		double getLogEvidence() const;
@@ -159,67 +161,6 @@ class NestedSampler : public Sampler {
 		double logSumExp(double a, double b) const;
 };
 
-
-/**
- @class MCMCSampler
- @brief Sample from a distribution using the Markov Chain Monte Carlo (MCMC) method.
- [UNTESTED]
-*/
-class MCMCSampler : public Sampler {
-	protected:
-		unsigned int nSteps;
-		double stepSize;
-		std::function<double(double)> pdf;
-			InverseSampler inverseSampler;
-		mutable double currentSample;
-		mutable double currentWeight;
-
-	public:
-		MCMCSampler();
-		MCMCSampler(unsigned int nSteps, double stepSize);
-		MCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize);
-		void setNumberOfSteps(unsigned int n);
-		void setStepSize(double s);
-		void createPDF();
-		void update(double x, double w) const;
-		unsigned int getNumberOfSteps() const;
-		double getStepSize() const;
-		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
-		void reset() override;
-};
-
-
-/**
- @class AdaptativeMCMCSampler
- @brief Sample from a distribution using the Markov Chain Monte Carlo (MCMC) method.
- [UNTESTED]
-*/
-class AdaptiveMCMCSampler : public Sampler {
-	protected:
-		unsigned int nSteps;
-		double adaptationRate;
-		std::function<double(double)> pdf;
-		mutable double stepSize;
-		mutable double currentSample;
-		mutable double currentWeight;
-		mutable unsigned int acceptedSamples;
-		mutable double acceptanceRate;
-		// constexpr static double acceptanceRate0 = 0.234;
-
-	public:
-		AdaptiveMCMCSampler();
-		AdaptiveMCMCSampler(unsigned int nSteps, double stepSize, double adaptationRate);
-		AdaptiveMCMCSampler(ref_ptr<Histogram1D> h, unsigned int nSteps, double stepSize, double adaptationRate);
-		void setNumberOfSteps(unsigned int n);
-		void setStepSize(double s);
-		void setAdaptationRate(double a);
-		void createPDF();
-		unsigned int getNumberOfSteps() const;
-		double getStepSize() const;
-		double getAdaptationRate() const;
-		std::pair<double, double> getSample(Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
-		void reset();
-};
 
 } // namespace livpropa
 
