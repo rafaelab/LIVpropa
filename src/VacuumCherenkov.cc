@@ -5,16 +5,13 @@ namespace livpropa {
 
 
 
-VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, ref_ptr<Weighter> weighter, double minEnergyFraction, unsigned int nBins, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, ref_ptr<RuntimeWeighter> runtimeWeighter, ref_ptr<PosterioriWeighter> posterioriWeighter, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
 	setAngularCorrection(angularCorrection);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
-
-	setSampler(sampler);
-	setWeighter(weighter);
 
 	if (not kin.exists(id)) {
 		throw runtime_error("VacuumCherenkov: kinematics for the desired particle is not specified in `KinematicsMap`.");
@@ -28,12 +25,16 @@ VacuumCherenkov::VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpect
 		setKinematicsPhoton(kin[22]);
 	}
 
-	setMinimumEnergyFraction(minEnergyFraction);
-	setNumberOfBins(nBins);
+	setSampler(sampler);
+	setRuntimeWeighter(runtimeWeighter);
+	setPosterioriWeighter(posterioriWeighter);
+
+	setMinimumEnergyFractionSpectrum(minEnergyFractionSpectrum);
+	setNumberOfBinsSpectrum(nBinsSpectrum);
 	setSpectrum(spec, sampler);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, ref_ptr<Weighter> weighter, double minEnergyFraction, unsigned int nBins, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, ref_ptr<RuntimeWeighter> runtimeWeighter, ref_ptr<PosterioriWeighter> posterioriWeighter, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
@@ -41,33 +42,35 @@ VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kine
 	setLimit(limit);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 
-	setSampler(sampler);
-	setWeighter(weighter);
-	
 	setKinematicsPhoton(kinPh);
 	setKinematicsParticle(kinOt);
 
-	setMinimumEnergyFraction(minEnergyFraction);
-	setNumberOfBins(nBins);
+	setSampler(sampler);
+	setRuntimeWeighter(runtimeWeighter);
+	setPosterioriWeighter(posterioriWeighter);
+
+	setMinimumEnergyFractionSpectrum(minEnergyFractionSpectrum);
+	setNumberOfBinsSpectrum(nBinsSpectrum);
 	setSpectrum(spec, sampler);
 }
 
-VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, ref_ptr<Weighter> weighter, double minEnergyFraction, unsigned int nBins, double limit) {
+VacuumCherenkov::VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec, bool havePhotons, bool angularCorrection, bool continuousEnergyLoss, ref_ptr<Sampler> sampler, ref_ptr<RuntimeWeighter> runtimeWeighter, ref_ptr<PosterioriWeighter> posterioriWeighter, double limit) {
 	setInteractionTag("VC");
 	setParticle(id);
 	setHavePhotons(havePhotons);
 	setAngularCorrection(angularCorrection);
 	setContinuousEnergyLoss(continuousEnergyLoss);
 	setLimit(limit);
-
-	setSampler(sampler);
-	setWeighter(weighter);
 
 	setKinematicsPhoton(kin);
 	setKinematicsParticle(kin);
 
-	setMinimumEnergyFraction(minEnergyFraction);
-	setNumberOfBins(nBins);
+	setSampler(sampler);
+	setRuntimeWeighter(runtimeWeighter);
+	setPosterioriWeighter(posterioriWeighter);
+
+	setMinimumEnergyFractionSpectrum(minEnergyFractionSpectrum);
+	setNumberOfBinsSpectrum(nBinsSpectrum);
 	setSpectrum(spec, sampler);
 }
 
@@ -86,12 +89,14 @@ void VacuumCherenkov::setKinematicsParticle(ref_ptr<Kinematics> kin) {
 	kinematicsParticle = kin;
 }
 
-void VacuumCherenkov::setWeighter(ref_ptr<Weighter> w) {
-	if (w == nullptr) {
-		weighter = new WeighterNull();
-	} else {
-		weighter = w;
-	}
+void VacuumCherenkov::setRuntimeWeighter(ref_ptr<RuntimeWeighter> w) {
+	runtimeWeighter = w;
+	runtimeWeighter->reset();
+}
+
+void VacuumCherenkov::setPosterioriWeighter(ref_ptr<PosterioriWeighter> w) {
+	posterioriWeighter = w;
+	posterioriWeighter->reset();
 }
 
 void VacuumCherenkov::setSampler(ref_ptr<Sampler> s) {
@@ -122,10 +127,6 @@ void VacuumCherenkov::setInteractionTag(std::string tag) {
 	interactionTag = tag;
 }
 
-void VacuumCherenkov::setWeightFunction(std::function<double(double)> f) {
-	weightFunction = f;
-}
-
 void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler> s) {
 	string kinType = kinematicsParticle->getNameTag();
 
@@ -149,22 +150,17 @@ void VacuumCherenkov::setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler>
 	}
 
 	if (spectrum == VacuumCherenkovSpectrum::Full) {
-		if (sampler == nullptr) {
-			sampler = new ImportanceSampler();
-			// auto w = _getDefaultWeightFunction(kinematicsParticle, kinematicsPhoton);
-			std::function<double(double)> w = [](double x) { return 1; };
-			setWeightFunction(w);
-		}
+		if (sampler == nullptr) 
+			sampler = new NestedSampler(1000);
 		buildSpectrum(kinematicsParticle, kinematicsPhoton);
-		sampler->computeCDF();
 	}
 }
 
-void VacuumCherenkov::setMinimumEnergyFraction(double xmin) {
+void VacuumCherenkov::setMinimumEnergyFractionSpectrum(double xmin) {
 	xMin = xmin;
 }
 
-void VacuumCherenkov::setNumberOfBins(unsigned int n) {
+void VacuumCherenkov::setNumberOfBinsSpectrum(unsigned int n) {
 	nBins = n;
 }
 
@@ -174,10 +170,6 @@ int VacuumCherenkov::getParticle() const {
 
 string VacuumCherenkov::getInteractionTag() const {
 	return interactionTag;
-}
-
-std::function<double(double)> VacuumCherenkov::getWeightFunction() const {
-	return weightFunction;
 }
 
 ref_ptr<Kinematics> VacuumCherenkov::getKinematicsParticle() const {
@@ -196,8 +188,12 @@ ref_ptr<Sampler> VacuumCherenkov::getSampler() const {
 	return sampler;
 }
 
-ref_ptr<Weighter> VacuumCherenkov::getWeighter() const {
-	return weighter;
+ref_ptr<RuntimeWeighter> VacuumCherenkov::getRuntimeWeighter() const {
+	return runtimeWeighter;
+}
+
+ref_ptr<PosterioriWeighter> VacuumCherenkov::getPosterioriWeighter() const {
+	return posterioriWeighter;
 }
 
 double VacuumCherenkov::computeThresholdMomentum() const {
@@ -278,7 +274,9 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		KISS_LOG_WARNING << "VacuumCherenkov: particle momentum is negative." << endl;
 		return;
 	}
-		
+	
+	// define "threshold" energy; it is different depending on whethr  CEL is assumed
+	double Et = Ethr;
 
 	// two implementations: continuous energy loss and instantaneous energy loss (the latter is faster)
 	// the CEL approach has not been thoroughly tested
@@ -294,70 +292,81 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		if (E - dE < Ethr)
 			return;
 
-		while (dE > 0) {
-			std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
-			std::pair<double, double> sample = sampler->getSample(random, range);
-			double x = sample.first;
-			double w = sample.second;
+		// within one step, we can think as if the threshold changed
+		Et = std::max(E - dE, Ethr);
+	} 
 
-			Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-			double Ephoton = x * E;
+	// change variable name
+	double Eo = E;
+
+	// current position; photons may be emitted at different positions
+	Vector3d pos = candidate->current.getPosition();
+
+	do {
+		// perform sampling of the energy fraction with a specific sampler
+		std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
+		std::pair<double, double> sample = sampler->getSample(random, range);
+		double x = sample.first;
+		double w = sample.second;
+
+		// compute photon energy
+		double Ephoton = x * Eo;
+
+
+		// decide whether to weight the secondaries at runtime or a posteriori
+		if (posterioriWeighter != nullptr) {
 			if (havePhotons) {
-				double ws = weighter->computeWeight(22, Ephoton / (1 + z), x);
-				if (ws > 0)
+				posterioriWeighter->push(Ephoton / (1 + z), w);
+			}
+
+		} else {
+			if (runtimeWeighter != nullptr) {
+				double ws = runtimeWeighter->computeWeight(22, Ephoton / (1 + z), x, 0, random);
+
+				if (havePhotons and ws > 0) {
+					// only draw random position if CEL is assumed
+					if (continuousEnergyLoss) {
+						pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+					} 
 					candidate->addSecondary(22, Ephoton / (1 + z), pos, w * ws);
-				candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
+				}
+			} else {
+				if (havePhotons) {
+					// only draw random position if CEL is assumed
+					if (continuousEnergyLoss) {
+						pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+					} 
+					candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
+				}
 			}
-				
-			dE -= Ephoton;
-		}		
-		candidate->current.setEnergy((E - dE) / (1 + z));
+		}
+			
 
-	} else {
-		// to account for weighting schemes
-		double wW = 1;
-		double wTot = 0;
-		double Ee = E;	
-		unsigned int counter = 0;
-		do {
-			std::pair<double, double> sample = sampler->getSample(random, range);
-			double x = sample.first;
-			double wS = sample.second;
-			double Ephoton = x * Ee;
-			Vector3d pos = candidate->current.getPosition();
-			wW = weighter->computeWeight(22, Ephoton / (1 + z), x, counter, random);
-			wTot += wW;
+		Eo -= Ephoton;
+	} while (Eo > Et);
+
+	candidate->current.setEnergy(Eo / (1 + z));
 
 
-			if (wW > 0) {
-				if (havePhotons) 
-					candidate->addSecondary(22, Ephoton / (1 + z), pos, wS * wW);
 
-			}
+	// add photon spectrum if using a posteriori weighter
+	if (havePhotons and posterioriWeighter != nullptr) {
+		vector<std::pair<double, double>> samples = posterioriWeighter->getEvents(random);
 
-			Ee -= Ephoton * wW * wS;
+		for (auto sample : samples) {
+			if (continuousEnergyLoss)
+				Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
+			if (! isnan(sample.second) and sample.second > 0)
+				candidate->addSecondary(22, sample.first / (1 + z), pos, sample.second);
+		}
 
-
-			// if (wW > 0) {
-			// 	if (havePhotons) {
-			// 		// if the weighter could lead to a negative energy, set corresponding weight to 1
-			// 		if (Ephoton * wW > Ee) {
-			// 			wW = 1;
-			// 			// if (counter == 0)
-			// 			// 	KISS_LOG_WARNING << "VacuumCherenkov: you are using a weighter that can barely sample a single particle. Choose a different value for the sampling fraction. I will proceed and ignore the weighter." << endl;
-			// 		} 
-			// 		candidate->addSecondary(22, Ephoton / (1 + z), pos, wS);	
-			// 	}
-			// } 
-			// Ee -= Ephoton;
-
-			// // cout << "Ephoton: " << Ephoton / eV << ", Ee: " << Ee / eV << ", wS: " << wS << ", wW: " << wW << endl;
-			// counter++;
-		} while (Ee > Ethr);
-
-
-		candidate->current.setEnergy(Ee / (1 + z));
+		// reset the weighter
+		posterioriWeighter->reset();
 	}
+
+	// reset the runtime weighters
+	if (runtimeWeighter != nullptr)
+		runtimeWeighter->reset();
 }
 
 VacuumCherenkovSpectrum VacuumCherenkov::getDefaultSpectrum(const ref_ptr<Kinematics>& kin) {
@@ -552,24 +561,36 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 		}
 	}
 
+	dist->setIsPDF(true);
 	sampler->setDistribution(dist);
 	distribution = dist;
 
-	if (sampler->getType() == SamplerType::Nested) {
-		NestedSampler* s = static_cast<NestedSampler*>(sampler.get());
-		sampler = new NestedSampler(dist, s->getNumberOfLivePoints());
-
-	} else if (sampler->getType() == SamplerType::Importance) {
-		ImportanceSampler* s = static_cast<ImportanceSampler*>(sampler.get());
-		std::function<double(double)> wFunc = s->getWeightFunction();
-		ref_ptr<Histogram1D> aux = new Histogram1DLog10(xMin, 1., nBins);
-		for (size_t i = 0; i < aux->getNumberOfBins(); i++) {
-			double x = dist->getBinCentre(i);
-			if (x >= range.first and x <= range.second) {
-				aux->setBinContent(i, wFunc(aux->getBinCentre(i)));
-			}
+	switch (sampler->getType()) {
+		case SamplerType::Inverse: {
+			InverseSampler* s = static_cast<InverseSampler*>(sampler.get());
+			sampler = new InverseSampler(dist);
+			break;
 		}
-		sampler = new ImportanceSampler(dist, aux, wFunc);
+		case SamplerType::Importance: {
+			ImportanceSampler* s = static_cast<ImportanceSampler*>(sampler.get());
+			std::function<double(double)> wFunc = s->getWeightFunction();
+			ref_ptr<Histogram1D> aux = new Histogram1DLog10(xMin, 1., nBins);
+			for (size_t i = 0; i < aux->getNumberOfBins(); i++) {
+				double x = dist->getBinCentre(i);
+				if (x >= range.first and x <= range.second) {
+					aux->setBinContent(i, wFunc(aux->getBinCentre(i)));
+				}
+			}
+			sampler = new ImportanceSampler(dist, aux, wFunc);
+			break;
+		}
+		case SamplerType::Nested: {
+			NestedSampler* s = static_cast<NestedSampler*>(sampler.get());
+			sampler = new NestedSampler(dist, s->getNumberOfLivePoints());
+			break;
+		}
+		default:
+			throw runtime_error("VacuumCherenkov: unknown sampler type.");
 	}
 }
 
@@ -678,7 +699,6 @@ double VacuumCherenkov::_Gm(const double& chiOt, const double& chiPh) {
 double VacuumCherenkov::_G0(const double& chiOt, const double& chiPh) {
 	return (157. * chiOt - 22. * chiPh) / 120.;
 }
-
 
 
 } // namespace livpropa

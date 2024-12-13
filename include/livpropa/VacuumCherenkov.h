@@ -1,6 +1,7 @@
 #ifndef LIVPROPA_VACUUMCHERENKOV_H
 #define LIVPROPA_VACUUMCHERENKOV_H
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <functional>
@@ -55,6 +56,10 @@ enum class VacuumCherenkovSpectrum {
  In this case, the user can control the type of sampling using custom functions. However, this does not work very well outside C++. The default implementation works reasonably.
 */
 class VacuumCherenkov: public Module {
+	private:
+		double minEnergyFractionSpectrum = 1e-10;
+		double nBinsSpectrum = 2001;
+
 	protected:
 		string interactionTag;
 		int particleId;
@@ -69,36 +74,36 @@ class VacuumCherenkov: public Module {
 		ref_ptr<Kinematics> kinematicsPhoton;
 		ref_ptr<Kinematics> kinematicsParticle;
 		ref_ptr<Histogram1D> distribution;
-		std::function<double(double)> weightFunction;
-		ref_ptr<Weighter> weighter; 
+		ref_ptr<RuntimeWeighter> runtimeWeighter; 
+		ref_ptr<PosterioriWeighter> posterioriWeighter;
 		ref_ptr<Sampler> sampler;
 
 	public:
-		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<Weighter> weighter = nullptr, double minEnergyFraction = 1e-10, unsigned int nBins = 2001, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<Weighter> weighter = nullptr, double minEnergyFraction = 1e-10, unsigned int nBins = 2001, double limit = 0.1);
-		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<Weighter> weighter = nullptr, double minEnergyFraction = 1e-10, unsigned int nBins = 2001, double limit = 0.1);
+		VacuumCherenkov(int id, KinematicsMap kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<RuntimeWeighter> runtimeWeighter = nullptr, ref_ptr<PosterioriWeighter> posterioriWeighter = nullptr, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<Kinematics> kinOt, ref_ptr<Kinematics> kinPh, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<RuntimeWeighter> runtimeWeighter = nullptr, ref_ptr<PosterioriWeighter> posterioriWeighter = nullptr, double limit = 0.1);
+		VacuumCherenkov(int id, ref_ptr<Kinematics> kin, VacuumCherenkovSpectrum spec = VacuumCherenkovSpectrum::Default, bool havePhotons = true, bool angularCorrection = false, bool continuousEnergyLoss = false, ref_ptr<Sampler> sampler = nullptr, ref_ptr<RuntimeWeighter> runtimeWeighter = nullptr, ref_ptr<PosterioriWeighter> posterioriWeighter = nullptr, double limit = 0.1);
 		void setParticle(int id);
 		void setKinematicsParticle(ref_ptr<Kinematics> kin);
 		void setKinematicsPhoton(ref_ptr<Kinematics> kin);
-		void setWeighter(ref_ptr<Weighter> weighter);
+		void setRuntimeWeighter(ref_ptr<RuntimeWeighter> weighter);
+		void setPosterioriWeighter(ref_ptr<PosterioriWeighter> weighter);
 		void setSampler(ref_ptr<Sampler> dist);
 		void setAngularCorrection(bool correction);
 		void setContinuousEnergyLoss(bool loss);
 		void setHavePhotons(bool photons);
 		void setLimit(double limit);
 		void setInteractionTag(string tag);
-		void setWeightFunction(std::function<double(double)> func);
 		void setSpectrum(VacuumCherenkovSpectrum spec, ref_ptr<Sampler> sampler);
-		void setMinimumEnergyFraction(double xMin);
-		void setNumberOfBins(unsigned int nBins);
+		void setMinimumEnergyFractionSpectrum(double xMin);
+		void setNumberOfBinsSpectrum(unsigned int nBins);
 		int getParticle() const;
 		string getInteractionTag() const;
-		std::function<double(double)> getWeightFunction() const;
 		ref_ptr<Kinematics> getKinematicsParticle() const;
 		ref_ptr<Kinematics> getKinematicsPhoton() const;
 		ref_ptr<Histogram1D> getDistribution() const;
 		ref_ptr<Sampler> getSampler() const;
-		ref_ptr<Weighter> getWeighter() const;
+		ref_ptr<RuntimeWeighter> getRuntimeWeighter() const;
+		ref_ptr<PosterioriWeighter> getPosterioriWeighter() const;
 		double computeThresholdMomentum() const;
 		double computeThresholdEnergy() const;
 		double computeInteractionRate(const double& p) const;
