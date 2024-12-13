@@ -40,7 +40,7 @@ class Sampler : public Referenced {
 		void setType(SamplerType t);
 		SamplerType getType() const;
 		string getNameTag() const;
-		void push(const double& v, const double& w) const;
+		void push(const double& v, const double& w);
 		virtual std::pair<double, double> getSample(Random& random =  Random::instance(), const std::pair<double, double>& range = {0, 1}) const = 0;
 		vector<std::pair<double, double>> getSamples(unsigned int nSamples, Random& random = Random::instance(), const std::pair<double, double>& range = {0, 1}) const;
 		void setDistribution(ref_ptr<Histogram1D> histogram);

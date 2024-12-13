@@ -51,7 +51,7 @@ string Sampler::getNameTag() const {
 	return getSamplerNameTag(type);
 }
 
-void Sampler::push(const double& v, const double& w) const {
+void Sampler::push(const double& v, const double& w) {
 	histogram->push(v, w);
 }
 
