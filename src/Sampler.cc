@@ -213,10 +213,10 @@ ImportanceSampler::ImportanceSampler(string weight) {
 		setWeightFunction([](const double& x) { return exp(- x); });
 	} else if (weight.find("power") == 0) {
 		double power = parseWeightFunctionName(weight, "power");
-		setWeightFunction([power](const double& x) { return 1. / pow(x, power); });
+		setWeightFunction([power](const double& x) { return pow(x, power) / (1 + power); });
 	} else if (weight.find("inversepower") == 0) {
 		double power = parseWeightFunctionName(weight, "inversepower");
-		setWeightFunction([power](const double& x) { return pow(x, - power); });
+		setWeightFunction([power](const double& x) { return pow(x, - power) / (1 - power); });
 	} else {
 		throw std::runtime_error("Unknown weight function. Try setting it manually.");
 	}
