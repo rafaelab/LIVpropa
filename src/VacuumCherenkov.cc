@@ -306,39 +306,28 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 	do {
 		// perform sampling of the energy fraction with a specific sampler
 		std::pair<double, double> range = xRange(kinematicsParticle, kinematicsPhoton);
-		std::pair<double, double> sample = sampler->getSample(random, range);
-		// std::pair<double, double> sample = sampler->getSample(random);
+		std::pair<double, double> sample = sampler->getSample(random);
 		double x = sample.first;
 		double w = sample.second;
 
 		// compute photon energy
 		double Ephoton = x * Eo;
 
-
-		double wRT = 1;
-		if (runtimeWeighter != nullptr) {
-			wRT = runtimeWeighter->computeWeight(22, Ephoton / (1 + z), x, 1, random);
-		}
-
 		if (havePhotons and w > 0) {
 			// decide whether to weight the secondaries at runtime or a posteriori
 			if (posterioriWeighter != nullptr) {
-				posterioriWeighter->push(Ephoton / (1 + z), w * wRT);
+				posterioriWeighter->push(Ephoton / (1 + z), w);
 			} else {
 				if (continuousEnergyLoss)
 					pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-				candidate->addSecondary(22, Ephoton / (1 + z), pos, w * wRT);
+				candidate->addSecondary(22, Ephoton / (1 + z), pos, w);
 			}
 		} 
-
-		// cout << "Ephoton: " << Ephoton / eV << " wRT: " << wRT << " w: " << w << endl;
-
-		Eo -= Ephoton * w;
+		
+		Eo -= Ephoton;
 	} while (Eo > Et);
 
 	candidate->current.setEnergy(Eo / (1 + z));
-
-
 
 
 	// add photon spectrum if using a posteriori weighter
@@ -524,10 +513,12 @@ void VacuumCherenkov::buildSpectrum(const ref_ptr<Kinematics>& kinOt, const ref_
 
 template<class KP>
 void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematics<2>& kinOt, const KP& kinPh) {
-	unsigned int nBins = 4801;
-	ref_ptr<Histogram1D> dist = new Histogram1DLog10(xMin, 1., nBins);
 
 	std::pair<double, double> range = xRange(kinOt, kinPh);
+	double xMin = std::max(range.first, minEnergyFractionSpectrum);
+	double xMax = std::min(range.second, 1.);
+
+	ref_ptr<Histogram1D> dist = new Histogram1DLog10(xMin, xMax, nBinsSpectrum);
 
 	double chiOt = kinOt.getCoefficient();
 	double chiPh = kinPh.getCoefficient();
@@ -545,7 +536,7 @@ void VacuumCherenkov::buildSpectrum(const MonochromaticLorentzViolatingKinematic
 	for (size_t i = 0; i < dist->getNumberOfBins(); i++) {
 		double x = dist->getBinCentre(i);
 		P = 0;
-		if (x >= range.first and x <= range.second) {
+		if (x >= range.first and x < range.second) {
 			double w0 = 0.5 * chiOt * (x * x * x - 3 * x * x + 3 * x) - 0.5 * chiPh * x * x * x;
 			double P = (2. / x - 2. + x)  * w0 / g0;
 			P = std::max(P, 0.);
