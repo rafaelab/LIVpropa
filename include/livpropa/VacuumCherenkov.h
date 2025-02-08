@@ -57,8 +57,8 @@ enum class VacuumCherenkovSpectrum {
 */
 class VacuumCherenkov: public Module {
 	private:
-		double minEnergyFractionSpectrum = 1e-10;
-		double nBinsSpectrum = 2001;
+		double minEnergyFractionSpectrum = 1e-9;
+		unsigned int nBinsSpectrum = 10000;
 
 	protected:
 		string interactionTag;

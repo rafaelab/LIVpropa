@@ -76,7 +76,7 @@ double WeighterEnergyFraction::computeWeight(const int& id, const double& E, con
 	
 	// accept/reject and return weight
 	double w = weightFunction(f);
-	return (random.rand() < w) ? 1. / w : 0;
+	return (random.rand() < w) ? w : 0;
 }
 
 
@@ -92,7 +92,7 @@ WeighterEnergyFractionUniform::WeighterEnergyFractionUniform(int pId, double s) 
 	setParticleId(pId);
 
 	std::function<double(double)> f = [s](const double& x) { 
-		return s; 
+		return 1 / s; 
 		};
 	setWeightFunction(f);
 }

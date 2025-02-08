@@ -6,6 +6,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include <kiss/logger.h>
+
 #include "livpropa/Common.h"
 #include "livpropa/Histogram.h"
 
@@ -120,7 +122,8 @@ class ImportanceSampler: public Sampler {
 		void reset();
 
 	private:
-		static double parseWeightFunctionName(const string& str, const string& pattern);
+		static double parseWeightFunctionNamePower(const string& str, const string& pattern);
+		static vector<double> parseWeightFunctionNameBrokenPower(const string& str, const string& pattern);
 };
 
 
@@ -144,8 +147,8 @@ class NestedSampler : public Sampler {
 		mutable double logWeight;
 
 	public:
-		NestedSampler(unsigned int nLivePoints, unsigned int maxIterations = 10);
-		NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints);
+		NestedSampler(unsigned int nLivePoints, unsigned int maxIterations = 100);
+		NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints, unsigned int maxIterations = 100);
 		void setMaximumIterations(unsigned int n);
 		void setNumberOfLivePoints(unsigned int n);
 		void setLikelihoodFunction(std::function<double(double)> func);

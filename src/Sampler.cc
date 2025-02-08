@@ -182,43 +182,32 @@ ImportanceSampler::ImportanceSampler(std::function<double(double)> weight) {
 ImportanceSampler::ImportanceSampler(string weight) {
 	setType(SamplerType::Importance);
 
-	// apply consistent naming
-	std::unordered_map<string, string> names = {
-		{"constant", "uniform"},
-		{"log", "log10"},
-		{"exponential", "exp"},
-		{"sqrt", "power0.5"},
-		{"linear", "power1"},
-		{"quadratic", "power2"},
-		{"cubic", "power3"},
-		{"inverselinear", "inversepower1"},
-		{"inversequadratic", "inversepower2"},
-		{"inversecubic", "inversepower3"},
-		{"inversesqrt", "inversepower0.5"},
-		{"inverseexp", "inverseexponential"}
-	};
-	if (names.find(weight) != names.end()) 
-		weight = names[weight];
-
-
 	if (weight == "uniform") {
 		setWeightFunction([](const double& x) { return 1; });
 	} else if (weight == "log10" ) {
 		setWeightFunction([](const double& x) { return abs(log10(x)); });
 	} else if (weight == "ln") {
 		setWeightFunction([](const double& x) { return abs(log(x)); });
-	} else if (weight == "exponential") {
-		setWeightFunction([](const double& x) { return exp(x); });
-	} else if (weight == "inverseexponential") {
-		setWeightFunction([](const double& x) { return exp(- x); });
+	} else if (weight == "exponential" or weight == "exp") {
+		setWeightFunction([](const double& x) { return exp(x) / expm1(1); });
+	} else if (weight == "inverseexponential" or weight == "invexp") {
+		setWeightFunction([](const double& x) { return exp(- x) / (- exp(-1.) - 1); });
 	} else if (weight.find("power") == 0) {
-		double power = parseWeightFunctionName(weight, "power");
+		double power = parseWeightFunctionNamePower(weight, "power");
 		setWeightFunction([power](const double& x) { return pow(x, power) / (1 + power); });
 	} else if (weight.find("inversepower") == 0) {
-		double power = parseWeightFunctionName(weight, "inversepower");
+		double power = parseWeightFunctionNamePower(weight, "inversepower");
 		setWeightFunction([power](const double& x) { return pow(x, - power) / (1 - power); });
+	} else if (weight.find("brokenpower") == 0) {
+		vector<double> parameters = parseWeightFunctionNameBrokenPower(weight, "brokenpower");
+		double x0 = parameters[2];
+		double a1 = parameters[0];
+		double a2 = parameters[1];
+		double norm = pow(x0, a1 + 1) / (1 + a1) - pow(x0, a2 + 1) / (1 + a2) + 1 / (1 + a2);
+		setWeightFunction([a1, a2, x0, norm](const double& x) { return (x > x0) ? pow(x, a2) / norm : pow(x, a1) / norm; });
 	} else {
-		throw std::runtime_error("Unknown weight function. Try setting it manually.");
+		KISS_LOG_WARNING << "Unknown weight function. Try setting it manually. Will use uniform." << std::endl;
+		setWeightFunction([](const double& x) { return 1; });
 	}
 }
 
@@ -279,8 +268,17 @@ std::function<double(double)> ImportanceSampler::getWeightFunction() const {
 	return weightFunction;
 }
 
-double ImportanceSampler::parseWeightFunctionName(const string& str, const string& pattern) {
+void ImportanceSampler::reset() {
+}
+
+double ImportanceSampler::parseWeightFunctionNamePower(const string& str, const string& pattern) {
 	if (str.find("power") == 0) {
+		string powerStr = str.substr(pattern.length());
+		std::istringstream iss(powerStr);
+		double power;
+		iss >> power;
+		return power;
+	} else if (str.find("inversepower") == 0) {
 		string powerStr = str.substr(pattern.length());
 		std::istringstream iss(powerStr);
 		double power;
@@ -290,9 +288,22 @@ double ImportanceSampler::parseWeightFunctionName(const string& str, const strin
 	return 1.;
 }
 
-void ImportanceSampler::reset() {
+vector<double> ImportanceSampler::parseWeightFunctionNameBrokenPower(const string& str, const string& pattern) {
+	if (str.find("brokenpower") == 0) {
+		string paramsStr = str.substr(pattern.length() + 1); // Skip the pattern and the underscore
+		std::istringstream iss(paramsStr);
+		vector<double> params;
+		string token;
+		while (std::getline(iss, token, '_')) {
+			params.push_back(std::stod(token));
+		}
+		if (params.size() != 3) {
+			throw std::runtime_error("Broken power law requires exactly three parameters.");
+		}
+		return params;
+	}
+	throw std::runtime_error("Invalid broken power law string format.");
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -305,8 +316,9 @@ NestedSampler::NestedSampler(unsigned int nLivePoints, unsigned int maxIteration
 	logWeight = 0;
 }
 
-NestedSampler::NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints) {
+NestedSampler::NestedSampler(ref_ptr<Histogram1D> h, unsigned int nLivePoints, unsigned int maxIterations) {
 	setType(SamplerType::Nested);
+	setMaximumIterations(maxIterations);
 	setDistribution(h);
 	setNumberOfLivePoints(nLivePoints);
 	setLikelihoodFunction(h->getInterpolator());
@@ -356,7 +368,7 @@ std::pair<double, double> NestedSampler::getSample(Random& random, const std::pa
 
 	double newPoint = 0;
 	double newLikelihood = 0;
-	
+
 	unsigned int iteration = 0;
 	while (iteration < maxIterations) {
 		// find the live point with the lowest likelihood
