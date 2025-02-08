@@ -226,7 +226,7 @@ void VacuumCherenkov::process(Candidate* candidate) const {
 	// compute threshold energy; emit photon only if E > Ethr
 	double Ethr = computeThresholdEnergy() * (1 + z);
 
-	if (E < Ethr or isnan(Ethr) or isinf(Ethr))
+	if (E < Ethr or std::isnan(Ethr) or std::isinf(Ethr))
 		return;
 
 	switch (spectrum) {
@@ -337,7 +337,7 @@ void VacuumCherenkov::emissionSpectrumFull(Candidate* candidate, const double& E
 		for (auto sample : samples) {
 			if (continuousEnergyLoss)
 				Vector3d pos = random.randomInterpolatedPosition(candidate->previous.getPosition(), candidate->current.getPosition());
-			if (! isnan(sample.second) and sample.second > 0)
+			if (! std::isnan(sample.second) and sample.second > 0)
 				candidate->addSecondary(22, sample.first / (1 + z), pos, sample.second);
 		}
 
