@@ -212,7 +212,7 @@ class KinematicsMap {
 		bool exists(const int& pId) const;
 		vector<int> getParticles() const;
 		string getIdentifierForParticle(const int& pId, bool showParticleId = true) const; 
-		string getIdentifier(const std::vector<int>& particles, bool simplify = false) const;
+		string getIdentifier(const std::vector<int>& particles) const;
 		string info() const;
 		ParticleKinematicsDict getParticleKinematicsMap() const;
 		const ref_ptr<Kinematics>& find(const int& id, bool showWarningInexistent = true) const;

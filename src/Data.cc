@@ -13,17 +13,19 @@ string getDataPath(string filename) {
 	if (environmentPath) {
 		if (is_directory(environmentPath)) {
 			dataPath = environmentPath;
-			KISS_LOG_INFO << "locateDataFiles: use environment variable, " << dataPath << endl;
+			dataPath = dataPath + "data/";
+			KISS_LOG_INFO << "getDataPath: use environment variable, " << dataPath << endl;
+			cout << "concat_path(dataPath, filename) = " << concat_path(dataPath, filename) << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
 
 	#ifdef LIVpropa_INSTALL_PREFIX
 	{
-		string path = LIVpropa_INSTALL_PREFIX  "/share/livpropa";
+		string path = getInstallPrefix() + "/share/livpropa/data";
 		if (is_directory(path)) {
 			dataPath = path;
-			KISS_LOG_INFO << "locateDataFiles: use install prefix, " << dataPath << endl;
+			KISS_LOG_INFO << "getDataPath: use install prefix, " << dataPath << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
@@ -33,13 +35,13 @@ string getDataPath(string filename) {
 		string path = executable_path() + "../data";
 		if (is_directory(path)) {
 			dataPath = path;
-			KISS_LOG_INFO << "locateDataFiles: use executable path, " << dataPath << endl;
+			KISS_LOG_INFO << "getDataPath: use executable path, " << dataPath << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
 
 	dataPath = "data";
-	KISS_LOG_INFO << "locateDataFiles: use default, " << dataPath << endl;
+	KISS_LOG_INFO << "getDataPath: use default, " << dataPath << endl;
 	return concat_path(dataPath, filename);
 }
 
