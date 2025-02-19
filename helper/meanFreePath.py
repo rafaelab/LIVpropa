@@ -16,21 +16,21 @@ from kinematics import *
 
 
 
-def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = MonochromaticLIV(), particle = None, z = 0, cdf = False):
+def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics, particle = None, z = 0, cdf = False):
 	"""
 	Calculate the interaction rate for given tabulated cross sections against an isotropic photon background.
 	The tabulated cross sections need to be of length n = 2^i + 1 and the tabulation points log-linearly spaced.
 	This is equivalent to the CRPropa3-data function found in interactionRate.py called `calc_rate_s` (with different arguments).
 
 	# Input
-	. sKin    : tabulated (s - m**2) for cross sections [J^2]
-	. xs      : tabulated cross sections [m^2]
-	. E       : (array of) cosmic ray energies [J]
-	. field   : photon background, see photonField.py
-	. z       : redshift
-	. cdf     : calculate cumulative differential rate
-	. sThrIn  : thresholds for inner integral
-	. sThrOut : thresholds for outer integral
+	. sKin: tabulated (s - m**2) for cross sections [J^2]
+	. xs: tabulated cross sections [m^2]
+	. E: (array of) cosmic ray energies [J]
+	. field: photon background, see photonField.py
+	. z: redshift
+	. cdf: calculate cumulative differential rate
+	. sThrIn : thresholds for inner integral
+	. sThrOut: thresholds for outer integral
 
 	# Output
 	. interaction rate 1/lambda(gamma) [1/Mpc] or
@@ -38,9 +38,11 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 	"""
 	if particle is None: 
 		raise KeyError('Particle %i not provided for rate computation.')
+	
+	kin = kinematics.getKinematicsForParticle(particle)
 	m = particleMassesDictionary[particle]
 	m2 = (m * c_squared) ** 2
-	ds = kinematics.computeDispersionCorrection(E, particle)
+	ds = kin.computeDispersionCorrection(E, m)
 
 	# size of table
 	nE, nS = len(E), len(sKin)
@@ -54,16 +56,16 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 		# interpolate
 		I = np.zeros((nE, nS))
 
-		if kinematics.label == 'SR':
+		if kinematics.isSpecialRelativity():
 			for i in range(nE):
-				I[i, :] = np.interp(sKin/ 4 / E[i], densityIntegral[:, 0], densityIntegral[:, 1])
+				I[i, :] = np.interp(sKin / (4. * E[i]), densityIntegral[:, 0], densityIntegral[:, 1])
 			y = np.array([xs * sKin for i in range(nE)]) * I
 		
-		elif kinematics.label == 'LIV':
+		elif kinematics.isMonochromaticLIV():
 			for i in range(nE):
 				sMin = sThrOut[i]
 				j = np.where(sKin > sMin)
-				I[i, j] = np.interp((sKin[j] - ds[i]) / 4. / E[i], densityIntegral[:, 0], densityIntegral[:, 1])
+				I[i, j] = np.interp((sKin[j] - ds[i]) / (4. * E[i]), densityIntegral[:, 0], densityIntegral[:, 1])
 			y = np.array([xs * (sKin - ds[i]) for i in range(nE)]) * I
 
 		else:
@@ -75,11 +77,11 @@ def computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = Mon
 
 		F = cumulative_trapezoid(x = sKin, y = sKin * xs, initial = 0)
 
-		if kinematics.label == 'SR':
+		if kinematics.isSpecialRelativity():
 			n = field.getDensity(np.outer(1. / (4 * E), sKin), z)
 			y = n * F / sKin
 
-		elif kinematics.label == 'LIV':
+		elif kinematics.isMonochromaticLIV():
 			F = cumulative_trapezoid(x = sKin, y = sKin * xs, initial = 0)
 			F1 = cumulative_trapezoid(x = sKin, y = xs, initial = 0)
 			G = np.zeros((nE, nS))
