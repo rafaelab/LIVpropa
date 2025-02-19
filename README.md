@@ -3,10 +3,13 @@
 This is a plugin for the CRPropa code.
 It enables simulations including Lorentz invariance violation (LIV).
 
-For now, only Breit-Wheeler pair production is supported, but we will soon extend the code to include other processes such as inverse Compton scattering.
+For now, only the following (QED) processes are considered:
+- Breit-Wheeler pair production 
+- inverse Compton scattering
+- photon decay
+- vacuum Cherenkov
+Other processes will be added later.
 
-
-## Science
 
 
 ## Installation procedure
@@ -48,6 +51,30 @@ sys.path.append('/path/to/livpropa/build/')
 from livpropa import *
 ```
 
+IMPORTANT NOTICE: For some reason, gcc complains about the templates, whereas clang does not. Therefore, use clang. (I will probably not fix this.)
+
+
+## Citation
+
+If you use this code in your work, please use the following citation:
+```
+@Article{saveliev2024,
+    author = "{Saveliev}, Andrey and {Alves Batista}, Rafael",
+    title = "{Simulating electromagnetic cascades with Lorentz invariance violation}",
+    doi = "10.1088/1361-6382/ad40f1",
+    eid = "115011",
+    eprint = "2312.10803",
+    number = "11",
+    pages = "115011",
+    volume = "41",
+    adsurl = "https://ui.adsabs.harvard.edu/abs/2024CQGra..41k5011S",
+    archiveprefix = "arXiv",
+    journal = "Classical and Quantum Gravity",
+    month = "June",
+    primaryclass = "astro-ph.HE",
+    year = "2024"
+}
+```
 
 ## Disclaimer
 
