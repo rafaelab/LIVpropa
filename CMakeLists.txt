@@ -163,14 +163,16 @@ set_target_properties(livpropa PROPERTIES OUTPUT_NAME "_livpropa")
 # 	enable_testing()
 # endif(ENABLE_TESTING)
 
+# set(LIVpropa_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data)
+
 
 # Install
 add_definitions(-DLIVpropa_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}")
-add_definitions(-DLIVpropa_DATA_PATH="${CMAKE_INSTALL_PREFIX}/data")
+add_definitions(-DLIVpropa_DATA_PATH="${LIVpropa_INSTALL_PREFIX}/data")
 install(TARGETS livpropa DESTINATION lib)
 install(DIRECTORY external/eigen3/Eigen DESTINATION include)
 install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/python/livpropa.i DESTINATION swig_interface)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_INSTALL_PREFIX}/.)
-
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/PairProduction DESTINATION data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/InverseComptonScattering DESTINATION data)

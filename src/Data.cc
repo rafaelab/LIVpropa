@@ -13,22 +13,22 @@ string getDataPath(string filename) {
 	if (environmentPath) {
 		if (is_directory(environmentPath)) {
 			dataPath = environmentPath;
-			dataPath = dataPath + "data/";
 			KISS_LOG_INFO << "getDataPath: use environment variable, " << dataPath << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
 
-	#ifdef LIVpropa_INSTALL_PREFIX
 	{
-		string path = getInstallPrefix() + "/share/livpropa/data";
-		if (is_directory(path)) {
-			dataPath = path;
-			KISS_LOG_INFO << "getDataPath: use install prefix, " << dataPath << endl;
-			return concat_path(dataPath, filename);
+		string path = getInstallPrefix();
+		if (path != "") {
+			path += "data";
+			if (is_directory(path)) {
+				dataPath = path;
+				KISS_LOG_INFO << "getDataPath: use install prefix, " << dataPath << endl;
+				return concat_path(dataPath, filename);
+			}
 		}
 	}
-	#endif
 
 	{
 		string path = executable_path() + "../data";
