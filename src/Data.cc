@@ -15,7 +15,6 @@ string getDataPath(string filename) {
 			dataPath = environmentPath;
 			dataPath = dataPath + "data/";
 			KISS_LOG_INFO << "getDataPath: use environment variable, " << dataPath << endl;
-			cout << "concat_path(dataPath, filename) = " << concat_path(dataPath, filename) << endl;
 			return concat_path(dataPath, filename);
 		}
 	}
