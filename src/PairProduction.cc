@@ -21,13 +21,16 @@ void PairProduction::setPhotonField(ref_ptr<PhotonField> field) {
 	string photonBgName = field->getFieldName();
 
 	string dataPath = "PairProduction/";
-	dataPath += kinematics.getIdentifier(vector<int>{-11, 11, 22});
+	dataPath += kinematics.getIdentifierForParticle(-11);
+	dataPath += "-";
+	dataPath += kinematics.getIdentifierForParticle( 11);
+	dataPath += "-";
+	dataPath += kinematics.getIdentifierForParticle( 22);
 	dataPath += "/";
-	
+
 	setDescription("PairProduction: " + photonBgName);
 	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
 	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
-
 }
 
 void PairProduction::setHaveElectrons(bool electrons) {

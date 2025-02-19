@@ -19,12 +19,16 @@ void InverseComptonScattering::setPhotonField(ref_ptr<PhotonField> field) {
 	string photonBgName = field->getFieldName();
 
 	string dataPath = "InverseComptonScattering/";
-	dataPath += kinematics.getIdentifier(vector<int>{-11, 11, 22});
+	dataPath += kinematics.getIdentifierForParticle(-11);
+	dataPath += "-";
+	dataPath += kinematics.getIdentifierForParticle( 11);
+	dataPath += "-";
+	dataPath += kinematics.getIdentifierForParticle( 22);
 	dataPath += "/";
 	
 	setDescription("InverseComptonScattering: " + photonBgName);
-	initRate(getDataPath(dataPath + "rate_" + photonBgName + ".txt"));
-	initCumulativeRate(getDataPath(dataPath + "cdf_" + photonBgName + ".txt"));
+	initRate(getDataPath(dataPath) + "rate_" + photonBgName + ".txt");
+	initCumulativeRate(getDataPath(dataPath) + "cdf_" + photonBgName + ".txt");
 }
 
 void InverseComptonScattering::setKinematics(KinematicsMap kin) {

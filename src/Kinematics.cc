@@ -67,7 +67,7 @@ SpecialRelativisticKinematics::~SpecialRelativisticKinematics() {
 }
 
 string SpecialRelativisticKinematics::getNameTag() const {
-	return "SR";
+	return "sr";
 }
 
 double SpecialRelativisticKinematics::getSymmetryBreakingShift(const double& p, const int& id) const {
@@ -200,12 +200,12 @@ double AbstractMonochromaticLorentzViolatingKinematics::getCoefficient() const {
 }
 
 string AbstractMonochromaticLorentzViolatingKinematics::getNameTag() const {
-	return "LIVmono" + std::to_string(order);
+	return "LIVmono";
 }
 
 string AbstractMonochromaticLorentzViolatingKinematics::getIdentifier() const {
 	char s[64];
-	sprintf(s, "LIV%i_chi_%+2.1e", order, coefficient);
+	sprintf(s, "LIVmono%i_chi_%+2.1e", order, coefficient);
 	return string(s);
 }
 
@@ -433,33 +433,15 @@ string KinematicsMap::getIdentifierForParticle(const int& pId, bool showParticle
 
 	size_t s = 0;
 	if (showParticleId)
-		s += sprintf(identifier + s, "Id_%+i-%s", pId, kStr.c_str());
+		s += sprintf(identifier + s, "Id_%+i_%s", pId, kStr.c_str());
 	else
 		s += sprintf(identifier + s, "%s", kStr.c_str());
 
 	return std::string(identifier);
 }
 
-string KinematicsMap::getIdentifier(const std::vector<int>& particles, bool simplify) const {
+string KinematicsMap::getIdentifier(const std::vector<int>& particles) const {
 	string identifier = "";
-
-	// if particles have exactly the same kinematics, return just one identifier.
-	if (simplify) {
-		int nParticles = particles.size();
-		if (nParticles == 1)
-			return getIdentifierForParticle(particles[0], false);
-
-		bool simplifiable = true;
-		for (size_t i = 1; i < particles.size(); i++) {
-			if (getIdentifierForParticle(particles[i - 1], false) != getIdentifierForParticle(particles[i], false)) {
-				simplifiable = false;
-				break;
-			}
-		}
-
-		if (simplifiable)
-			return getIdentifierForParticle(particles[0], false);
-	}
 
 	for (size_t i = 0; i < particles.size(); i++) {
 		int pId = particles[i];
