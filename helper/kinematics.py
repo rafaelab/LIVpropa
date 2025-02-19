@@ -27,36 +27,30 @@ class Kinematics(ABC):
 		self._label = l
 
 	@abstractmethod
-	def getParticles(self):
-		"""
-		Returns list of all particles affected by this type of kinematics.
-		All other particles obey, by default, special relativity
-		"""
-		pass
-
-	@abstractmethod
-	def computeDispersionCorrectionMomentum(self, p, particle):
+	def computeDispersionCorrectionMomentum(self, p, m):
 		"""
 		Compute correction to special-relativistic dispersion relation given the momentum
 		"""
 		pass
 
 	@abstractmethod
-	def computeDispersionCorrectionEnergy(self, E, particle):
+	def computeDispersionCorrectionEnergy(self, E, m):
 		"""
 		Compute correction to special-relativistic dispersion relation given the energy.
 		"""
 		pass
 
-	def computeDispersionCorrection(self, E, particle):
-		return self.computeDispersionCorrectionEnergy(E, particle)
+	def computeDispersionCorrection(self, E, m):
+		"""
+		"""
+		return self.computeDispersionCorrectionEnergy(E, m)
 
 	@abstractmethod
-	def computeEnergy2FromMomentum(self, p, particle):
+	def computeEnergy2FromMomentum(self, p, m):
 		pass
 
-	def computeEnergyFromMomentum(self, p, particle):
-		return np.sqrt(self.computeEnergy2FromMomentum(p, mass = mass, particle = particle))
+	def computeEnergyFromMomentum(self, p, m):
+		return np.sqrt(self.computeEnergy2FromMomentum(p, m))
 
 	# @abstractmethod
 	# def computeMomentumFromEnergy(self, m, E):
@@ -65,6 +59,10 @@ class Kinematics(ABC):
 	# 	This method will not be implemented for the timebeing.
 	# 	"""
 	# 	pass
+
+	@abstractmethod
+	def getIdentifier(self):
+		pass
 
 	@abstractmethod
 	def __str__(self):
@@ -77,25 +75,34 @@ class SpecialRelativity(Kinematics):
 	"""
 	The usual special-relativistic case.
 	"""
-	def __init__(self, particles = None):
+	def __init__(self):
 		self.name = 'special relativity'
 		self.label = 'SR'
-		self.particles = particles
 
-	def getParticles(self):
-		return self.particles
-
-	def computeEnergy2FromMomentum(self, p, particle):
-		m = particleMassesDictionary[particle]
+	def computeEnergy2FromMomentum(self, p, m):
+		"""
+		Returns m^2 + p^2
+		"""
 		return (m * c_squared) ** 2 + (p * c_light) ** 2
 		
-	def computeDispersionCorrectionEnergy(self, E, particle):
+	def computeDispersionCorrectionEnergy(self, E, m):
+		"""
+		"""
 		return 0.
 	
-	def computeDispersionCorrectionMomentum(self, p, particle):
+	def computeDispersionCorrectionMomentum(self, p, m):
+		"""
+		"""
 		return 0.
 	
+	def getIdentifier(self):
+		"""
+		"""
+		return 'SR'
+
 	def __str__(self):
+		"""
+		"""
 		s = self.name
 		return s
 
@@ -106,87 +113,153 @@ class MonochromaticLIV(Kinematics):
 	"""
 	A simple phenomenological implementation of LIV.
 	This preserves energy-momentum conservations and modifies the dispersion relations as:
-		E^2 = m^2 + p^2 + f^n.
+		E^2 = m^2 + p^2 + f(p).
 	The fact that only a single value of n is taken into account defines the naming choice `monochromatic'.
 	"""
-	def __init__(self, chi = {11: 0., 22: 0.}, order = 0):
+	def __init__(self, chi, order = 0):
+		"""
+		"""
 		self.chi = chi
 		self.order = order
 		self.name = 'monochromatic LIV'
-		self.label = 'LIV'
+		self.label = 'LIVmono'
 
 	def getOrder(self):
+		"""
+		"""
 		return self.order
 
-	def getParticles(self):
-		return self.chi.keys()
-	
-	def isParticleLorentzInvariant(self, particle):
-		if particle in getParticles():
+	def isSuperluminal(self):
+		"""
+		"""
+		if chi == 0:
 			return False
-		return True
-
-	def isSuperluminal(self, particle = None):
-		if self.isParticleLorentzInvariant(particle):
-			return False
-		
-		if particle is None:
-			return np.any([chi >= 0. for chi in self.chi.values()])
-		else:
-			return self.chi[particle] >= 0. 
+		return chi > 0.
 	
 	def isSubluminal(self):
-		if self.isParticleLorentzInvariant(particle):
+		"""
+		"""
+		if chi == 0:
 			return False
-		
-		if particle is None:
-			return np.any([chi < 0. for chi in self.chi.values()])
-		else:
-			return self.chi[particle] < 0. 
+		return chi < 0.
 
-	def getChi(self, particle = None):
-		if particle is None:
-			return self.chi
-		else:
-			if particle in self.getParticles():
-				return self.chi[particle]
-			else:
-				return 0.
+	def getChi(self):
+		"""
+		"""
+		return self.chi
 
 	def getNLIV(self):
+		"""
+		"""
 		return self.order + 2
 	
-	def getSign(self, particle = None):
-		return np.sign(self.getChi(particle = particle))
-
-	def computeDispersionCorrectionEnergy(self, E, particle):
+	def getSign(self):
 		"""
-		Calculation of the term that modifies the SR dispersion relation.
+		"""
+		return np.sign(self.getChi())
+
+	def computeDispersionCorrectionEnergy(self, E, m):
+		"""
+		Calculation of the term that modifies the SR dispersion relation in the ultrarelativistic limit
+		Calculate: dE2 =  chi * (p / Eliv) ^ n
 		"""		
-		m = particleMassesDictionary[particle]
-		return self.chi[particle] * (E) ** (self.getNLIV()) / EPl ** (self.getNLIV() - 2)
+		return self.chi * (E) ** (self.getNLIV()) / EPl ** (self.getNLIV() - 2)
 	
-	def computeDispersionCorrectionMomentum(self, p, particle):
+	def computeDispersionCorrectionMomentum(self, p, m):
 		"""
 		Calculation of the term that modifies the SR dispersion relation.
+		Calculate: dE2 =  chi * (p / Eliv) ^ n
 		"""
-		return self.chi[particle] * (p * c_light) ** (self.getNLIV()) / EPl ** (self.getNLIV() - 2)
+		return self.chi * (p * c_light) ** (self.getNLIV()) / EPl ** (self.getNLIV() - 2)
 
-	def computeEnergy2FromMomentum(self, p, particle):
+	def computeEnergy2FromMomentum(self, p, m):
 		"""
-		Note that particle and `m' should refer to the same particle
+		Calculate: E^2 = m^2 + p^2 + chi * (p / Eliv) ^ n
 		"""
 		sr = SpecialRelativity()
-		E2 = sr.computeEnergy2FromMomentum(p, particle)
-		dE2 = self.computeDispersionCorrection(p, particle)
+		E2 = sr.computeEnergy2FromMomentum(p, m)
+		dE2 = self.computeDispersionCorrection(p, m)
 		return E2 + dE2
 
-	def __str__(self):
-		s = 'order=%i' % self.order
-		for particle in self.getParticles():
-			s += ', chi_%i=%+2.1e' % (particle, self.chi[particle])
+	def getIdentifier(self):
+		"""
+		"""
+		s = self.label
+		s += '%i' % self.order
+		s += '_chi_%+2.1e' % self.chi
 		return s
 
+	def __str__(self):
+		"""
+		"""
+		s = 'order = %i' % self.order
+		s += ', chi_%i = %+2.1e' % self.chi
+		return s
+
+
+###############################################################################
+###############################################################################
+class KinematicsMap():
+	"""
+	This class is a simple dictionary that maps particles to their respective kinematics.
+	"""
+	def __init__(self, kinematicsDict = {}):
+		self.kinematicsDict = kinematicsDict
+	
+	def add(self, particle, kinematics):
+		"""
+		Add an entry to the dictionary (a particle and its corresponding kinematics).
+		"""
+		self.kinematicsDict[particle] = kinematics
+
+	def getParticles(self):
+		"""
+		Returns the list of particles.
+		"""
+		return list(self.kinematicsDict.keys())
+
+	def getIdentifier(self):
+		"""
+		Returns a string with the format:
+			Id_+{ID}-{KIN}_{KIN_DETAILS}
+		Example: 
+		. Id_+11-SR
+		. Id_+22-LIVmono0_chi_+1.0e-5
+		"""
+		entries = []
+		for particle in self.getParticles():
+			kinematics = self.kinematicsDict[particle]
+			s = 'Id_%+i_' % particle
+			s += kinematics.getIdentifier()
+			entries.append(s)
+
+		return '-'.join(entries)
+	
+	def isSpecialRelativity(self):
+		"""
+		Returns True if all particles obey special relativity.
+		"""
+		for kinematics in self.kinematicsDict.values():
+			if kinematics.label != 'SR':
+				return False
+		return True
+
+	def isMonochromaticLIV(self):
+		"""
+		Returns True if at least one particle obeys LIV.
+		"""
+		for kinematics in self.kinematicsDict.values():
+			if kinematics.label == 'LIVmono':
+				return True
+		return False
+
+	def getKinematicsForParticle(self, particle):
+		"""
+		Returns the chi value for a given particle.
+		"""
+		return self.kinematicsDict[particle]
+
+	
 
 ###############################################################################
 ###############################################################################

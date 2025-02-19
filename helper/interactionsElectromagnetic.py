@@ -11,7 +11,7 @@ filterwarnings('ignore')
 class ElectromagneticInteraction(ABC):
 	"""
 	Abstract base class for electromagnetic processes of the type:
-	  X + gamma -> ...,
+		X + gamma -> ...,
 	wherein X is a photon or charged lepton.
 	"""
 	@property
@@ -46,23 +46,17 @@ class ElectromagneticInteraction(ABC):
 	def incidentParticle(self, p):
 		self._incidentParticle = p
 
-	@property
-	def massInitial(self):
-		return self._massInitial
-	
-	@massInitial.setter
-	def massInitial(self, m):
-		self._massInitial = m
-
-	def thresholdEnergy2(self, Erange, kinematics = SpecialRelativity()):
-		if kinematics.label == 'SR':
+	def thresholdEnergy2(self, Erange, kinematics):
+		"""
+		"""
+		if kinematics.isSpecialRelativity():
 			return self.sMin0
 		
-		elif kinematics.label == 'LIV':
-			particle = self.incidentParticle
-			
-			sMin = kinematics.computeDispersionCorrection(Erange[0], particle)
-			sMax = kinematics.computeDispersionCorrection(Erange[1], particle)
+		elif kinematics.isMonochromaticLIV():
+			mass = particleMassesDictionary[self.incidentParticle]
+			kin = kinematics.getKinematicsForParticle(self.incidentParticle)
+			sMin = kin.computeDispersionCorrection(Erange[0], mass)
+			sMax = kin.computeDispersionCorrection(Erange[1], mass)
 			if sMin > sMax:
 				sMin, sMax = sMax, sMin
 
@@ -72,19 +66,19 @@ class ElectromagneticInteraction(ABC):
 			raise TypeError('Unknown type of kinematics.')
 	
 	@abstractmethod
-	def thresholdEnergy2Outer(self, E, kinematics = SpecialRelativity()):
+	def thresholdEnergy2Outer(self, E, kinematics):
 		"""
 		Calculate threshold s for the outer interaction rate integral.
 		"""
 		pass
 
-	def thresholdEnergy2Inner(self, E, Erange, kinematics = SpecialRelativity()):
+	def thresholdEnergy2Inner(self, E, Erange, kinematics):
 		"""
 		Calculate threshold s for the inner interaction rate integral.
 		"""
-		ds = kinematics.computeDispersionCorrection(E, self.incidentParticle)
-		sMin = self.thresholdEnergy2(Erange, kinematics = kinematics)
-		
+		kin = kinematics.getKinematicsForParticle(self.incidentParticle)
+		ds = kin.computeDispersionCorrection(E, self.incidentParticle)
+		sMin = self.thresholdEnergy2(Erange, kinematics)
 		return np.maximum(sMin, ds)
 
 	@abstractmethod
@@ -98,15 +92,13 @@ class ElectromagneticInteraction(ABC):
 		"""
 		pass
 
-	def minimumEnergyLab(self, field, Erange, kinematics = SpecialRelativity()):
+	def minimumEnergyLab(self, field, Erange, kinematics):
 		""" 
 		Return minimum required cosmic ray energy for interaction *sigma* with *field* 
 		"""
-		return self.thresholdEnergy2(Erange, kinematics = kinematics) / 4. / field.getEmax()
+		return self.thresholdEnergy2(Erange, kinematics) / (4. * field.getEmax())
 
-	# @abstractmethod
-	# def minimumEnergyBackground(self, field, kinematics = SpecialRelativity()):
-	# 	pass
+
 
 
 ###############################################################################
@@ -114,7 +106,7 @@ class ElectromagneticInteraction(ABC):
 class PairProduction(ElectromagneticInteraction):
 	"""
 	Breit-Wheeler pair production:
-	  gamma + gamma -> e+ + e-
+		gamma + gamma -> e+ + e-
 	"""
 	def __init__(self):
 		self.name = 'pair production'
@@ -140,20 +132,26 @@ class PairProduction(ElectromagneticInteraction):
 		"""
 		return np.array([self.crossSection(s) for s in sKin])
 
-	def thresholdEnergy2Outer(self, E, kinematics = SpecialRelativity()):		
-		if kinematics.label == 'SR':
+	def thresholdEnergy2Outer(self, E, kinematics):		
+		if kinematics.isSpecialRelativity():
 			return self.sMin0
 		
-		elif kinematics.label == 'LIV':
-			chiPh = kinematics.getChi(particle = 22)
+		elif kinematics.isMonochromaticLIV:
+			kinPh = kinematics.getKinematicsForParticle( 22)
+			kinEl = kinematics.getKinematicsForParticle( 11)
+			kinPo = kinematics.getKinematicsForParticle(-11) # not used for now
+
+			chiPh = kinPh.getChi()
+			chiEl = kinEl.getChi()
 			if chiPh == 0.:
 				return self.sMin0
 			
-			dsPh = kinematics.computeDispersionCorrection(E, 22)
-			dsEl = kinematics.computeDispersionCorrection(E, 11)
+			m = 0.
+			dsPh = kinPh.computeDispersionCorrection(E, m)
+			dsEl = kinEl.computeDispersionCorrection(E, m)
 
 			sThrPh = np.maximum(dsPh, self.sMin0)
-			sThrEl = 4 * me2 + dsEl / 2 ** (kinematics.getNLIV() - 2)
+			sThrEl = 4 * me2 + dsEl / 2 ** (kinEl.getNLIV() - 2)
 
 			return np.maximum(sThrPh, sThrEl)
 
@@ -167,7 +165,7 @@ class PairProduction(ElectromagneticInteraction):
 class InverseComptonScattering(ElectromagneticInteraction):
 	"""
 	Inverse Compton Scattering:
-	  e + gamma -> e + gamma
+		e + gamma -> e + gamma
 	"""
 	def __init__(self):
 		self.name = 'inverse Compton scattering'
@@ -197,16 +195,18 @@ class InverseComptonScattering(ElectromagneticInteraction):
 		"""
 		return np.array([self.crossSection(sK + me2) for sK in (sKin)])
 
-	def thresholdEnergy2Outer(self, E, kinematics = SpecialRelativity()):
-		if kinematics.label == 'SR':
+	def thresholdEnergy2Outer(self, E, kinematics):
+		if kinematics.isSpecialRelativity():
 			return me2
 
-		elif kinematics.label == 'LIV':
-			chi = kinematics.getChi(particle = 11)
+		elif kinematics.isMonochromaticLIV():
+			kin = kinematics.getKinematicsForParticle(self.incidentParticle)
+			chi = kin.getChi()
 			if chi == 0.:
 				return me2
 			
-			ds = kinematics.computeDispersionCorrection(E, 11)
+			m = particleMassesDictionary[self.incidentParticle]
+			ds = kin.computeDispersionCorrection(E, m)
 			sThr = np.maximum(ds, self.sMin0)
 			sThr = np.maximum(me2 + ds, sThr)
 			
@@ -214,6 +214,7 @@ class InverseComptonScattering(ElectromagneticInteraction):
 		
 		else:
 			raise TypeError('Unknown type of kinematics.')
+
 
 ###############################################################################
 ###############################################################################

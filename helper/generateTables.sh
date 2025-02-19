@@ -15,7 +15,7 @@ fi
 dataDir="../build/data"
 
 # folders with tabulated interactions
-folders=("PairProductionSR", "PairProductionLIV", "InverseComptonScatteringSR", "InverseComptonScatteringLIV")
+folders=("PairProduction" "InverseComptonScattering")
 
 
 # compute the tables
@@ -46,5 +46,5 @@ then
 	echo "Files copied to the appropriate folder." 
 else
 	echo "Installation path is not standard." 
-	echo "You should mannually copy the data files from ../data/ to the folder where LIVPropa was installed."
+	echo "You should manually copy the data files from ../data/ to the folder where LIVpropa was installed."
 fi

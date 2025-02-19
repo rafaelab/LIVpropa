@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 import numpy as np
@@ -18,35 +19,18 @@ filterwarnings('ignore')
 
 ###############################################################################
 ###############################################################################
-def process(interaction, field, kinematics = SpecialRelativity(), folder = '../data'):
+def process(interaction, field, kinematics, folder = '../data'):
 	""" 
 	Calculate the interaction rates for a given process on a given photon field .
 
 	# Input
 	. interaction: EM process
-	. field   : photon field as defined in photonField.py
-	. name    : name of the process which will be calculated. Necessary for the naming of the data folder
-	. order   : order of the LIV (0 = symmetric)
-	. energyQG: energy at which LIV sets in (defaults to Planck energy)
-	. sign    : superluminal (+1), subluminal (-1)
-	. kinematics: encapsulates LIV parameters
+	. field: photon field as defined in photonField.py
+	. kinematics: kinematics of the process
 	"""
 	particle = interaction.incidentParticle
-	name = interaction.label + kinematics.label
-
-	# output folder and kinematics-specific values
-	if kinematics.label == 'SR':
-		subfolder = ''
-
-	elif kinematics.label == 'LIV':
-		chi = kinematics.getChi(particle = particle)
-		chiEl = kinematics.getChi(particle = 11)
-		chiPh = kinematics.getChi(particle = 22)
-		order = kinematics.getOrder()
-		subfolder = 'chiEl_%+2.1e-chiPh_%+2.1e-order_%i' % (chiEl, chiPh, order)
-
-	else:
-		raise TypeError('Unknown type of kinematics.')
+	name = interaction.label
+	subfolder = kinematics.getIdentifier()
 
 	if not folder.endswith('/'):
 		folder += '/'
@@ -58,7 +42,7 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 	E = np.logspace(9, 23, 281) * eV
 	Erange = (E[0], E[-1])
 
-	Emin = interaction.minimumEnergyLab(field, Erange, kinematics = kinematics)
+	Emin = interaction.minimumEnergyLab(field, Erange, kinematics)
 	E = E[E > Emin]
 	Erange = (E[0], E[-1])
 	
@@ -70,10 +54,10 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 	sKin = np.logspace(4, 23, 2 ** 21 + 1) * eV ** 2
 	xs = interaction.computeCrossSections(sKin)
 
-	sThrIn = interaction.thresholdEnergy2Inner(E, Erange, kinematics = kinematics) 
-	sThrOut = interaction.thresholdEnergy2Outer(E, kinematics = kinematics)
+	sThrIn = interaction.thresholdEnergy2Inner(E, Erange, kinematics) 
+	sThrOut = interaction.thresholdEnergy2Outer(E, kinematics)
 
-	rate = computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics = kinematics, particle = particle)
+	rate = computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics, particle = particle)
 
 	# save
 	fname = folder + '/rate_%s.txt' % field.name
@@ -96,7 +80,7 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 	# calculate cumulative differential interaction rates for sampling s values
 	# -------------------------------------------
 
-	sKinMin = interaction.thresholdEnergy2(Erange, kinematics = kinematics)
+	sKinMin = interaction.thresholdEnergy2(Erange, kinematics)
 
 	# tabulated values of s_kin = s - mc^2, limit to relevant range
 	# Note: use higher resolution and then downsample
@@ -104,7 +88,7 @@ def process(interaction, field, kinematics = SpecialRelativity(), folder = '../d
 	sKin = sKin[sKin > sKinMin]
 
 	xs = interaction.computeCrossSections(sKin)
-	rate = computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, cdf = True, kinematics = kinematics, particle = particle)
+	rate = computeInteractionRate(sKin, xs, E, field, sThrIn, sThrOut, kinematics, cdf = True, particle = particle)
 
 	# downsample
 	sKin_save = np.logspace(4, 23, 190 + 1) * eV ** 2
@@ -144,82 +128,52 @@ if __name__ == "__main__":
 	pp = PairProduction()
 	ics = InverseComptonScattering()
 
-	interactions = [ics]
+	interactions = [pp, ics]
 	fields = [
-		photonField.CMB(),
+		# photonField.CMB(),
 		photonField.EBL_Gilmore12(),
 		# photonField.URB_Protheroe96() # breaking down (why?)
 	]
 	orders = [1, 2]
-	orders = [1]
-	chis = np.logspace(-10., 10., 21, endpoint = True)
-	chis = [1e-10, 1e-5, 1., 1e5]
-	chis = [1e-1, -1e-1]
 
-	chisMix = [1e-3, 1e-2, 1e-1, 1., 1e1]
+	# define the range within which chi values for all particles are the same
+	chiRange = np.array([1e-3, 1e-2, 1e-1, 1., 10.])
+	chiRange = np.hstack([-chiRange[::-1], chiRange])
 
-	# define the range within which chi values for photons and electrons will be allowed to differ
-	chiRange = (1e-3, 1e3)
+	sr = SpecialRelativity()
+	kinSR = {-11: sr, 11: sr, 22: sr}
+
+	listKinematics = []
+	listKinematics.append(KinematicsMap(kinSR))
+
+	#  assume all particles have the same chi value
+	for order in orders:
+		for chi in chiRange:
+			liv = MonochromaticLIV(chi = chi, order = order)
+			kinDict = {-11: liv, 11: liv, 22: liv}
+			kinLIV = KinematicsMap(kinematicsDict = kinDict)
+			listKinematics.append(kinLIV)
+
+	#  assume chis photons and electrons/positrons are different
+	chiRange = (-1e-1, 1e-1)
+	for order in orders:
+		for chiPh in chiRange:
+			for chiEl in chiRange:
+				livEl = MonochromaticLIV(chi = chiEl, order = order)
+				livPh = MonochromaticLIV(chi = chiPh, order = order)
+				livPo = livEl
+				kinLIV = KinematicsMap(kinematicsDict = {22: livPh, 11: livEl, -11: livPo})
+				listKinematics.append(kinLIV)
+
 
 	for interaction in interactions:
 		print('##########################################')
 		print('=> interaction = ', interaction.name)
 
 		for field in fields:
-			print('  ==> photon field = ', field.name)
+			print('. photon field = ', field.name)
 
-			## LIV 
-			print('   ===> LIV')
-			for order in orders:
-
-				if interaction.label == 'PairProduction':
-					for chiEl in chis:
-						chiPh = chiEl
-						chiDictP = {-11: chiEl, 11: chiEl, 22: chiPh}
-						chiDictM = {-11: chiEl, 11: -1. * chiEl, 22: -1. * chiPh}
-						livP = MonochromaticLIV(chi = chiDictP, order = order)
-						livM = MonochromaticLIV(chi = chiDictM, order = order)	
-						print('       ', livP)
-						process(interaction, field, livP)
-						print('       ', livM)
-						process(interaction, field, livM)
-
-						for chiPh in chisMix: # 
-							chiRatio = np.abs(chiEl / chiPh)
-							chiDictPP = {-11: chiEl, 11: chiEl, 22: chiPh}
-							chiDictMM = {-11: chiEl, 11: -1. * chiEl, 22: -1. * chiPh}
-							chiDictPM = {-11: chiEl, 11: chiEl, 22: -1. * chiPh}
-							chiDictMP = {-11: chiEl, 11: -1. * chiEl, 22: chiPh}
-							livPM = MonochromaticLIV(chi = chiDictPM, order = order)
-							livMP = MonochromaticLIV(chi = chiDictMP, order = order)	
-							livPP = MonochromaticLIV(chi = chiDictPP, order = order)
-							livMM = MonochromaticLIV(chi = chiDictMM, order = order)	
-
-							# run for different value
-							if chiPh == chiEl and chiEl > chisMix[0] and chiEl < chisMix[-1]:
-								print('       ', livPM)
-								process(interaction, field, livPM)
-								print('       ', livMP)
-								process(interaction, field, livMP)
-								print('       ', livPP)
-								process(interaction, field, livPP)
-								print('       ', livMM)
-								process(interaction, field, livMM)
-
-
-				elif interaction.label == 'InverseComptonScattering':
-					for chiEl in chis:
-						chiDictP = {-11: chiEl, 11: chiEl, 22: chiEl}
-						chiDictM = {-11: chiEl, 11: -1. * chiEl, 22: -1. * chiEl}
-						livP = MonochromaticLIV(chi = chiDictP, order = order)
-						livM = MonochromaticLIV(chi = chiDictM, order = order)		
-						print('       ', livP)
-						process(interaction, field, livM)
-						print('       ', livM)
-						process(interaction, field, livP)
+			for kin in listKinematics:
+				print('. ', kin.getIdentifier())
+				process(interaction, field, kin)
 							
-
-			## SR (for cross checks with CRPropa)
-			sr = SpecialRelativity()
-			print('   ===> SR')
-			process(interaction, field, sr)
